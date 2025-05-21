@@ -1,6 +1,6 @@
 /**
  * AJAX Validation Interface
- * 
+ *
  * This file contains the JavaScript for handling AJAX updates in the validation interface.
  */
 
@@ -13,15 +13,15 @@ function initAjaxValidation() {
 
     // Add event listeners for global action buttons
     document.getElementById('applyAllValid')?.addEventListener('click', handleApplyAllValid);
-    
+
     document.querySelectorAll('.apply-all-source').forEach(button => {
         button.addEventListener('click', handleApplyAllSource);
     });
-    
+
     document.getElementById('resetAll')?.addEventListener('click', handleResetAll);
     document.getElementById('validateAgain')?.addEventListener('click', handleValidateAgain);
     document.getElementById('refreshValidation')?.addEventListener('click', handleRefreshValidation);
-    
+
     // Initialize tooltips
     if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
         const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
@@ -29,7 +29,7 @@ function initAjaxValidation() {
             return new bootstrap.Tooltip(tooltipTriggerEl);
         });
     }
-    
+
     console.log('AJAX validation interface initialized');
 }
 
@@ -39,24 +39,24 @@ function handleApplyButtonClick(event) {
     const field = button.dataset.field;
     const source = button.dataset.source;
     const status = button.dataset.status;
-    
+
     // Don't do anything if the button is disabled or the status is 'match' or 'empty'
     if (button.classList.contains('disabled') || status === 'match' || status === 'empty') {
         return;
     }
-    
+
     // Get the value from the source
     const sourceCell = button.closest('td');
     const valueContainer = sourceCell.querySelector('.value-container');
     const value = getSourceValue(field, valueContainer);
-    
+
     // Get the book ID
     const bookId = document.querySelector('input[name="book_id"]').value;
-    
+
     // Show loading state
     button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Applying...';
     button.disabled = true;
-    
+
     // Make the AJAX request
     updateField(bookId, field, value, source)
         .then(response => {
@@ -65,22 +65,22 @@ function handleApplyButtonClick(event) {
                 const fieldRow = button.closest('tr');
                 const currentValueCell = fieldRow.querySelector('.current-value');
                 currentValueCell.innerHTML = response.data.formatted_value;
-                
+
                 // Update the button status
                 button.dataset.status = 'match';
                 button.classList.remove('btn-outline-warning', 'btn-outline-danger');
                 button.classList.add('btn-outline-success', 'disabled');
                 button.innerHTML = '<i class="fas fa-check"></i> Applied';
-                
+
                 // Show success message
                 showNotification('success', `Successfully updated field '${field}'`);
-                
+
                 // Add to validation history
                 addToValidationHistory(`Updated field '${field}' from source '${source}'`);
             } else {
                 // Show error message
                 showNotification('danger', response.message);
-                
+
                 // Reset button
                 button.innerHTML = '<i class="fas fa-times"></i> Failed';
                 setTimeout(() => {
@@ -92,7 +92,7 @@ function handleApplyButtonClick(event) {
         .catch(error => {
             console.error('Error updating field:', error);
             showNotification('danger', 'Error updating field: ' + error.message);
-            
+
             // Reset button
             button.innerHTML = '<i class="fas fa-times"></i> Failed';
             setTimeout(() => {
@@ -107,29 +107,29 @@ function handleApplyAllSource(event) {
     const button = event.currentTarget;
     const source = button.dataset.source;
     const bookId = document.querySelector('input[name="book_id"]').value;
-    
+
     // Show confirmation dialog
     if (!confirm(`Are you sure you want to apply all fields from ${source}?`)) {
         return;
     }
-    
+
     // Show loading state
     button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Applying...';
     button.disabled = true;
-    
+
     // Make the AJAX request
     applyAllFieldsFromSource(bookId, source)
         .then(response => {
             if (response.success) {
                 // Show success message
                 showNotification('success', response.message);
-                
+
                 // Reload the page to show all updated fields
                 location.reload();
             } else {
                 // Show error message
                 showNotification('danger', response.message);
-                
+
                 // Reset button
                 button.innerHTML = '<i class="fas fa-times"></i> Failed';
                 setTimeout(() => {
@@ -141,7 +141,7 @@ function handleApplyAllSource(event) {
         .catch(error => {
             console.error('Error applying all fields:', error);
             showNotification('danger', 'Error applying all fields: ' + error.message);
-            
+
             // Reset button
             button.innerHTML = '<i class="fas fa-times"></i> Failed';
             setTimeout(() => {
@@ -173,6 +173,20 @@ function handleValidateAgain(event) {
     // This will still use the form submission for now
     const form = document.getElementById('validationActionForm');
     document.getElementById('actionType').value = 'validate_again';
+
+    // Check if bypass cache is checked
+    const bypassCache = document.getElementById('bypassCache')?.checked || false;
+
+    // Add bypass_cache parameter to the form
+    let bypassInput = form.querySelector('input[name="bypass_cache"]');
+    if (!bypassInput) {
+        bypassInput = document.createElement('input');
+        bypassInput.type = 'hidden';
+        bypassInput.name = 'bypass_cache';
+        form.appendChild(bypassInput);
+    }
+    bypassInput.value = bypassCache ? '1' : '0';
+
     form.submit();
 }
 
@@ -181,6 +195,20 @@ function handleRefreshValidation(event) {
     // This will still use the form submission for now
     const form = document.getElementById('validationActionForm');
     document.getElementById('actionType').value = 'refresh_validation';
+
+    // Check if bypass cache is checked
+    const bypassCache = document.getElementById('bypassCache')?.checked || false;
+
+    // Add bypass_cache parameter to the form
+    let bypassInput = form.querySelector('input[name="bypass_cache"]');
+    if (!bypassInput) {
+        bypassInput = document.createElement('input');
+        bypassInput.type = 'hidden';
+        bypassInput.name = 'bypass_cache';
+        form.appendChild(bypassInput);
+    }
+    bypassInput.value = bypassCache ? '1' : '0';
+
     form.submit();
 }
 
@@ -188,7 +216,7 @@ function handleRefreshValidation(event) {
 function getSourceValue(field, valueContainer) {
     // For most fields, we can just get the text content
     let value = valueContainer.textContent.trim();
-    
+
     // For some fields, we need special handling
     switch (field) {
         case 'cover_url':
@@ -196,14 +224,14 @@ function getSourceValue(field, valueContainer) {
             const img = valueContainer.querySelector('img');
             value = img ? img.src : '';
             break;
-            
+
         case 'preview_link':
             // Get the link URL
             const link = valueContainer.querySelector('a');
             value = link ? link.href : '';
             break;
     }
-    
+
     return value;
 }
 
@@ -215,7 +243,7 @@ async function updateField(bookId, field, value, source) {
     formData.append('field', field);
     formData.append('value', value);
     formData.append('source', source);
-    
+
     const response = await fetch('ajax-update-field.php', {
         method: 'POST',
         body: formData,
@@ -223,7 +251,7 @@ async function updateField(bookId, field, value, source) {
             'X-Requested-With': 'XMLHttpRequest'
         }
     });
-    
+
     return await response.json();
 }
 
@@ -233,7 +261,7 @@ async function applyAllFieldsFromSource(bookId, source) {
     formData.append('action', 'apply_all_source');
     formData.append('book_id', bookId);
     formData.append('source', source);
-    
+
     const response = await fetch('ajax-update-field.php', {
         method: 'POST',
         body: formData,
@@ -241,7 +269,7 @@ async function applyAllFieldsFromSource(bookId, source) {
             'X-Requested-With': 'XMLHttpRequest'
         }
     });
-    
+
     return await response.json();
 }
 
@@ -254,11 +282,11 @@ function showNotification(type, message) {
         ${message}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     `;
-    
+
     // Add to the page
     const container = document.querySelector('.notification-container') || document.body;
     container.appendChild(notification);
-    
+
     // Auto-dismiss after 5 seconds
     setTimeout(() => {
         notification.classList.remove('show');
@@ -272,24 +300,24 @@ function showNotification(type, message) {
 function addToValidationHistory(action) {
     const historyContainer = document.querySelector('.history-container');
     if (!historyContainer) return;
-    
+
     const now = new Date();
     const timestamp = now.toISOString().replace('T', ' ').substring(0, 19);
-    
+
     const entry = document.createElement('div');
     entry.className = 'history-entry';
     entry.innerHTML = `
         <span class="history-timestamp">${timestamp}</span> -
         <span class="history-action">${action}</span>
     `;
-    
+
     // Add to the top of the history
     if (historyContainer.firstChild) {
         historyContainer.insertBefore(entry, historyContainer.firstChild);
     } else {
         historyContainer.appendChild(entry);
     }
-    
+
     // Remove "No validation history available" message if present
     const noHistoryMessage = historyContainer.querySelector('.text-muted');
     if (noHistoryMessage) {

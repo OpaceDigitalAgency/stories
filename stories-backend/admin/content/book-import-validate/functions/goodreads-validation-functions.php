@@ -159,10 +159,13 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
             'cache_ttl' => 0 // Don't cache results
         ];
 
-        // Check if we should bypass cache (from environment variable)
-        if (getenv('VPS_BYPASS_CACHE') === 'true') {
+        // Check if we should bypass cache (from environment variable or request parameter)
+        if (getenv('VPS_BYPASS_CACHE') === 'true' ||
+            isset($_GET['bypass_cache']) && $_GET['bypass_cache'] == '1' ||
+            isset($_POST['bypass_cache']) && $_POST['bypass_cache'] == '1') {
             $options['force'] = true;
-            error_log("🔄 VPS_BYPASS_CACHE environment variable set, forcing cache refresh");
+            putenv('VPS_BYPASS_CACHE=true'); // Set environment variable for downstream processes
+            error_log("🔄 Cache bypass enabled, forcing cache refresh");
         }
 
         try {
@@ -371,7 +374,17 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
                     $cleaned = trim($cleaned);
                     // Replace multiple spaces with a single space
                     $cleaned = preg_replace('/\s+/', ' ', $cleaned);
+                    // Replace HTML entities
+                    $cleaned = html_entity_decode($cleaned, ENT_QUOTES | ENT_HTML5, 'UTF-8');
                     return $cleaned;
+                } elseif (is_array($value)) {
+                    // If it's an array, clean each element
+                    return array_map(function($item) {
+                        if (is_string($item)) {
+                            return strip_tags(trim(preg_replace('/\s+/', ' ', html_entity_decode($item, ENT_QUOTES | ENT_HTML5, 'UTF-8'))));
+                        }
+                        return $item;
+                    }, $value);
                 }
                 return $value;
             };
@@ -388,6 +401,7 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
                 'language' => ['language'],
                 'format' => ['format', 'book_format'],
                 'series' => ['series'],
+                'series_number' => ['series_number', 'series_position'],
                 'description' => ['description'],
                 'cover_url' => ['cover_url', 'image_url', 'cover_image_url'],
                 'rating' => ['average_rating', 'rating'],

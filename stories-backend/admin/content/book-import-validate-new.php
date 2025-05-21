@@ -329,6 +329,13 @@ try {
                     error_log("Skipping VPS headless browser for validation (user requested)");
                 }
 
+                // Check if we should bypass cache
+                $bypassCache = isset($_GET['bypass_cache']) && $_GET['bypass_cache'] == '1';
+                if ($bypassCache) {
+                    putenv('VPS_BYPASS_CACHE=true');
+                    error_log("Bypassing cache for validation (user requested)");
+                }
+
                 // Force refresh validation data to ensure we get fresh results
                 $validationData = validateBookData($bookId, $isbn, $bookData['title'], $db, true);
                 error_log("Validation status: " . ($validationData['status'] ?? 'unknown'));

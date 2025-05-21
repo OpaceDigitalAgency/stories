@@ -142,6 +142,25 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
     const metadata = await page.evaluate((selectors) => {
       const metadata = {};
       
+      // Helper function to clean text
+      function cleanText(text) {
+        if (!text) return '';
+        // Remove HTML tags
+        text = text.replace(/<[^>]*>/g, '');
+        // Remove extra whitespace
+        text = text.replace(/\s+/g, ' ');
+        // Remove special characters
+        text = text.replace(/[^\x20-\x7E]/g, '');
+        return text.trim();
+      }
+
+      // Helper function to extract date
+      function extractDate(text) {
+        if (!text) return '';
+        const dateMatch = text.match(/(\d{4}(?:-\d{2}-\d{2})?)/);
+        return dateMatch ? dateMatch[1] : '';
+      }
+      
       // Try each selector and its fallbacks
       for (const [field, selectorObj] of Object.entries(selectors)) {
         const { primary, fallbacks = [] } = selectorObj;
@@ -155,7 +174,28 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
         }
         
         if (element) {
-          metadata[field] = element.textContent.trim();
+          let value = element.textContent;
+          
+          // Apply field-specific cleaning
+          switch (field) {
+            case 'publication_date':
+              value = extractDate(value);
+              break;
+            case 'rating':
+              value = value.match(/\d+\.?\d*/)?.[0] || '';
+              break;
+            case 'rating_count':
+            case 'review_count':
+              value = value.match(/\d+/)?.[0] || '';
+              break;
+            case 'pages':
+              value = value.match(/\d+/)?.[0] || '';
+              break;
+            default:
+              value = cleanText(value);
+          }
+          
+          metadata[field] = value;
         }
       }
       

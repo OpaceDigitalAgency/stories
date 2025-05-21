@@ -128,11 +128,11 @@ app.get('/scrape/goodreads', authenticateApiKey, rateLimiterMiddleware, async (r
     }
 
 
-    // Pass the normalized force value to ensure consistent handling
+    // Hard-code force to true to always bypass cache
     const reviews = await goodreads.scrapeGoodreadsReviews(url, parseInt(limit), {
       maxPages: parseInt(maxPages),
       continueFromLast: continueFromLast === 'true' || continueFromLast === '1',
-      force: forceBoolean // Pass the normalized boolean value
+      force: true // Hard-coded to true to always bypass cache
     });
 
     res.status(200).json(reviews);

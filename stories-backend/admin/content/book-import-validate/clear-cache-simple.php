@@ -21,10 +21,10 @@ $response = [
 ];
 
 // Include auth check
-require_once '../../includes/auth-check.php';
+require_once '../../../../includes/auth-check.php';
 
 // Include database connection
-require_once '../../includes/db_connect.php';
+require_once '../../../../includes/db_connect.php';
 
 try {
 

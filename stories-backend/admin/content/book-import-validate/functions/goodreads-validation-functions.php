@@ -150,32 +150,35 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null, $options = []
         putenv('HEADLESS_BROWSER_API_KEY=stories-scraper-api-key-2023');
 
         // Set default options for the fetcher
-        // Set default options for the fetcher
         $defaultOptions = [
             'timeout' => 30, // Longer timeout for validation
             'maxPages' => 1,
             'limit' => 1,
             'validation_mode' => true, // Flag to indicate we're just validating, not fetching reviews
             'skip_db_check' => true, // Skip database check for reviews
-            'cache_ttl' => 0 // Don't cache results
+            'cache_ttl' => 0, // Don't cache results
+            'force' => false // Default force value
         ];
 
-        // Merge provided options with defaults, but don't override force parameter
+        // Merge provided options with defaults
         $options = array_merge($defaultOptions, $options);
         
-        // Log force parameter for debugging
+        // Log force parameter and options for debugging
         error_log("Force parameter value: " . ($options['force'] ? 'true' : 'false'));
-
-        // Log options for debugging
         error_log("Goodreads fetch options: " . json_encode($options));
 
-        // Always set environment variables based on force parameter
-        putenv('VPS_BYPASS_CACHE=' . ($options['force'] ? 'true' : 'false'));
-        putenv('FORCE_FRESH_DATA=' . ($options['force'] ? 'true' : 'false'));
-        putenv('SKIP_CACHE=' . ($options['force'] ? 'true' : 'false'));
-        error_log("🔄 Cache bypass settings: VPS_BYPASS_CACHE=" . getenv('VPS_BYPASS_CACHE') .
-                 ", FORCE_FRESH_DATA=" . getenv('FORCE_FRESH_DATA') .
-                 ", SKIP_CACHE=" . getenv('SKIP_CACHE'));
+        // Set environment variables based on force parameter
+        if ($options['force']) {
+            putenv('VPS_BYPASS_CACHE=true');
+            putenv('FORCE_FRESH_DATA=true');
+            putenv('SKIP_CACHE=true');
+            error_log("🔄 Force refresh enabled - Cache bypass settings: VPS_BYPASS_CACHE=true, FORCE_FRESH_DATA=true, SKIP_CACHE=true");
+        } else {
+            putenv('VPS_BYPASS_CACHE=false');
+            putenv('FORCE_FRESH_DATA=false');
+            putenv('SKIP_CACHE=false');
+            error_log("🔄 Using cached data - Cache bypass settings: VPS_BYPASS_CACHE=false, FORCE_FRESH_DATA=false, SKIP_CACHE=false");
+        }
 
         try {
             // Determine whether to use ISBN or title/author for search

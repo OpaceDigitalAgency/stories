@@ -1969,7 +1969,7 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, 60); // 60 second timeout
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            "x-api-key: stories-scraper-api-key-2023"
+            "x-api-key: {$apiKey}"
         ]);
 
         // Enable verbose output for debugging

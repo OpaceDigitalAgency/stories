@@ -18,7 +18,7 @@ function extractWorkId(html) {
     logger.info(`Extracted work ID: ${workId}`);
     return workId;
   }
-  logger.warn('Could not extract work ID from HTML'); 
+  logger.warn('Could not extract work ID from HTML');
   return null;
 }
 
@@ -53,7 +53,8 @@ function extractBookId(url) {
  * @param {Object} options - Scraping options
  */
 async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
-  const force = options.force === true;
+  // Fix force parameter handling - accept boolean true, string 'true', or '1'
+  const force = options.force === true || options.force === 'true' || options.force === '1';
   const envForce = process.env.VPS_BYPASS_CACHE === 'true' || process.env.FORCE_FRESH_DATA === 'true';
   const forceFinal = force || envForce;
   const maxPages = options.maxPages ?? 100;
@@ -61,7 +62,7 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
 
   // Log force parameter sources for debugging
   logger.info(`Force refresh sources:
-    - Passed from options: ${force}
+    - Passed from options: ${force} (raw value: ${JSON.stringify(options.force)})
     - Environment variables: ${envForce}
     - Final force value: ${forceFinal}
   `);
@@ -102,7 +103,7 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
   // Handle cache result
   if (cachedData && !forceFinal) {
     logger.info(`Using cached data for book ${bookId}`);
-    
+
     if (continueFromLast) {
       logger.info(`Using cached data for continuation`);
       return { ...cachedData, source: 'cache' };
@@ -258,7 +259,7 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
         addStep('graphql_request', 'error', 'GraphQL request failed');
         break;
       }
-      
+
       addStep('graphql_request', 'success', 'Successfully fetched GraphQL data', {
         new_reviews: result.reviews.length,
         has_more: result.hasMore,
@@ -272,7 +273,7 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
       const newReviews = result.reviews.filter(review => {
         // Skip duplicates when continuing from cache
         if (continueFromLast) {
-          return !reviews.some(existing => 
+          return !reviews.some(existing =>
             existing.reviewer_name === review.reviewer_name &&
             existing.review_text.substring(0, 50) === review.review_text.substring(0, 50)
           );

@@ -20,7 +20,7 @@ const db = new sqlite3.Database(dbPath, (err) => {
     logger.error(`Error opening cache database: ${err.message}`);
   } else {
     logger.info(`Connected to cache database at ${dbPath}`);
-    
+
     // Create tables if they don't exist
     db.run(`
       CREATE TABLE IF NOT EXISTS reviews_cache (
@@ -46,14 +46,17 @@ const cache = {
    */
   get: (source, identifier, options = {}) => {
     return new Promise((resolve, reject) => {
+      // Normalize force parameter - accept boolean true, string 'true', or '1'
+      const force = options.force === true || options.force === 'true' || options.force === '1';
+
       // Always return null if cache is disabled or force refresh is requested
-      if (!config.cache.enabled || options.force) {
-        logger.info(`Cache disabled or force refresh requested for ${source}:${identifier}`);
+      if (!config.cache.enabled || force) {
+        logger.info(`Cache disabled or force refresh requested for ${source}:${identifier} (force=${JSON.stringify(options.force)})`);
         return resolve(null);
       }
-      
+
       const now = Date.now();
-      
+
       db.get(
         'SELECT data, expires_at FROM reviews_cache WHERE source = ? AND identifier = ? AND expires_at > ?',
         [source, identifier, now],
@@ -62,7 +65,7 @@ const cache = {
             logger.error(`Cache get error: ${err.message}`);
             return resolve(null);
           }
-          
+
           if (row) {
             logger.info(`Cache hit for ${source}:${identifier}`);
             try {
@@ -80,7 +83,7 @@ const cache = {
       );
     });
   },
-  
+
   /**
    * Store data in the cache
    * @param {string} source - The source (e.g., 'goodreads', 'amazon')
@@ -94,16 +97,16 @@ const cache = {
       if (!config.cache.enabled) {
         return resolve(false);
       }
-      
+
       const now = Date.now();
       const expiresAt = now + (ttl || config.cache.ttl);
-      
+
       try {
         const jsonData = JSON.stringify(data);
-        
+
         db.run(
-          `INSERT OR REPLACE INTO reviews_cache 
-           (source, identifier, data, created_at, expires_at) 
+          `INSERT OR REPLACE INTO reviews_cache
+           (source, identifier, data, created_at, expires_at)
            VALUES (?, ?, ?, ?, ?)`,
           [source, identifier, jsonData, now, expiresAt],
           function(err) {
@@ -111,7 +114,7 @@ const cache = {
               logger.error(`Cache set error: ${err.message}`);
               return resolve(false);
             }
-            
+
             logger.info(`Cached ${source}:${identifier} (expires ${new Date(expiresAt).toISOString()})`);
             return resolve(true);
           }
@@ -122,7 +125,7 @@ const cache = {
       }
     });
   },
-  
+
   /**
    * Clear a specific cache entry
    * @param {string} source - The source (e.g., 'goodreads', 'amazon')
@@ -139,7 +142,7 @@ const cache = {
             logger.error(`Cache clear error for ${source}:${identifier}: ${err.message}`);
             return resolve(false);
           }
-          
+
           logger.info(`Cleared cache entry for ${source}:${identifier}`);
           return resolve(true);
         }
@@ -154,7 +157,7 @@ const cache = {
   clearExpired: () => {
     return new Promise((resolve, reject) => {
       const now = Date.now();
-      
+
       db.run(
         'DELETE FROM reviews_cache WHERE expires_at <= ?',
         [now],
@@ -163,14 +166,14 @@ const cache = {
             logger.error(`Cache clear error: ${err.message}`);
             return resolve(0);
           }
-          
+
           logger.info(`Cleared ${this.changes} expired cache entries`);
           return resolve(this.changes);
         }
       );
     });
   },
-  
+
   /**
    * Close the database connection
    */

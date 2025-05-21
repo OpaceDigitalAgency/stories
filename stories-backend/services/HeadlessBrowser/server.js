@@ -13,7 +13,7 @@ const browser = require('./utils/browser');
 const cache = require('./utils/cache');
 
 // Import scrapers
-const goodreads = require('./scrapers/goodreads');
+const goodreads = require('./scrapers/goodreads/index.js');
 const amazon = require('./scrapers/amazon');
 
 // Initialize Express app
@@ -126,10 +126,11 @@ app.get('/scrape/goodreads', authenticateApiKey, rateLimiterMiddleware, async (r
     }
 
 
+    // Pass the raw force value to ensure it's properly handled downstream
     const reviews = await goodreads.scrapeGoodreadsReviews(url, parseInt(limit), {
       maxPages: parseInt(maxPages),
       continueFromLast: continueFromLast === 'true' || continueFromLast === '1',
-      force: force === 'true' || force === '1' || force === true
+      force: force // Pass the raw value, normalization happens in the scraper
     });
 
     res.status(200).json(reviews);

@@ -14,11 +14,14 @@ const config = require('../../config/default');
  * @returns {Object|null} Cached data or null
  */
 async function checkCache(bookId, options = {}) {
+  // Extract and normalize options
   const {
-    force = false,
     continueFromLast = false,
     limit = 50
   } = options;
+
+  // Fix force parameter handling - accept boolean true, string 'true', or '1'
+  const force = options.force === true || options.force === 'true' || options.force === '1';
 
   // Check environment variables for force refresh
   const envForce = process.env.VPS_BYPASS_CACHE === 'true' ||
@@ -31,7 +34,7 @@ async function checkCache(bookId, options = {}) {
   // Log cache check parameters with detailed force information
   logger.info(`Cache check for book ${bookId}:
     - Force refresh: ${shouldForceRefresh}
-      * Options force: ${force}
+      * Options force: ${force} (raw value: ${JSON.stringify(options.force)})
       * VPS_BYPASS_CACHE: ${process.env.VPS_BYPASS_CACHE}
       * FORCE_FRESH_DATA: ${process.env.FORCE_FRESH_DATA}
       * SKIP_CACHE: ${process.env.SKIP_CACHE}

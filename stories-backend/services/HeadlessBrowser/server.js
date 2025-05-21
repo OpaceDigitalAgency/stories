@@ -87,9 +87,11 @@ app.get('/scrape/goodreads', authenticateApiKey, rateLimiterMiddleware, async (r
 
     logger.info(`Extracted book ID: ${bookId} from URL: ${url}`);
 
-    // Check if we should bypass cache
-    if (force === 'true' || force === '1' || force === true) {
-      logger.info(`Force parameter set to ${force}, bypassing cache`);
+    // Check if we should bypass cache - normalize force parameter to boolean
+    const forceBoolean = force === true || force === 'true' || force === '1' || force === 1;
+
+    if (forceBoolean) {
+      logger.info(`Force parameter set to ${force} (normalized to true), bypassing cache`);
 
       // If we have a book ID, clear its cache entry
       if (bookId) {
@@ -110,7 +112,7 @@ app.get('/scrape/goodreads', authenticateApiKey, rateLimiterMiddleware, async (r
           db.close();
         });
       }
-    } else if ((!force || force === 'false' || force === '0') && bookId) {
+    } else if (!forceBoolean && bookId) {
       // Check if we have cached data
       const cachedData = await cache.get('goodreads', bookId);
       if (cachedData) {
@@ -126,11 +128,11 @@ app.get('/scrape/goodreads', authenticateApiKey, rateLimiterMiddleware, async (r
     }
 
 
-    // Pass the raw force value to ensure it's properly handled downstream
+    // Pass the normalized force value to ensure consistent handling
     const reviews = await goodreads.scrapeGoodreadsReviews(url, parseInt(limit), {
       maxPages: parseInt(maxPages),
       continueFromLast: continueFromLast === 'true' || continueFromLast === '1',
-      force: force // Pass the raw value, normalization happens in the scraper
+      force: forceBoolean // Pass the normalized boolean value
     });
 
     res.status(200).json(reviews);

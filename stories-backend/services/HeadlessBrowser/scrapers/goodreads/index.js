@@ -54,7 +54,8 @@ function extractBookId(url) {
  */
 async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
   // Fix force parameter handling - accept boolean true, string 'true', or '1'
-  const force = options.force === true || options.force === 'true' || options.force === '1';
+  // Convert the force parameter to a boolean to ensure consistent handling
+  const force = options.force === true || options.force === 'true' || options.force === '1' || options.force === 1;
   const envForce = process.env.VPS_BYPASS_CACHE === 'true' || process.env.FORCE_FRESH_DATA === 'true';
   const forceFinal = force || envForce;
   const maxPages = options.maxPages ?? 100;

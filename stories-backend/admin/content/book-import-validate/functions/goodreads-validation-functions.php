@@ -23,7 +23,7 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
         $detailedStatus = [
             'status' => 'initializing',
             'message' => 'Starting Goodreads data fetch',
-            'method' => 'review_fetcher',
+            'method' => 'headless',
             'processing_time' => 0,
             'steps' => []
         ];
@@ -122,7 +122,8 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
             $detailedStatus['steps'][] = [
                 'name' => 'url_generation',
                 'status' => 'success',
-                'message' => "Generated URL from title/author: $searchUrl"
+                'message' => "Generated URL from title/author: $searchUrl",
+                'fetch_url' => $searchUrl
             ];
         } else {
             // Fallback to search URL with ISBN
@@ -131,7 +132,8 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
             $detailedStatus['steps'][] = [
                 'name' => 'url_generation',
                 'status' => 'info',
-                'message' => "Generated URL from ISBN: $searchUrl"
+                'message' => "Generated URL from ISBN: $searchUrl",
+                'fetch_url' => $searchUrl
             ];
         }
 
@@ -139,7 +141,8 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
         $detailedStatus['steps'][] = [
             'name' => 'review_fetcher',
             'status' => 'in_progress',
-            'message' => "Using GoodreadsReviewFetcher to find book"
+            'message' => "Using GoodreadsReviewFetcher to find book",
+            'fetch_url' => $searchUrl
         ];
 
         // Make sure we're using the correct API key
@@ -192,7 +195,8 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
                     $detailedStatus['steps'][] = [
                         'name' => 'book_url',
                         'status' => 'success',
-                        'message' => "Found book URL: $bookUrl"
+                        'message' => "Found book URL: $bookUrl",
+                        'fetch_url' => $bookUrl
                     ];
 
                     // Make sure we're not using a reviews URL when fetching book metadata

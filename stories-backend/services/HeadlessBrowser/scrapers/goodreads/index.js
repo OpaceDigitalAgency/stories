@@ -3,7 +3,7 @@
  */
 const browser = require('../../utils/browser');
 const logger = require('../../utils/logger');
-const { extractBookMetadata } = require('./selectors');
+const { SELECTORS, extractBookMetadata } = require('./selectors');
 const { makeGraphQLRequest } = require('./graphql');
 const { checkCache, saveToCache } = require('./cache');
 

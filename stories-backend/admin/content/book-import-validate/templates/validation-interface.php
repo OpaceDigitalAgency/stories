@@ -52,9 +52,9 @@ $sources = array_keys($sourceData);
                         <i class="fas fa-trash-alt"></i> Clear All Caches
                     </button>
 
-                    <a href="book-import-validate/download-raw-data.php?book_id=<?php echo (int)$book['id']; ?>"
+                    <a href="<?php echo dirname($_SERVER['PHP_SELF']); ?>/book-import-validate/download-raw-data.php?book_id=<?php echo (int)$book['id']; ?>"
                        class="btn btn-info btn-lg ms-2"
-                       download="book_<?php echo (int)$book['id']; ?>_data.json">
+                       target="_blank">
                         <i class="fas fa-download"></i> Download Raw Data
                     </a>
 
@@ -72,17 +72,24 @@ $sources = array_keys($sourceData);
                                 // Make AJAX request to clear cache
                                 fetch('book-import-validate/clear-goodreads-cache.php')
                                     .then(response => {
-                                        // Check if response is OK
-                                        if (!response.ok) {
-                                            throw new Error(`HTTP error! Status: ${response.status}`);
-                                        }
-
-                                        // Try to parse JSON
-                                        try {
-                                            return response.json();
-                                        } catch (e) {
-                                            throw new Error('Invalid JSON response');
-                                        }
+                                        // Even if the response is not OK, try to parse the JSON
+                                        // as it might contain useful error information
+                                        return response.json().catch(e => {
+                                            // If JSON parsing fails, create a simple error object
+                                            if (!response.ok) {
+                                                return {
+                                                    status: 'error',
+                                                    message: `HTTP error! Status: ${response.status}`,
+                                                    actions: [{
+                                                        name: 'http_error',
+                                                        status: 'error',
+                                                        message: `Server returned HTTP ${response.status}`
+                                                    }]
+                                                };
+                                            } else {
+                                                throw new Error('Invalid JSON response');
+                                            }
+                                        });
                                     })
                                     .then(data => {
                                         console.log('Cache clear response:', data);

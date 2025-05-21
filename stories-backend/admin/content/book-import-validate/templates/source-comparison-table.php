@@ -111,6 +111,12 @@ function formatFieldValue($field, $value) {
 
         case 'characters':
         case 'settings':
+            // Special handling for characters field to fix the review text issue
+            if ($field === 'characters' && is_string($value) && strpos($value, 'the key reason why I have given this book') !== false) {
+                // This is clearly review text, not character data
+                return '<span class="text-danger">Invalid data (review text)</span>';
+            }
+
             // Handle array or JSON
             if (is_array($value)) {
                 return implode(', ', $value);
@@ -118,6 +124,13 @@ function formatFieldValue($field, $value) {
                 try {
                     $decoded = json_decode($value, true);
                     if (is_array($decoded)) {
+                        // Filter out any items that look like review text
+                        $decoded = array_filter($decoded, function($item) {
+                            return !is_string($item) ||
+                                   (strpos($item, 'the key reason why') === false &&
+                                    strpos($item, 'stars') === false &&
+                                    strpos($item, 'rating') === false);
+                        });
                         return implode(', ', $decoded);
                     }
                 } catch (Exception $e) {
@@ -127,6 +140,11 @@ function formatFieldValue($field, $value) {
 
             // Clean up characters and settings with HTML artifacts
             if (is_string($value)) {
+                // Check if this is review text
+                if (strpos($value, 'stars') !== false && strpos($value, 'rating') !== false) {
+                    return '<span class="text-danger">Invalid data (review text)</span>';
+                }
+
                 // Remove HTML tags
                 $value = strip_tags($value);
 
@@ -135,6 +153,9 @@ function formatFieldValue($field, $value) {
 
                 // Remove role="link" and other attributes
                 $value = preg_replace('/\s+role="[^"]*"/i', '', $value);
+
+                // Remove unicode escape sequences
+                $value = preg_replace('/\\\\u[\da-f]{4}/i', '', $value);
 
                 // Trim whitespace
                 $value = trim($value);

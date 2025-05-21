@@ -727,6 +727,36 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         } else if (preg_match('/<a[^>]*href="\/series\/\d+[^"]*"[^>]*>([^<]+)<\/a>/i', $response, $matches)) {
             $details['series'] = trim($matches[1]);
             $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found series using series ID link pattern: {$details['series']}");
+        } else if (preg_match('/Series<\/h2>.*?<div[^>]*>(.*?)<\/div>/is', $response, $matches)) {
+            $seriesHtml = $matches[1];
+            if (preg_match('/<a[^>]*>(.*?)<\/a>/i', $seriesHtml, $seriesMatches)) {
+                $seriesText = trim($seriesMatches[1]);
+                // Clean up series format like "The Worst Witch (#1)"
+                if (preg_match('/^(.*?)\s*\(#\d+\)$/', $seriesText, $seriesCleanMatches)) {
+                    $details['series'] = trim($seriesCleanMatches[1]);
+                } else {
+                    $details['series'] = $seriesText;
+                }
+                $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found series using h2 pattern: {$details['series']}");
+            }
+        } else if (preg_match('/Series<\/h3>.*?<div[^>]*>(.*?)<\/div>/is', $response, $matches)) {
+            $seriesHtml = $matches[1];
+            if (preg_match('/<a[^>]*>(.*?)<\/a>/i', $seriesHtml, $seriesMatches)) {
+                $seriesText = trim($seriesMatches[1]);
+                // Clean up series format like "The Worst Witch (#1)"
+                if (preg_match('/^(.*?)\s*\(#\d+\)$/', $seriesText, $seriesCleanMatches)) {
+                    $details['series'] = trim($seriesCleanMatches[1]);
+                } else {
+                    $details['series'] = $seriesText;
+                }
+                $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found series using h3 pattern: {$details['series']}");
+            }
+        } else if (preg_match('/<a[^>]*href="\/series\/[^"]*"[^>]*>.*?<span[^>]*>(.*?)<\/span>/is', $response, $matches)) {
+            $details['series'] = trim($matches[1]);
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found series using series link with span pattern: {$details['series']}");
+        } else if (preg_match('/Book\s+\d+\s+of\s+([^<]+)/i', $response, $matches)) {
+            $details['series'] = trim($matches[1]);
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found series using 'Book X of' pattern: {$details['series']}");
         }
 
         // Extract genres/shelves
@@ -746,6 +776,7 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         // Extract characters (if available)
         if (preg_match('/Characters\s*:?\s*([^<\n]+)/i', $response, $matches)) {
             $details['characters'] = array_map('trim', explode(',', $matches[1]));
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found characters using text pattern: " . implode(', ', $details['characters']));
         } else if (preg_match('/<dt[^>]*>Characters<\/dt>\s*<dd[^>]*>(.*?)<\/dd>/is', $response, $matches)) {
             // Extract character links from the HTML
             preg_match_all('/<a[^>]*>([^<]+)<\/a>/i', $matches[1], $charMatches);
@@ -754,6 +785,7 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             } else {
                 $details['characters'] = [trim(strip_tags($matches[1]))];
             }
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found characters using dt/dd pattern: " . implode(', ', $details['characters']));
         } else if (preg_match('/<span[^>]*>Characters:<\/span>\s*<span[^>]*>(.*?)<\/span>/is', $response, $matches)) {
             // Extract character links from the HTML
             preg_match_all('/<a[^>]*>([^<]+)<\/a>/i', $matches[1], $charMatches);
@@ -762,6 +794,7 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             } else {
                 $details['characters'] = [trim(strip_tags($matches[1]))];
             }
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found characters using span pattern: " . implode(', ', $details['characters']));
         } else if (preg_match('/<div[^>]*class="DescListItem"[^>]*>.*?<dt>Characters<\/dt>.*?<dd>(.*?)<\/dd>/is', $response, $matches)) {
             // Extract character links from the HTML (new Goodreads design)
             preg_match_all('/<a[^>]*>([^<]+)<\/a>/i', $matches[1], $charMatches);
@@ -770,6 +803,25 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             } else {
                 $details['characters'] = [trim(strip_tags($matches[1]))];
             }
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found characters using DescListItem pattern: " . implode(', ', $details['characters']));
+        } else if (preg_match('/Characters<\/h2>.*?<div[^>]*>(.*?)<\/div>/is', $response, $matches)) {
+            // Extract character links from the HTML (newer Goodreads design with h2 heading)
+            preg_match_all('/<a[^>]*>([^<]+)<\/a>/i', $matches[1], $charMatches);
+            if (!empty($charMatches[1])) {
+                $details['characters'] = array_map('trim', $charMatches[1]);
+            } else {
+                $details['characters'] = [trim(strip_tags($matches[1]))];
+            }
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found characters using h2 pattern: " . implode(', ', $details['characters']));
+        } else if (preg_match('/Characters<\/h3>.*?<div[^>]*>(.*?)<\/div>/is', $response, $matches)) {
+            // Extract character links from the HTML (newer Goodreads design with h3 heading)
+            preg_match_all('/<a[^>]*>([^<]+)<\/a>/i', $matches[1], $charMatches);
+            if (!empty($charMatches[1])) {
+                $details['characters'] = array_map('trim', $charMatches[1]);
+            } else {
+                $details['characters'] = [trim(strip_tags($matches[1]))];
+            }
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found characters using h3 pattern: " . implode(', ', $details['characters']));
         }
 
         // Extract settings (if available)

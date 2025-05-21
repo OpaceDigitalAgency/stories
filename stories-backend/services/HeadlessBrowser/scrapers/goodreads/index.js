@@ -19,7 +19,7 @@ function extractWorkId(html) {
     logger.info(`Extracted work ID: ${workId}`);
     return workId;
   }
-  logger.warn('Could not extract work ID from HTML');
+  logger.warn('Could not extract work ID from HTML'); 
   return null;
 }
 
@@ -54,21 +54,17 @@ function extractBookId(url) {
  * @param {Object} options - Scraping options
  */
 async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
-  // Parse force parameter from query string if present
-  const urlObj = new URL(goodreadsUrl);
-  const forceParam = urlObj.searchParams.get('force') === '1';
+  const force = options.force === true;
   const envForce = process.env.VPS_BYPASS_CACHE === 'true' || process.env.FORCE_FRESH_DATA === 'true';
+  const forceFinal = force || envForce;
   const maxPages = options.maxPages ?? 100;
   const continueFromLast = options.continueFromLast ?? false;
-  const force = forceParam || envForce || options.force === true;
 
   // Log force parameter sources for debugging
   logger.info(`Force refresh sources:
-    - URL parameter: ${forceParam}
+    - Passed from options: ${force}
     - Environment variables: ${envForce}
-    - VPS_BYPASS_CACHE: ${process.env.VPS_BYPASS_CACHE}
-    - FORCE_FRESH_DATA: ${process.env.FORCE_FRESH_DATA} 
-    - Final force value: ${force}
+    - Final force value: ${forceFinal}
   `);
 
   // Initialize steps array for detailed logging
@@ -90,7 +86,7 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
     limit,
     maxPages,
     continueFromLast,
-    force
+    force: forceFinal
   });
 
   // Extract book ID for caching
@@ -101,11 +97,11 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
 
   // Check cache with detailed logging
   logger.info(`Checking cache for book ${bookId}`);
-  logger.info(`Force refresh: ${force}, Force param from URL: ${forceParam}`);
-  const cachedData = await checkCache(bookId, { force, continueFromLast, limit });
+  logger.info(`Force refresh: ${forceFinal}`);
+  const cachedData = await checkCache(bookId, { force: forceFinal, continueFromLast, limit });
 
   // Handle cache result
-  if (cachedData && !force) {
+  if (cachedData && !forceFinal) {
     logger.info(`Using cached data for book ${bookId}`);
     
     if (continueFromLast) {
@@ -120,7 +116,7 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
     }
 
     logger.info(`Cached reviews insufficient: ${cachedData.reviews?.length} < ${limit}`);
-  } else if (cachedData && force) {
+  } else if (cachedData && forceFinal) {
     logger.info(`Force refresh requested - skipping cache`);
   } else {
     logger.info(`No cached data found for book ${bookId} - proceeding`);

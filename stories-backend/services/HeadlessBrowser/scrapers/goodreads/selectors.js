@@ -76,9 +76,24 @@ const SELECTORS = {
     ]
   },
   awards: {
-    primary: '.WorkDetails .DescListItem dt:contains("Literary awards")',
+    primary: '.DescListItem dt:contains("Literary awards") + dd',
     fallbacks: [
+      '.BookDetails__list .DescListItem dt:contains("Literary awards") + dd',
       '.Awards'
+    ]
+  },
+  characters: {
+    primary: '.DescListItem dt:contains("Characters") + dd',
+    fallbacks: [
+      '.BookDetails__list .DescListItem dt:contains("Characters") + dd',
+      '.Characters'
+    ]
+  },
+  settings: {
+    primary: '.DescListItem dt:contains("Setting") + dd',
+    fallbacks: [
+      '.BookDetails__list .DescListItem dt:contains("Setting") + dd',
+      '.Settings'
     ]
   }
 };
@@ -158,7 +173,9 @@ async function extractBookMetadata(page) {
           }
           break;
         case 'awards':
-          metadata.awards = value.split(',').map(award => award.trim());
+        case 'characters':
+        case 'settings':
+          metadata[field] = value.split(',').map(item => item.trim());
           break;
         default:
           metadata[field] = value;

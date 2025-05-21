@@ -479,8 +479,7 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
 
         // Build the request URL
         $url = "{$apiUrl}/scrape/goodreads?url=" . urlencode($bookUrl) . "&limit=1";
-        
-        
+    
         // CHATHPT -Propagate force flag to headless-browser request
         if (!empty($options['force'] ?? false)) {
             $url .= '&force=1';
@@ -1945,6 +1944,10 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         
         // Add limit parameter (required by Node.js server)
         $url .= "&limit={$limit}";
+
+         // CHATGPT - Append force=true if requested
+        $forceValue = (isset($options['force']) && $options['force']) ? "1" : "0";
+        $url .= "&force={$forceValue}";
 
         // Log the actual limit being used vs requested
         $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Using actual limit={$limit} (original requestLimit was {$requestLimit})");

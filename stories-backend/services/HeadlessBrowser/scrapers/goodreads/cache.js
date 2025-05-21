@@ -82,10 +82,9 @@ async function checkCache(bookId, options = {}) {
 }
 
 /**
- * Clear cache for a specific book
- * @param {string} bookId - Goodreads book ID
+ * Note: Cache clearing is handled by cache.clear() from utils/cache.js
+ * @see ../../utils/cache.js
  */
-// Function removed as we now use cache.clear() directly
 
 /**
  * Save data to cache

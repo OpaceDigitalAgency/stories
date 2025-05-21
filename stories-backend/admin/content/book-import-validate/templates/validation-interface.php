@@ -47,6 +47,44 @@ $sources = array_keys($sourceData);
                             <i class="fas fa-sync-alt"></i> Force Fresh Data
                         </button>
                     </form>
+
+                    <button type="button" class="btn btn-danger btn-lg ms-2" id="clearCacheBtn">
+                        <i class="fas fa-trash-alt"></i> Clear All Caches
+                    </button>
+
+                    <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        document.getElementById('clearCacheBtn').addEventListener('click', function() {
+                            if (confirm('This will clear all caches for Goodreads data. Continue?')) {
+                                // Show loading indicator
+                                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Clearing...';
+                                this.disabled = true;
+
+                                // Make AJAX request to clear cache
+                                fetch('book-import-validate/clear-goodreads-cache.php')
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        // Show result
+                                        if (data.status === 'success' || data.status === 'partial') {
+                                            alert('Cache cleared successfully. ' + data.message);
+                                            // Reload the page to get fresh data
+                                            window.location.reload();
+                                        } else {
+                                            alert('Error clearing cache: ' + data.message);
+                                            this.innerHTML = '<i class="fas fa-trash-alt"></i> Clear All Caches';
+                                            this.disabled = false;
+                                        }
+                                    })
+                                    .catch(error => {
+                                        console.error('Error:', error);
+                                        alert('Error clearing cache: ' + error);
+                                        this.innerHTML = '<i class="fas fa-trash-alt"></i> Clear All Caches';
+                                        this.disabled = false;
+                                    });
+                            }
+                        });
+                    });
+                    </script>
                 </div>
             </div>
         </div>

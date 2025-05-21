@@ -93,8 +93,6 @@ function formatFieldValue($field, $value) {
             return number_format((int)$value);
 
         case 'awards':
-        case 'characters':
-        case 'settings':
         case 'genres':
             // Handle array or JSON
             if (is_array($value)) {
@@ -111,6 +109,39 @@ function formatFieldValue($field, $value) {
             }
             return htmlspecialchars($value);
 
+        case 'characters':
+        case 'settings':
+            // Handle array or JSON
+            if (is_array($value)) {
+                return implode(', ', $value);
+            } elseif (is_string($value) && (strpos($value, '[') === 0 || strpos($value, '{') === 0)) {
+                try {
+                    $decoded = json_decode($value, true);
+                    if (is_array($decoded)) {
+                        return implode(', ', $decoded);
+                    }
+                } catch (Exception $e) {
+                    // Fall through to default
+                }
+            }
+
+            // Clean up characters and settings with HTML artifacts
+            if (is_string($value)) {
+                // Remove HTML tags
+                $value = strip_tags($value);
+
+                // Remove ", link, opens in new tab" text
+                $value = preg_replace('/, link, opens in new tab.*$/i', '', $value);
+
+                // Remove role="link" and other attributes
+                $value = preg_replace('/\s+role="[^"]*"/i', '', $value);
+
+                // Trim whitespace
+                $value = trim($value);
+            }
+
+            return htmlspecialchars($value);
+
         case 'series':
             // Handle series which might be an array or a string
             if (is_array($value)) {
@@ -125,10 +156,27 @@ function formatFieldValue($field, $value) {
                     // Fall through to default
                 }
             }
-            // Clean up series format like "The Worst Witch (#1)"
-            if (is_string($value) && preg_match('/^(.*?)\s*\(#\d+\)$/', $value, $matches)) {
-                return htmlspecialchars($matches[1]);
+
+            // Clean up series format with HTML artifacts
+            if (is_string($value)) {
+                // Remove HTML tags
+                $value = strip_tags($value);
+
+                // Remove ", link, opens in new tab" text
+                $value = preg_replace('/, link, opens in new tab.*$/i', '', $value);
+
+                // Remove role="link" and other attributes
+                $value = preg_replace('/\s+role="[^"]*"/i', '', $value);
+
+                // Clean up series format like "The Worst Witch (#1)"
+                if (preg_match('/^(.*?)\s*\(#\d+\)$/', $value, $matches)) {
+                    $value = $matches[1];
+                }
+
+                // Trim whitespace
+                $value = trim($value);
             }
+
             return htmlspecialchars($value);
 
         default:

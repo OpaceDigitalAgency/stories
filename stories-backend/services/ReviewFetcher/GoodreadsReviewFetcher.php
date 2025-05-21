@@ -211,12 +211,37 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             ];
         }
 
+        // Prepare final response with status, steps, and data
+        $response = [
+            'status' => !empty($reviews) ? 'success' : 'error',
+            'message' => $this->lastError ?? (!empty($reviews) ? 'Successfully fetched book data' : 'No data found'),
+            'steps' => [
+                [
+                    'name' => 'find_book_url',
+                    'status' => !empty($bookUrl) ? 'success' : 'error',
+                    'message' => !empty($bookUrl) ? "Found book URL: $bookUrl" : "No book URL found for ISBN: $isbn"
+                ],
+                [
+                    'name' => 'fetch_book_details',
+                    'status' => !empty($bookDetails) ? 'success' : 'error',
+                    'message' => !empty($bookDetails) ? 'Successfully fetched book details' : 'Failed to fetch book details'
+                ],
+                [
+                    'name' => 'fetch_reviews',
+                    'status' => !empty($reviews) ? 'success' : 'error',
+                    'message' => !empty($reviews) ? 'Successfully fetched reviews' : 'No reviews found'
+                ]
+            ],
+            'data' => []
+        ];
+
         // Add book metadata to each review
         foreach ($reviews as $key => $review) {
             $reviews[$key]['book_metadata'] = $bookDetails;
         }
 
-        return $reviews;
+        $response['data'] = $reviews;
+        return $response;
     }
 
     /**

@@ -1397,12 +1397,15 @@ function enrichBookData($bookId, $db) {
                         $bookData['google_books'] = [
                             'title' => $response[0]['book_title'] ?? '',
                             'author' => $response[0]['book_author'] ?? '',
-                            'publisher' => $response[0]['book_publisher'] ?? '',
-                            'publication_date' => $response[0]['book_publication_date'] ?? '',
-                            'page_count' => $response[0]['book_page_count'] ?? '',
-                            'categories' => $response[0]['book_categories'] ?? [],
-                            'description' => $response[0]['book_description'] ?? '',
-                            'source' => 'Google Books'
+                            'publisher' => $response['data'][0]['book_metadata']['publisher'] ?? '',
+                            'publication_date' => $response['data'][0]['book_metadata']['published_date'] ?? '',
+                            'page_count' => $response['data'][0]['book_metadata']['page_count'] ?? '',
+                            'categories' => $response['data'][0]['book_metadata']['genres'] ?? [],
+                            'description' => $response['data'][0]['book_metadata']['description'] ?? '',
+                            'source' => 'Google Books',
+                            'status' => $response['status'],
+                            'message' => $response['message'],
+                            'steps' => $response['steps']
                         ];
                     }
                 } catch (Exception $e) {
@@ -1421,13 +1424,23 @@ function enrichBookData($bookId, $db) {
                     $response = $openLibraryFetcher->fetchReviewsByISBN($isbn, 1);
                     if (!empty($response)) {
                         $bookData['open_library'] = [
-                            'title' => $response[0]['book_title'] ?? '',
-                            'author' => $response[0]['book_author'] ?? '',
-                            'publisher' => $response[0]['book_publisher'] ?? '',
-                            'publication_date' => $response[0]['book_publication_date'] ?? '',
-                            'page_count' => $response[0]['book_page_count'] ?? '',
-                            'categories' => $response[0]['book_categories'] ?? [],
-                            'description' => $response[0]['book_description'] ?? '',
+                            'title' => $response['data'][0]['book_title'] ?? '',
+                            'author' => $response['data'][0]['book_author'] ?? '',
+                            'publisher' => $response['data'][0]['book_publisher'] ?? '',
+                            'publication_date' => $response['data'][0]['book_publication_date'] ?? '',
+                            'page_count' => $response['data'][0]['book_page_count'] ?? '',
+                            'categories' => $response['data'][0]['book_categories'] ?? [],
+                            'description' => $response['data'][0]['book_description'] ?? '',
+                            'source' => 'Open Library',
+                            'status' => $response['status'],
+                            'message' => $response['message'],
+                            'steps' => $response['steps']
+                        ];
+                    } else {
+                        $bookData['open_library'] = [
+                            'status' => $response['status'] ?? 'error',
+                            'message' => $response['message'] ?? 'No data found',
+                            'steps' => $response['steps'] ?? [],
                             'source' => 'Open Library'
                         ];
                     }
@@ -1453,18 +1466,33 @@ function enrichBookData($bookId, $db) {
                     // Use the fetcher to get book data - just fetch 1 review to get book metadata
                     $response = $goodreadsFetcher->fetchReviewsByISBN($isbn, 1, $options);
 
-                    if (!empty($response)) {
+                    if (!empty($response['data'])) {
+                        $metadata = $response['data'][0]['book_metadata'] ?? [];
                         $bookData['goodreads'] = [
-                            'title' => $response[0]['book_title'] ?? '',
-                            'author' => $response[0]['book_author'] ?? '',
-                            'publisher' => $response[0]['book_publisher'] ?? '',
-                            'publication_date' => $response[0]['book_publication_date'] ?? '',
-                            'page_count' => $response[0]['book_page_count'] ?? '',
-                            'isbn' => $response[0]['book_isbn'] ?? '',
-                            'isbn13' => $response[0]['book_isbn13'] ?? '',
-                            'categories' => $response[0]['book_categories'] ?? [],
-                            'description' => $response[0]['book_description'] ?? '',
-                            'cover_url' => $response[0]['book_cover_url'] ?? '',
+                            'title' => $metadata['title'] ?? '',
+                            'author' => $metadata['author'] ?? '',
+                            'publisher' => $metadata['publisher'] ?? '',
+                            'publication_date' => $metadata['published_date'] ?? '',
+                            'page_count' => $metadata['page_count'] ?? '',
+                            'isbn' => $metadata['isbn'] ?? '',
+                            'isbn13' => $metadata['isbn13'] ?? '',
+                            'categories' => $metadata['genres'] ?? [],
+                            'description' => $metadata['description'] ?? '',
+                            'cover_url' => $metadata['cover_url'] ?? '',
+                            'format' => $metadata['format'] ?? '',
+                            'rating' => $metadata['average_rating'] ?? '',
+                            'rating_count' => $metadata['ratings_count'] ?? '',
+                            'review_count' => $metadata['review_count'] ?? '',
+                            'source' => 'Goodreads',
+                            'status' => $response['status'],
+                            'message' => $response['message'],
+                            'steps' => $response['steps']
+                        ];
+                    } else {
+                        $bookData['goodreads'] = [
+                            'status' => $response['status'] ?? 'error',
+                            'message' => $response['message'] ?? 'No data found',
+                            'steps' => $response['steps'] ?? [],
                             'source' => 'Goodreads'
                         ];
                     }

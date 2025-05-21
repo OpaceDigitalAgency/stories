@@ -16,6 +16,30 @@ class OpenLibraryReviewFetcher extends AbstractReviewFetcher {
     private $apiBaseUrl = 'https://openlibrary.org/api';
 
     /**
+     * @var array Steps taken during validation
+     */
+    private $steps = [];
+
+    /**
+     * Add a step to the validation process
+     *
+     * @param string $name Step name
+     * @param string $status Step status (success, error, warning, in_progress)
+     * @param string $message Step message
+     * @param array $details Additional step details
+     */
+    private function addStep(string $name, string $status, string $message, array $details = []): void {
+        $this->steps[] = [
+            'name' => $name,
+            'status' => $status,
+            'message' => $message,
+            'fetch_url' => $details['url'] ?? null,
+            'response' => $details['response_length'] ?? null,
+            'details' => $details
+        ];
+    }
+
+    /**
      * @var string Internet Archive API base URL
      */
     private $iaApiBaseUrl = 'https://archive.org/metadata';
@@ -49,24 +73,55 @@ class OpenLibraryReviewFetcher extends AbstractReviewFetcher {
      * @return array Array of review data
      */
     public function fetchReviewsByISBN(string $isbn, int $limit = 10, array $options = []): array {
+        // Initialize steps array
+        $this->steps = [];
+        
+        // Initialize response structure
+        $response = [
+            'status' => 'not_attempted',
+            'message' => '',
+            'steps' => [],
+            'data' => []
+        ];
+        
         // Standardize ISBN format
         $isbnData = $this->standardizeISBN($isbn);
+        $this->addStep('isbn_standardization', 'success', 'Standardized ISBN format', [
+            'original_isbn' => $isbn,
+            'isbn10' => $isbnData['isbn'],
+            'isbn13' => $isbnData['isbn13']
+        ]);
 
         // Try ISBN-13 first, then ISBN-10
         $isbnToUse = !empty($isbnData['isbn13']) ? $isbnData['isbn13'] : $isbnData['isbn'];
-
+        
         // Build the API URL
         $url = "{$this->apiBaseUrl}/books?bibkeys=ISBN:{$isbnToUse}&format=json&jscmd=data";
+        $this->addStep('api_request_preparation', 'success', 'Prepared API request', [
+            'url' => $url,
+            'isbn_used' => $isbnToUse
+        ]);
 
         // Make the request
         $response = $this->makeRequest($url);
 
         if ($response === false) {
-            return [];
+            $this->addStep('api_request', 'error', 'Failed to fetch book data', [
+                'url' => $url,
+                'error' => $this->lastError
+            ]);
+            $response['status'] = 'error';
+            $response['message'] = $this->lastError;
+            return $response;
         }
 
         // Parse the response
         $data = json_decode($response, true);
+        $this->addStep('api_request', 'success', 'Successfully fetched book data', [
+            'url' => $url,
+            'response_length' => strlen($response),
+            'data_found' => !empty($data["ISBN:$isbnToUse"])
+        ]);
 
         if (empty($data["ISBN:$isbnToUse"])) {
             // Try with ISBN-10 if we used ISBN-13 before
@@ -84,7 +139,9 @@ class OpenLibraryReviewFetcher extends AbstractReviewFetcher {
 
             if (empty($data["ISBN:$isbnToUse"])) {
                 $this->lastError = "No books found for ISBN: $isbnToUse";
-                return [];
+                $response['status'] = 'error';
+                $response['message'] = $this->lastError;
+                return $response;
             }
         }
 
@@ -99,7 +156,9 @@ class OpenLibraryReviewFetcher extends AbstractReviewFetcher {
 
         if (empty($olid)) {
             $this->lastError = "No Open Library ID found for ISBN: $isbnToUse";
-            return [];
+            $response['status'] = 'error';
+            $response['message'] = $this->lastError;
+            return $response;
         }
 
         // Get the Open Library work data
@@ -107,7 +166,9 @@ class OpenLibraryReviewFetcher extends AbstractReviewFetcher {
 
         if (empty($workData)) {
             $this->lastError = "Failed to get Open Library work data for ID: $olid";
-            return [];
+            $response['status'] = 'error';
+            $response['message'] = $this->lastError;
+            return $response;
         }
 
         // Generate reviews from the Open Library data
@@ -116,7 +177,9 @@ class OpenLibraryReviewFetcher extends AbstractReviewFetcher {
         // If we have no reviews, return an empty array
         if (empty($reviews)) {
             $this->lastError = "No reviews found for this book on Open Library or Internet Archive";
-            return [];
+            $response['status'] = 'error';
+            $response['message'] = $this->lastError;
+            return $response;
         }
 
         // Add book metadata to each review
@@ -138,7 +201,13 @@ class OpenLibraryReviewFetcher extends AbstractReviewFetcher {
             ];
         }
 
-        return $reviews;
+        // Prepare final response
+        $response['status'] = !empty($reviews) ? 'success' : 'error';
+        $response['message'] = $this->lastError ?? (!empty($reviews) ? 'Successfully fetched book data' : 'No data found');
+        $response['steps'] = $this->steps;
+        $response['data'] = $reviews;
+
+        return $response;
     }
 
     /**
@@ -204,16 +273,29 @@ class OpenLibraryReviewFetcher extends AbstractReviewFetcher {
     private function getOpenLibraryWorkData(string $olid): ?array {
         // Build the API URL for the edition
         $url = "https://openlibrary.org/books/$olid.json";
+        $this->addStep('edition_lookup', 'in_progress', 'Looking up edition data', [
+            'url' => $url,
+            'olid' => $olid
+        ]);
 
         // Make the request
         $response = $this->makeRequest($url);
 
         if ($response === false) {
+            $this->addStep('edition_lookup', 'error', 'Failed to fetch edition data', [
+                'url' => $url,
+                'error' => $this->lastError
+            ]);
             return null;
         }
 
         // Parse the response
         $editionData = json_decode($response, true);
+        $this->addStep('edition_lookup', 'success', 'Successfully fetched edition data', [
+            'url' => $url,
+            'response_length' => strlen($response),
+            'has_works_reference' => !empty($editionData['works'][0]['key'])
+        ]);
 
         // Check if we have a works reference
         if (empty($editionData['works'][0]['key'])) {
@@ -229,11 +311,20 @@ class OpenLibraryReviewFetcher extends AbstractReviewFetcher {
         $workResponse = $this->makeRequest($workUrl);
 
         if ($workResponse === false) {
+            $this->addStep('work_lookup', 'error', 'Failed to fetch work data', [
+                'url' => $workUrl,
+                'error' => $this->lastError
+            ]);
             return null;
         }
 
         // Parse the work data
         $workData = json_decode($workResponse, true);
+        $this->addStep('work_lookup', 'success', 'Successfully fetched work data', [
+            'url' => $workUrl,
+            'response_length' => strlen($workResponse),
+            'has_ratings' => isset($workData['ratings_average']) && isset($workData['ratings_count'])
+        ]);
 
         // Combine relevant data
         return [
@@ -376,20 +467,39 @@ class OpenLibraryReviewFetcher extends AbstractReviewFetcher {
     private function fetchReviewsFromInternetArchive(string $iaId, int $limit): array {
         // Build the API URL
         $url = "{$this->iaApiBaseUrl}/{$iaId}/reviews";
+        $this->addStep('ia_reviews_lookup', 'in_progress', 'Fetching Internet Archive reviews', [
+            'url' => $url,
+            'ia_id' => $iaId,
+            'limit' => $limit
+        ]);
 
         // Make the request
         $response = $this->makeRequest($url);
 
         if ($response === false) {
+            $this->addStep('ia_reviews_lookup', 'error', 'Failed to fetch Internet Archive reviews', [
+                'url' => $url,
+                'error' => $this->lastError
+            ]);
             return [];
         }
 
         // Parse the response
         $data = json_decode($response, true);
-
+        
         if (empty($data['reviews'])) {
+            $this->addStep('ia_reviews_lookup', 'warning', 'No reviews found on Internet Archive', [
+                'url' => $url,
+                'response_length' => strlen($response)
+            ]);
             return [];
         }
+
+        $this->addStep('ia_reviews_lookup', 'success', 'Successfully fetched Internet Archive reviews', [
+            'url' => $url,
+            'response_length' => strlen($response),
+            'review_count' => count($data['reviews'])
+        ]);
 
         // Process reviews
         $reviews = [];

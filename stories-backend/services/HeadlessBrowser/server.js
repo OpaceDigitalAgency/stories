@@ -128,7 +128,8 @@ app.get('/scrape/goodreads', authenticateApiKey, rateLimiterMiddleware, async (r
 
     const reviews = await goodreads.scrapeGoodreadsReviews(url, parseInt(limit), {
       maxPages: parseInt(maxPages),
-      continueFromLast: continueFromLast === 'true' || continueFromLast === '1'
+      continueFromLast: continueFromLast === 'true' || continueFromLast === '1',
+      force: force === 'true' || force === '1' || force === true
     });
 
     res.status(200).json(reviews);

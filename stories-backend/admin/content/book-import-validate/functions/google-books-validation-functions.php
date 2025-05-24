@@ -340,63 +340,100 @@ function validateIsbnWithGoogleBooks($isbn) {
  * @param int $limit Maximum number of results to return
  * @return array List of book suggestions
  */
-function searchBooksByTitleAuthor($title, $author = '', $limit = 5) {
+function searchBooksByTitleAuthor($title, $author = '', $limit = 10) {
     try {
-        $query = '';
-        if (!empty($title)) {
-            $query .= "intitle:" . urlencode($title);
-        }
-        if (!empty($author)) {
-            if (!empty($query)) {
-                $query .= "+";
-            }
-            $query .= "inauthor:" . urlencode($author);
-        }
-
-        $url = "https://www.googleapis.com/books/v1/volumes?q=" . $query . "&maxResults=" . $limit;
-
-        $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-        curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
-        $response = curl_exec($ch);
-        curl_close($ch);
-
-        $data = json_decode($response, true);
-
         $suggestions = [];
-        if (!empty($data['items'])) {
-            foreach ($data['items'] as $item) {
-                $volumeInfo = $item['volumeInfo'] ?? [];
+        $seenISBNs = [];
 
-                // Extract ISBNs
-                $isbn10 = '';
-                $isbn13 = '';
-                if (!empty($volumeInfo['industryIdentifiers'])) {
-                    foreach ($volumeInfo['industryIdentifiers'] as $identifier) {
-                        if ($identifier['type'] === 'ISBN_10') {
-                            $isbn10 = $identifier['identifier'];
-                        } else if ($identifier['type'] === 'ISBN_13') {
-                            $isbn13 = $identifier['identifier'];
+        // Try multiple search strategies to find more comprehensive results
+        $searchStrategies = [];
+
+        // Strategy 1: Exact intitle/inauthor search
+        if (!empty($title) && !empty($author)) {
+            $searchStrategies[] = "intitle:" . urlencode($title) . "+inauthor:" . urlencode($author);
+        }
+
+        // Strategy 2: General search with title and author
+        if (!empty($title) && !empty($author)) {
+            $searchStrategies[] = urlencode($title) . "+" . urlencode($author);
+        }
+
+        // Strategy 3: Title only search (more results)
+        if (!empty($title)) {
+            $searchStrategies[] = urlencode($title);
+        }
+
+        // Strategy 4: Try without common words
+        if (!empty($title)) {
+            $cleanTitle = preg_replace('/\b(the|a|an)\b/i', '', $title);
+            $cleanTitle = trim(preg_replace('/\s+/', ' ', $cleanTitle));
+            if (!empty($cleanTitle) && $cleanTitle !== $title) {
+                $searchStrategies[] = urlencode($cleanTitle);
+                if (!empty($author)) {
+                    $searchStrategies[] = urlencode($cleanTitle) . "+" . urlencode($author);
+                }
+            }
+        }
+
+        foreach ($searchStrategies as $query) {
+            if (count($suggestions) >= $limit) break;
+
+            $url = "https://www.googleapis.com/books/v1/volumes?q=" . $query . "&maxResults=20"; // Get more results per strategy
+
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+            $response = curl_exec($ch);
+            curl_close($ch);
+
+            $data = json_decode($response, true);
+
+            if (!empty($data['items'])) {
+                foreach ($data['items'] as $item) {
+                    if (count($suggestions) >= $limit) break;
+
+                    $volumeInfo = $item['volumeInfo'] ?? [];
+
+                    // Extract ISBNs
+                    $isbn10 = '';
+                    $isbn13 = '';
+                    if (!empty($volumeInfo['industryIdentifiers'])) {
+                        foreach ($volumeInfo['industryIdentifiers'] as $identifier) {
+                            if ($identifier['type'] === 'ISBN_10') {
+                                $isbn10 = $identifier['identifier'];
+                            } else if ($identifier['type'] === 'ISBN_13') {
+                                $isbn13 = $identifier['identifier'];
+                            }
                         }
                     }
-                }
 
-                $suggestions[] = [
-                    'title' => $volumeInfo['title'] ?? '',
-                    'author' => implode(', ', $volumeInfo['authors'] ?? []),
-                    'publisher' => $volumeInfo['publisher'] ?? '',
-                    'publication_date' => $volumeInfo['publishedDate'] ?? '',
-                    'isbn' => $isbn10,
-                    'isbn13' => $isbn13,
-                    'cover_url' => isset($volumeInfo['imageLinks']['thumbnail']) ? str_replace('http://', 'https://', $volumeInfo['imageLinks']['thumbnail']) : '',
-                    'preview_link' => $volumeInfo['previewLink'] ?? ''
-                ];
+                    // Skip if we've already seen this ISBN
+                    $primaryISBN = $isbn13 ?: $isbn10;
+                    if (!empty($primaryISBN) && isset($seenISBNs[$primaryISBN])) {
+                        continue;
+                    }
+                    if (!empty($primaryISBN)) {
+                        $seenISBNs[$primaryISBN] = true;
+                    }
 
-                if (count($suggestions) >= $limit) {
-                    break;
+                    $suggestions[] = [
+                        'title' => $volumeInfo['title'] ?? '',
+                        'author' => implode(', ', $volumeInfo['authors'] ?? []),
+                        'publisher' => $volumeInfo['publisher'] ?? '',
+                        'publication_date' => $volumeInfo['publishedDate'] ?? '',
+                        'isbn' => $isbn10,
+                        'isbn13' => $isbn13,
+                        'format' => $volumeInfo['printType'] ?? '',
+                        'cover_url' => isset($volumeInfo['imageLinks']['thumbnail']) ? str_replace('http://', 'https://', $volumeInfo['imageLinks']['thumbnail']) : '',
+                        'preview_link' => $volumeInfo['previewLink'] ?? '',
+                        'source' => 'google_books'
+                    ];
                 }
             }
+
+            // Small delay between requests to be respectful
+            usleep(100000); // 0.1 second
         }
 
         return $suggestions;

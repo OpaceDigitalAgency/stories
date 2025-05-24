@@ -45,11 +45,11 @@ function searchBookByTitle($bookId, $title, $db) {
         $searchTitle = !empty($title) ? $title : $book['title'];
         $author = $book['author'] ?? '';
 
-        // Search in Google Books
-        $googleSuggestions = searchBooksByTitleAuthor($searchTitle, $author, 3);
+        // Search in Google Books - get more results for better coverage
+        $googleSuggestions = searchBooksByTitleAuthor($searchTitle, $author, 10);
 
-        // Search in Open Library
-        $openLibrarySuggestions = searchOpenLibraryByTitleAuthor($searchTitle, $author, 3);
+        // Search in Open Library - get more results for better coverage
+        $openLibrarySuggestions = searchOpenLibraryByTitleAuthor($searchTitle, $author, 10);
 
         // Combine suggestions
         $allSuggestions = array_merge($googleSuggestions, $openLibrarySuggestions);
@@ -105,8 +105,8 @@ function searchBookByTitle($bookId, $title, $db) {
             return 0;
         });
 
-        // Limit to top 5 suggestions
-        $uniqueSuggestions = array_slice($uniqueSuggestions, 0, 5);
+        // Limit to top 10 suggestions for better coverage
+        $uniqueSuggestions = array_slice($uniqueSuggestions, 0, 10);
 
         $results['status'] = 'success';
         $results['message'] = count($uniqueSuggestions) > 0

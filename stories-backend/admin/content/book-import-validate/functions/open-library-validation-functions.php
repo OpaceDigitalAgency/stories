@@ -444,66 +444,94 @@ function validateIsbnWithOpenLibrary($isbn) {
  * @param int $limit Maximum number of results to return
  * @return array List of book suggestions
  */
-function searchOpenLibraryByTitleAuthor($title, $author = '', $limit = 5) {
+function searchOpenLibraryByTitleAuthor($title, $author = '', $limit = 10) {
     try {
-        $query = '';
-        if (!empty($title)) {
-            $query .= "title=" . urlencode($title);
-        }
-        if (!empty($author)) {
-            if (!empty($query)) {
-                $query .= "&";
-            }
-            $query .= "author=" . urlencode($author);
-        }
-
-        $url = "https://openlibrary.org/search.json?" . $query . "&limit=" . $limit;
-
-        $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-        curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
-        $response = curl_exec($ch);
-        curl_close($ch);
-
-        $data = json_decode($response, true);
-
         $suggestions = [];
-        if (!empty($data['docs'])) {
-            foreach ($data['docs'] as $doc) {
-                // Extract ISBNs
-                $isbn10 = '';
-                $isbn13 = '';
-                if (!empty($doc['isbn'])) {
-                    foreach ($doc['isbn'] as $isbnValue) {
-                        if (strlen($isbnValue) == 10) {
-                            $isbn10 = $isbnValue;
-                        } else if (strlen($isbnValue) == 13) {
-                            $isbn13 = $isbnValue;
+        $seenISBNs = [];
+
+        // Try multiple search strategies
+        $searchStrategies = [];
+
+        // Strategy 1: Title and author together
+        if (!empty($title) && !empty($author)) {
+            $searchStrategies[] = "title=" . urlencode($title) . "&author=" . urlencode($author);
+        }
+
+        // Strategy 2: Title only (broader search)
+        if (!empty($title)) {
+            $searchStrategies[] = "title=" . urlencode($title);
+        }
+
+        // Strategy 3: General search query
+        if (!empty($title) && !empty($author)) {
+            $searchStrategies[] = "q=" . urlencode($title . " " . $author);
+        } elseif (!empty($title)) {
+            $searchStrategies[] = "q=" . urlencode($title);
+        }
+
+        foreach ($searchStrategies as $query) {
+            if (count($suggestions) >= $limit) break;
+
+            $url = "https://openlibrary.org/search.json?" . $query . "&limit=20"; // Get more results per strategy
+
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+            $response = curl_exec($ch);
+            curl_close($ch);
+
+            $data = json_decode($response, true);
+
+            if (!empty($data['docs'])) {
+                foreach ($data['docs'] as $doc) {
+                    if (count($suggestions) >= $limit) break;
+
+                    // Extract ISBNs
+                    $isbn10 = '';
+                    $isbn13 = '';
+                    if (!empty($doc['isbn'])) {
+                        foreach ($doc['isbn'] as $isbnValue) {
+                            $cleanIsbn = preg_replace('/[^0-9X]/i', '', $isbnValue);
+                            if (strlen($cleanIsbn) == 10) {
+                                $isbn10 = $isbnValue;
+                            } else if (strlen($cleanIsbn) == 13) {
+                                $isbn13 = $isbnValue;
+                            }
                         }
                     }
-                }
 
-                $coverUrl = '';
-                if (!empty($doc['cover_i'])) {
-                    $coverUrl = "https://covers.openlibrary.org/b/id/" . $doc['cover_i'] . "-M.jpg";
-                }
+                    // Skip if we've already seen this ISBN
+                    $primaryISBN = $isbn13 ?: $isbn10;
+                    if (!empty($primaryISBN) && isset($seenISBNs[$primaryISBN])) {
+                        continue;
+                    }
+                    if (!empty($primaryISBN)) {
+                        $seenISBNs[$primaryISBN] = true;
+                    }
 
-                $suggestions[] = [
-                    'title' => $doc['title'] ?? '',
-                    'author' => !empty($doc['author_name']) ? implode(', ', $doc['author_name']) : '',
-                    'publisher' => !empty($doc['publisher']) ? implode(', ', $doc['publisher']) : '',
-                    'publication_date' => !empty($doc['publish_date']) ? $doc['publish_date'][0] : '',
-                    'isbn' => $isbn10,
-                    'isbn13' => $isbn13,
-                    'cover_url' => $coverUrl,
-                    'preview_link' => !empty($doc['ia']) ? "https://archive.org/details/" . $doc['ia'][0] : ''
-                ];
+                    $coverUrl = '';
+                    if (!empty($doc['cover_i'])) {
+                        $coverUrl = "https://covers.openlibrary.org/b/id/" . $doc['cover_i'] . "-M.jpg";
+                    }
 
-                if (count($suggestions) >= $limit) {
-                    break;
+                    $suggestions[] = [
+                        'title' => $doc['title'] ?? '',
+                        'author' => !empty($doc['author_name']) ? implode(', ', $doc['author_name']) : '',
+                        'publisher' => !empty($doc['publisher']) ? implode(', ', $doc['publisher']) : '',
+                        'publication_date' => !empty($doc['publish_date']) ? $doc['publish_date'][0] : '',
+                        'isbn' => $isbn10,
+                        'isbn13' => $isbn13,
+                        'format' => !empty($doc['type']) ? $doc['type'] : '',
+                        'cover_url' => $coverUrl,
+                        'preview_link' => !empty($doc['ia']) ? "https://archive.org/details/" . $doc['ia'][0] : '',
+                        'source' => 'open_library'
+                    ];
                 }
             }
+
+            // Small delay between requests
+            usleep(100000); // 0.1 second
         }
 
         return $suggestions;

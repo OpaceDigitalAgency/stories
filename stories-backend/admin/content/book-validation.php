@@ -506,7 +506,10 @@ $(document).ready(function() {
                             const $actionsCell = $row.find('td:last-child');
                             if (validation.status === 'invalid' || validation.status === 'mismatch') {
                                 if (!$actionsCell.find('.fix-isbn-btn').length) {
-                                    $actionsCell.find('.validate-isbn-btn').after(' <button class="btn btn-sm btn-warning fix-isbn-btn" data-book-id="' + bookId + '"><i class="fas fa-wrench"></i> Fix</button>');
+                                    const $validateBtn = $actionsCell.find('.validate-isbn-btn');
+                                    const bookTitle = $validateBtn.data('book-title') || 'Unknown';
+                                    const author = $validateBtn.data('author') || 'Unknown';
+                                    $validateBtn.after(' <button class="btn btn-sm btn-warning fix-isbn-btn" data-book-id="' + bookId + '" data-book-title="' + bookTitle + '" data-author="' + author + '"><i class="fas fa-wrench"></i> Fix</button>');
                                 }
                             }
                         } else {
@@ -643,7 +646,10 @@ $(document).ready(function() {
                             const $actionsCell = $row.find('td:last-child');
                             if (validation.status === 'invalid' || validation.status === 'mismatch') {
                                 if (!$actionsCell.find('.fix-isbn-btn').length) {
-                                    $actionsCell.find('.validate-isbn-btn').after(' <button class="btn btn-sm btn-warning fix-isbn-btn" data-book-id="' + bookId + '"><i class="fas fa-wrench"></i> Fix</button>');
+                                    const $validateBtn = $actionsCell.find('.validate-isbn-btn');
+                                    const bookTitle = $validateBtn.data('book-title') || 'Unknown';
+                                    const author = $validateBtn.data('author') || 'Unknown';
+                                    $actionsCell.find('.validate-isbn-btn').after(' <button class="btn btn-sm btn-warning fix-isbn-btn" data-book-id="' + bookId + '" data-book-title="' + bookTitle + '" data-author="' + author + '"><i class="fas fa-wrench"></i> Fix</button>');
                                 }
                             }
                         } else {

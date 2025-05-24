@@ -76,16 +76,22 @@ try {
  * Validate ISBN against external APIs
  */
 function validateISBNAgainstAPIs($isbn, $title, $author) {
+    // Debug logging
+    error_log("validateISBNAgainstAPIs called with ISBN: '$isbn', Title: '$title', Author: '$author'");
+
     if (empty($isbn)) {
+        error_log("No ISBN provided");
         return ['status' => 'missing', 'class' => 'danger', 'icon' => 'times-circle', 'message' => 'No ISBN'];
     }
 
     // Clean ISBN
     $cleanIsbn = preg_replace('/[^0-9X]/i', '', $isbn);
+    error_log("Original ISBN: '$isbn', Cleaned ISBN: '$cleanIsbn', Length: " . strlen($cleanIsbn));
 
     // Basic format check first
     if (strlen($cleanIsbn) != 10 && strlen($cleanIsbn) != 13) {
-        return ['status' => 'invalid', 'class' => 'danger', 'icon' => 'times-circle', 'message' => 'Invalid format'];
+        error_log("Invalid ISBN format - length: " . strlen($cleanIsbn));
+        return ['status' => 'invalid', 'class' => 'danger', 'icon' => 'times-circle', 'message' => 'Invalid format (' . strlen($cleanIsbn) . ' digits)'];
     }
 
     // OpenLibrary check (primary validation - faster response)

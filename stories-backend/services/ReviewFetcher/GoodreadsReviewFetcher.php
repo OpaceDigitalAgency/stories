@@ -674,11 +674,20 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         }
 
         // First try to use the VPS-based Headless Browser service
+        $this->logToFile($debugDir . '/goodreads-log.txt', "🚀 [VPS-CALL] Calling VPS with URL: {$reviewsUrl}");
+        $this->logToFile($debugDir . '/goodreads-log.txt', "🚀 [VPS-CALL] VPS Options: " . json_encode([
+            'maxPages' => $maxPages,
+            'continueFromLast' => $continueFromLast,
+            'force' => $forceRefresh
+        ]));
+        
         $vpsReviews = $this->fetchReviewsWithHeadlessBrowser($reviewsUrl, $limit, [
             'maxPages' => $maxPages,
             'continueFromLast' => $continueFromLast,
             'force' => $forceRefresh
         ]);
+        
+        $this->logToFile($debugDir . '/goodreads-log.txt', "🚀 [VPS-RESULT] VPS returned " . count($vpsReviews) . " reviews");
 
         if (!empty($vpsReviews)) {
             $reviewCount = count($vpsReviews);

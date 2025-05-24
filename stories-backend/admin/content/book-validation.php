@@ -295,6 +295,17 @@ require_once '../includes/header.php';
                             <div class="mt-3">
                                 <div class="alert alert-info">
                                     <i class="fas fa-info-circle"></i> ISBNs are automatically validated on page load. Use the "Fix" button for invalid ISBNs.
+                                    <div class="mt-2">
+                                        <button id="disable-auto-validation" class="btn btn-sm btn-secondary">
+                                            <i class="fas fa-pause"></i> Disable Auto-Validation
+                                        </button>
+                                        <button id="manual-validation" class="btn btn-sm btn-primary" style="display: none;">
+                                            <i class="fas fa-play"></i> Run Validation Now
+                                        </button>
+                                        <button id="test-enrichment" class="btn btn-sm btn-success">
+                                            <i class="fas fa-database"></i> Test Enrichment
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -394,8 +405,11 @@ require_once '../includes/header.php';
 
 <script>
 $(document).ready(function() {
-    // Auto-validate all ISBNs on page load
-    autoValidateAllISBNs();
+    // Auto-validate all ISBNs on page load (unless disabled)
+    let autoValidationEnabled = true;
+    if (autoValidationEnabled) {
+        autoValidateAllISBNs();
+    }
 
     // ISBN Validation Tab Handlers
     $('.select-all-checkbox').on('change', function() {
@@ -456,6 +470,54 @@ $(document).ready(function() {
         openDataEnrichmentModal(bookId, bookTitle, author, currentISBN);
     });
 
+    // Handle disable/enable auto-validation
+    $('#disable-auto-validation').click(function() {
+        autoValidationEnabled = false;
+        $(this).hide();
+        $('#manual-validation').show();
+        $('.alert-info').removeClass('alert-info').addClass('alert-warning');
+        $('.alert-warning i').removeClass('fa-info-circle').addClass('fa-exclamation-triangle');
+        $('.alert-warning').find('i:first').after(' Auto-validation disabled.');
+    });
+
+    $('#manual-validation').click(function() {
+        autoValidateAllISBNs();
+    });
+
+    // Test enrichment with first book
+    $('#test-enrichment').click(function() {
+        const $firstRow = $('#isbn-validation-table tbody tr:first');
+        if ($firstRow.length > 0) {
+            const bookId = $firstRow.find('.item-checkbox').val();
+            const bookTitle = $firstRow.find('td:nth-child(2)').text().trim();
+
+            // Try to get author from the book data (we'll need to make an AJAX call for this)
+            $.ajax({
+                url: 'book-validation-ajax.php',
+                method: 'POST',
+                data: {
+                    action: 'get_book_data',
+                    book_id: bookId
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        const book = response.book;
+                        openDataEnrichmentModal(bookId, book.title, book.author, book.isbn13 || book.isbn || '');
+                    } else {
+                        // Fallback with basic data
+                        openDataEnrichmentModal(bookId, bookTitle, 'Unknown Author', '');
+                    }
+                },
+                error: function() {
+                    // Fallback with basic data
+                    openDataEnrichmentModal(bookId, bookTitle, 'Unknown Author', '');
+                }
+            });
+        } else {
+            alert('No books found to test enrichment with.');
+        }
+    });
+
     // Function to auto-validate all ISBNs on page load
     function autoValidateAllISBNs() {
         const $progress = $('#validation-progress');
@@ -502,19 +564,23 @@ $(document).ready(function() {
                             const validation = response.validation;
                             $statusCell.html(`<span class="badge badge-${validation.class}" title="${validation.message}"><i class="fas fa-${validation.icon}"></i> ${validation.status.charAt(0).toUpperCase() + validation.status.slice(1)}</span>`);
 
-                            // Update Fix button if needed
+                            // Update Fix button if needed - preserve existing Enrich buttons
                             const $actionsCell = $row.find('td:last-child');
                             const bookTitle = $row.find('td:nth-child(2)').text().trim(); // Title column
                             const detailsButton = `<a href="book-import-validate-new.php?action=validate_book&book_id=${bookId}" class="btn btn-sm btn-info" title="View detailed validation data"><i class="fas fa-search"></i></a>`;
 
+                            // Preserve existing Enrich button if it exists
+                            const existingEnrichBtn = $actionsCell.find('.enrich-data-btn');
+                            const enrichButton = existingEnrichBtn.length > 0 ? ' ' + existingEnrichBtn[0].outerHTML : '';
+
                             if (validation.status === 'invalid' || validation.status === 'mismatch') {
                                 if (!$actionsCell.find('.fix-isbn-btn').length) {
                                     const author = 'Unknown'; // We'll need to get this from somewhere else
-                                    $actionsCell.html(detailsButton + ' <button class="btn btn-sm btn-warning fix-isbn-btn" data-book-id="' + bookId + '" data-book-title="' + bookTitle + '" data-author="' + author + '"><i class="fas fa-wrench"></i> Fix</button>');
+                                    $actionsCell.html(detailsButton + ' <button class="btn btn-sm btn-warning fix-isbn-btn" data-book-id="' + bookId + '" data-book-title="' + bookTitle + '" data-author="' + author + '"><i class="fas fa-wrench"></i> Fix</button>' + enrichButton);
                                 }
                             } else {
-                                // Show only Details button for valid ISBNs
-                                $actionsCell.html(detailsButton);
+                                // Show Details button and preserve Enrich button for valid ISBNs
+                                $actionsCell.html(detailsButton + enrichButton);
                             }
                         } else {
                             $statusCell.html('<span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>');

@@ -216,6 +216,35 @@ try {
             }
             break;
 
+        case 'get_book_data':
+            $bookId = intval($_POST['book_id'] ?? 0);
+
+            if (!$bookId) {
+                echo json_encode(['status' => 'error', 'message' => 'No book ID provided']);
+                exit;
+            }
+
+            // Get book details
+            $stmt = $db->prepare("
+                SELECT di.id, di.title, b.isbn, b.isbn13, b.author, b.publisher, b.publication_date
+                FROM directory_items di
+                JOIN books b ON di.id = b.directory_item_id
+                WHERE di.id = ?
+            ");
+            $stmt->execute([$bookId]);
+            $book = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$book) {
+                echo json_encode(['status' => 'error', 'message' => 'Book not found']);
+                exit;
+            }
+
+            echo json_encode([
+                'status' => 'success',
+                'book' => $book
+            ]);
+            break;
+
         default:
             echo json_encode(['status' => 'error', 'message' => 'Invalid action: ' . $action]);
             break;

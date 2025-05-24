@@ -121,6 +121,55 @@ try {
             ]);
             break;
 
+        case 'update_isbn':
+            $bookId = intval($_POST['book_id'] ?? 0);
+            $newISBN = trim($_POST['isbn'] ?? '');
+
+            if (!$bookId) {
+                echo json_encode(['status' => 'error', 'message' => 'No book ID provided']);
+                exit;
+            }
+
+            if (empty($newISBN)) {
+                echo json_encode(['status' => 'error', 'message' => 'No ISBN provided']);
+                exit;
+            }
+
+            // Clean the ISBN
+            $cleanISBN = preg_replace('/[^0-9X]/i', '', $newISBN);
+
+            // Determine if it's ISBN-10 or ISBN-13
+            $isISBN13 = (strlen($cleanISBN) == 13);
+            $isISBN10 = (strlen($cleanISBN) == 10);
+
+            if (!$isISBN13 && !$isISBN10) {
+                echo json_encode(['status' => 'error', 'message' => 'Invalid ISBN format']);
+                exit;
+            }
+
+            // Update the database
+            try {
+                if ($isISBN13) {
+                    // Update ISBN-13 field, clear ISBN-10
+                    $stmt = $db->prepare("UPDATE books SET isbn13 = ?, isbn = '' WHERE directory_item_id = ?");
+                    $stmt->execute([$cleanISBN, $bookId]);
+                } else {
+                    // Update ISBN-10 field, clear ISBN-13
+                    $stmt = $db->prepare("UPDATE books SET isbn = ?, isbn13 = '' WHERE directory_item_id = ?");
+                    $stmt->execute([$cleanISBN, $bookId]);
+                }
+
+                echo json_encode([
+                    'status' => 'success',
+                    'message' => 'ISBN updated successfully',
+                    'book_id' => $bookId,
+                    'new_isbn' => $cleanISBN
+                ]);
+            } catch (Exception $e) {
+                echo json_encode(['status' => 'error', 'message' => 'Database error: ' . $e->getMessage()]);
+            }
+            break;
+
         default:
             echo json_encode(['status' => 'error', 'message' => 'Invalid action: ' . $action]);
             break;

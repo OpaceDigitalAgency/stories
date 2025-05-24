@@ -278,9 +278,7 @@ require_once '../includes/header.php';
                                 <button id="validate-selected-isbns" class="btn btn-primary ml-2">
                                     <i class="fas fa-check-double"></i> Validate Selected ISBNs
                                 </button>
-                                <button id="fix-invalid-isbns" class="btn btn-warning ml-2">
-                                    <i class="fas fa-wrench"></i> Fix Invalid ISBNs
-                                </button>
+
                                 <button id="refresh-validation" class="btn btn-secondary ml-2">
                                     <i class="fas fa-sync"></i> Refresh Page
                                 </button>
@@ -458,16 +456,8 @@ $(document).ready(function() {
                 },
                 success: function(response) {
                     if (typeof response === 'object' && response.status === 'success') {
-                        // Show suggestions in a modal or alert
-                        let message = `Found ${response.suggestions.length} possible matches for "${response.current_title}":\n\n`;
-                        response.suggestions.forEach((suggestion, index) => {
-                            message += `${index + 1}. ${suggestion.title} by ${suggestion.author}\n`;
-                            message += `   ISBN-10: ${suggestion.isbn || 'N/A'}\n`;
-                            message += `   ISBN-13: ${suggestion.isbn13 || 'N/A'}\n`;
-                            message += `   Publisher: ${suggestion.publisher || 'N/A'}\n\n`;
-                        });
-                        message += 'Please manually update the book with the correct ISBN from the list above.';
-                        alert(message);
+                        // Create a proper selection interface
+                        showISBNSelectionModal(response.suggestions, response.current_title, bookId);
                     } else {
                         alert('Error: ' + (response.message || 'Failed to find ISBN suggestions'));
                     }
@@ -503,7 +493,7 @@ $(document).ready(function() {
         $progressText.text('Starting validation of selected books...');
 
         // Disable buttons during validation
-        $('#validate-all-isbns, #validate-selected-isbns, #fix-invalid-isbns').prop('disabled', true);
+        $('#validate-all-isbns, #validate-selected-isbns').prop('disabled', true);
 
         // Process each selected book
         $selectedCheckboxes.each(function(index) {
@@ -555,7 +545,7 @@ $(document).ready(function() {
                         if (completedBooks === selectedBooks) {
                             setTimeout(() => {
                                 $progress.hide();
-                                $('#validate-all-isbns, #validate-selected-isbns, #fix-invalid-isbns').prop('disabled', false);
+                                $('#validate-all-isbns, #validate-selected-isbns').prop('disabled', false);
                                 $progressText.text('Validation complete!');
                             }, 500);
                         }
@@ -572,7 +562,7 @@ $(document).ready(function() {
                         if (completedBooks === selectedBooks) {
                             setTimeout(() => {
                                 $progress.hide();
-                                $('#validate-all-isbns, #validate-selected-isbns, #fix-invalid-isbns').prop('disabled', false);
+                                $('#validate-all-isbns, #validate-selected-isbns').prop('disabled', false);
                             }, 500);
                         }
                     }
@@ -581,14 +571,7 @@ $(document).ready(function() {
         });
     });
 
-    $('#fix-invalid-isbns').on('click', function() {
-        if (confirm('This will attempt to fix all invalid ISBNs by searching with title and author. Continue?')) {
-            // For now, just show an alert - we can implement the fix functionality later
-            alert('Bulk fix functionality will be implemented soon. Please use individual validation for now.');
-            // TODO: Implement proper bulk fix functionality
-            // window.location.href = 'book-import-validate-new.php?action=fix_all_invalid_isbns';
-        }
-    });
+
 
     $('#refresh-validation').on('click', function() {
         // Simply reload the page to refresh validation status
@@ -644,7 +627,7 @@ $(document).ready(function() {
         $progressText.text('Starting validation...');
 
         // Disable buttons during validation
-        $('#validate-all-isbns, #validate-selected-isbns, #fix-invalid-isbns').prop('disabled', true);
+        $('#validate-all-isbns, #validate-selected-isbns').prop('disabled', true);
 
         // Process each book
         $rows.each(function(index) {
@@ -695,7 +678,7 @@ $(document).ready(function() {
                         if (completedBooks === totalBooks) {
                             setTimeout(() => {
                                 $progress.hide();
-                                $('#validate-all-isbns, #validate-selected-isbns, #fix-invalid-isbns').prop('disabled', false);
+                                $('#validate-all-isbns, #validate-selected-isbns').prop('disabled', false);
                                 $progressText.text('Validation complete!');
                             }, 500);
                         }
@@ -712,7 +695,7 @@ $(document).ready(function() {
                         if (completedBooks === totalBooks) {
                             setTimeout(() => {
                                 $progress.hide();
-                                $('#validate-all-isbns, #validate-selected-isbns, #fix-invalid-isbns').prop('disabled', false);
+                                $('#validate-all-isbns, #validate-selected-isbns').prop('disabled', false);
                             }, 500);
                         }
                     }
@@ -720,6 +703,127 @@ $(document).ready(function() {
             }, index * 200); // 200ms delay between each request
         });
     }
+
+    // Function to show ISBN selection modal
+    function showISBNSelectionModal(suggestions, currentTitle, bookId) {
+        if (suggestions.length === 0) {
+            alert('No ISBN suggestions found for this book.');
+            return;
+        }
+
+        // Filter suggestions to prefer exact title matches and exclude compilations
+        const filteredSuggestions = suggestions.filter(suggestion => {
+            const title = suggestion.title.toLowerCase();
+            const currentTitleLower = currentTitle.toLowerCase();
+
+            // Exclude compilations/box sets
+            if (title.includes(' and ') || title.includes('includes') || title.includes('collection')) {
+                return false;
+            }
+
+            // Prefer exact or close title matches
+            return title.includes(currentTitleLower) || currentTitleLower.includes(title);
+        });
+
+        const suggestionsToShow = filteredSuggestions.length > 0 ? filteredSuggestions : suggestions.slice(0, 3);
+
+        // Create modal content
+        let modalContent = `
+            <div style="max-width: 600px;">
+                <h4>Select Correct ISBN for "${currentTitle}"</h4>
+                <p>Found ${suggestionsToShow.length} possible matches. Select the correct one:</p>
+                <div style="max-height: 400px; overflow-y: auto;">
+        `;
+
+        suggestionsToShow.forEach((suggestion, index) => {
+            const isbn10 = suggestion.isbn || 'N/A';
+            const isbn13 = suggestion.isbn13 || 'N/A';
+            const publisher = suggestion.publisher || 'Unknown';
+
+            modalContent += `
+                <div style="border: 1px solid #ddd; margin: 10px 0; padding: 15px; border-radius: 5px;">
+                    <h5>${suggestion.title}</h5>
+                    <p><strong>Author:</strong> ${suggestion.author}</p>
+                    <p><strong>Publisher:</strong> ${publisher}</p>
+                    <p><strong>ISBN-10:</strong> ${isbn10}</p>
+                    <p><strong>ISBN-13:</strong> ${isbn13}</p>
+                    <button class="btn btn-primary" onclick="selectISBN('${isbn13}', '${isbn10}', ${bookId})">
+                        Select This ISBN
+                    </button>
+                </div>
+            `;
+        });
+
+        modalContent += `
+                </div>
+                <div style="margin-top: 20px;">
+                    <button class="btn btn-secondary" onclick="closeISBNModal()">Cancel</button>
+                </div>
+            </div>
+        `;
+
+        // Create and show modal
+        const modal = document.createElement('div');
+        modal.id = 'isbn-selection-modal';
+        modal.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 1000;
+            display: flex; align-items: center; justify-content: center;
+        `;
+
+        const modalDialog = document.createElement('div');
+        modalDialog.style.cssText = `
+            background: white; padding: 20px; border-radius: 10px;
+            max-width: 90%; max-height: 90%; overflow-y: auto;
+        `;
+        modalDialog.innerHTML = modalContent;
+
+        modal.appendChild(modalDialog);
+        document.body.appendChild(modal);
+    }
+
+    // Function to select an ISBN and update the database
+    window.selectISBN = function(isbn13, isbn10, bookId) {
+        // Use the best available ISBN (prefer ISBN-13)
+        const selectedISBN = (isbn13 && isbn13 !== 'N/A') ? isbn13 : isbn10;
+
+        if (!selectedISBN || selectedISBN === 'N/A') {
+            alert('No valid ISBN selected.');
+            return;
+        }
+
+        // Make AJAX call to update the ISBN
+        $.ajax({
+            url: 'book-validation-ajax.php',
+            method: 'POST',
+            data: {
+                action: 'update_isbn',
+                book_id: bookId,
+                isbn: selectedISBN
+            },
+            success: function(response) {
+                if (typeof response === 'object' && response.status === 'success') {
+                    alert('ISBN updated successfully!');
+                    closeISBNModal();
+                    // Refresh the page to show updated data
+                    window.location.reload();
+                } else {
+                    alert('Error updating ISBN: ' + (response.message || 'Unknown error'));
+                }
+            },
+            error: function(xhr, status, error) {
+                alert('Error updating ISBN: ' + error);
+            }
+        });
+    };
+
+    // Function to close the ISBN selection modal
+    window.closeISBNModal = function() {
+        const modal = document.getElementById('isbn-selection-modal');
+        if (modal) {
+            modal.remove();
+        }
+    };
 
     // Data Enrichment Tab Handlers
     $('#enrichBookSelection').change(function() {

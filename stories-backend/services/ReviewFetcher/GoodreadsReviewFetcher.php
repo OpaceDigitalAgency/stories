@@ -1182,14 +1182,13 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             $this->logToFile($debugDir . '/goodreads-log.txt', "🔄 Force refresh requested via environment variables");
         }
 
-        // First try to use the VPS-based Headless Browser service
-        $vpsReviews = $this->fetchReviewsWithHeadlessBrowser($reviewsUrl, $limit, [
-            'maxPages' => $maxPages,
-            'continueFromLast' => $continueFromLast,
-            'force' => $forceRefresh
-        ]);
+        // COMPLETELY BYPASS VPS - VPS extracts corrupted GraphQL/HTML fragments
+        // Skip VPS entirely, go straight to clean HTML scraping
+        $this->logToFile($debugDir . '/goodreads-log.txt', "🚫 BYPASSING VPS - VPS extracts corrupted GraphQL fragments, using direct HTML scraping for clean data");
+        
+        $vpsReviews = []; // Force empty to skip VPS processing
 
-        if (!empty($vpsReviews)) {
+        if (false) { // Never execute VPS block
             $reviewCount = count($vpsReviews);
             $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Successfully fetched {$reviewCount} reviews using VPS Headless Browser");
 

@@ -13,7 +13,7 @@ const { checkCache, saveToCache } = require('./cache');
  */
 function extractWorkId(html) {
   // Method 1: Try to extract from kca:// format
-  const kcaMatch = html.match(/kca:\/\/work\/amzn1\.gr\.work\.v1\.[a-zA-Z0-9]+/);
+  const kcaMatch = html.match(/kca:\/\/work\/amzn1\.gr\.work\.v1\.[a-zA-Z0-9_-]+/);
   if (kcaMatch) {
     const workId = kcaMatch[0].replace('kca://', '');
     logger.info(`Extracted work ID (kca format): ${workId}`);

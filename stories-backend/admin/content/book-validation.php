@@ -138,7 +138,36 @@ require_once '../includes/header.php';
                                     return ['status' => 'invalid', 'class' => 'danger', 'icon' => 'times-circle', 'message' => "Invalid format ($length digits)"];
                                 }
 
-                                // Format is valid, but we need to check against APIs
+                                // For valid format ISBNs, do a quick checksum validation
+                                if ($length == 13) {
+                                    // ISBN-13 checksum validation
+                                    $sum = 0;
+                                    for ($i = 0; $i < 12; $i++) {
+                                        $digit = intval($cleanIsbn[$i]);
+                                        $sum += ($i % 2 == 0) ? $digit : $digit * 3;
+                                    }
+                                    $checkDigit = (10 - ($sum % 10)) % 10;
+                                    $actualCheckDigit = intval($cleanIsbn[12]);
+
+                                    if ($checkDigit != $actualCheckDigit) {
+                                        return ['status' => 'invalid', 'class' => 'danger', 'icon' => 'times-circle', 'message' => 'Invalid ISBN-13 checksum'];
+                                    }
+                                } else if ($length == 10) {
+                                    // ISBN-10 checksum validation
+                                    $sum = 0;
+                                    for ($i = 0; $i < 9; $i++) {
+                                        $digit = intval($cleanIsbn[$i]);
+                                        $sum += $digit * (10 - $i);
+                                    }
+                                    $checkDigit = (11 - ($sum % 11)) % 11;
+                                    $actualCheckDigit = ($cleanIsbn[9] == 'X') ? 10 : intval($cleanIsbn[9]);
+
+                                    if ($checkDigit != $actualCheckDigit) {
+                                        return ['status' => 'invalid', 'class' => 'danger', 'icon' => 'times-circle', 'message' => 'Invalid ISBN-10 checksum'];
+                                    }
+                                }
+
+                                // Format and checksum are valid, but we need to check against APIs
                                 return ['status' => 'unknown', 'class' => 'secondary', 'icon' => 'question-circle', 'message' => 'Click Validate to check'];
                             }
 

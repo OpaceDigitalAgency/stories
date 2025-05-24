@@ -28,12 +28,12 @@ try {
     switch ($action) {
         case 'validate_isbn':
             $bookId = intval($_POST['book_id'] ?? 0);
-            
+
             if (!$bookId) {
                 echo json_encode(['status' => 'error', 'message' => 'No book ID provided']);
                 exit;
             }
-            
+
             // Get book details
             $stmt = $db->prepare("
                 SELECT di.id, di.title, b.isbn, b.isbn13, b.author
@@ -43,24 +43,24 @@ try {
             ");
             $stmt->execute([$bookId]);
             $book = $stmt->fetch(PDO::FETCH_ASSOC);
-            
+
             if (!$book) {
                 echo json_encode(['status' => 'error', 'message' => 'Book not found']);
                 exit;
             }
-            
+
             $isbn = !empty($book['isbn13']) ? $book['isbn13'] : (!empty($book['isbn']) ? $book['isbn'] : '');
-            
+
             // Validate ISBN against external APIs
             $validation = validateISBNAgainstAPIs($isbn, $book['title'], $book['author']);
-            
+
             echo json_encode([
                 'status' => 'success',
                 'book_id' => $bookId,
                 'validation' => $validation
             ]);
             break;
-            
+
         default:
             echo json_encode(['status' => 'error', 'message' => 'Invalid action']);
             break;
@@ -76,34 +76,34 @@ function validateISBNAgainstAPIs($isbn, $title, $author) {
     if (empty($isbn)) {
         return ['status' => 'missing', 'class' => 'danger', 'icon' => 'times-circle', 'message' => 'No ISBN'];
     }
-    
+
     // Clean ISBN
     $cleanIsbn = preg_replace('/[^0-9X]/i', '', $isbn);
-    
+
     // Basic format check first
     if (strlen($cleanIsbn) != 10 && strlen($cleanIsbn) != 13) {
         return ['status' => 'invalid', 'class' => 'danger', 'icon' => 'times-circle', 'message' => 'Invalid format'];
     }
-    
-    // Quick OpenLibrary check (fastest)
-    if (validateIsbnWithOpenLibrary($cleanIsbn)) {
-        return ['status' => 'valid', 'class' => 'success', 'icon' => 'check-circle', 'message' => 'Valid (OpenLibrary)'];
-    }
-    
-    // Quick Google Books check
+
+    // TEMPORARILY DISABLED: OpenLibrary check (403 errors causing timeouts)
+    // if (validateIsbnWithOpenLibrary($cleanIsbn)) {
+    //     return ['status' => 'valid', 'class' => 'success', 'icon' => 'check-circle', 'message' => 'Valid (OpenLibrary)'];
+    // }
+
+    // Google Books check (primary validation)
     if (validateIsbnWithGoogleBooks($cleanIsbn)) {
         return ['status' => 'valid', 'class' => 'success', 'icon' => 'check-circle', 'message' => 'Valid (Google Books)'];
     }
-    
-    // If ISBN validation fails, check if we can find the book by title/author
+
+    // If ISBN validation fails, check if we can find the book by title/author using Google Books
     if (!empty($title)) {
-        // Try to find suggestions by title/author
-        $suggestions = searchOpenLibraryByTitleAuthor($title, $author, 1);
+        // Try to find suggestions by title/author using Google Books only
+        $suggestions = searchBooksByTitleAuthor($title, $author, 1);
         if (!empty($suggestions)) {
             return ['status' => 'mismatch', 'class' => 'warning', 'icon' => 'exclamation-triangle', 'message' => 'ISBN invalid, but book found by title'];
         }
     }
-    
+
     return ['status' => 'invalid', 'class' => 'danger', 'icon' => 'times-circle', 'message' => 'ISBN not found'];
 }
 ?>

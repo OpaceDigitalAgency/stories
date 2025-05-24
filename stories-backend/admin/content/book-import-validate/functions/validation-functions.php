@@ -713,17 +713,17 @@ function fixBookISBN($bookId, $title, $author, $db) {
         // Search for the book using title and author
         $suggestions = [];
 
-        // Try Google Books first
-        $googleSuggestions = searchBooksByTitleAuthor($title, $author, 3);
+        // Try Google Books (OpenLibrary temporarily disabled due to 403 errors)
+        $googleSuggestions = searchBooksByTitleAuthor($title, $author, 5);
         if (!empty($googleSuggestions)) {
             $suggestions = array_merge($suggestions, $googleSuggestions);
         }
 
-        // Try Open Library
-        $openLibrarySuggestions = searchOpenLibraryByTitleAuthor($title, $author, 3);
-        if (!empty($openLibrarySuggestions)) {
-            $suggestions = array_merge($suggestions, $openLibrarySuggestions);
-        }
+        // TEMPORARILY DISABLED: OpenLibrary (403 errors causing timeouts)
+        // $openLibrarySuggestions = searchOpenLibraryByTitleAuthor($title, $author, 3);
+        // if (!empty($openLibrarySuggestions)) {
+        //     $suggestions = array_merge($suggestions, $openLibrarySuggestions);
+        // }
 
         if (empty($suggestions)) {
             return [
@@ -816,10 +816,10 @@ function fixAllInvalidISBNs($db) {
         foreach ($books as $book) {
             $isbn = !empty($book['isbn13']) ? $book['isbn13'] : (!empty($book['isbn']) ? $book['isbn'] : '');
 
-            // Skip if ISBN is already valid
+            // Skip if ISBN is already valid (using Google Books only for now)
             if (!empty($isbn)) {
-                // Quick validation check
-                if (validateIsbnWithOpenLibrary($isbn) || validateIsbnWithGoogleBooks($isbn)) {
+                // Quick validation check (OpenLibrary disabled due to 403 errors)
+                if (validateIsbnWithGoogleBooks($isbn)) {
                     // Mark as valid and skip
                     $updateStmt = $db->prepare("
                         UPDATE books

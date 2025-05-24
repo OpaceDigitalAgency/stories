@@ -211,28 +211,42 @@ require_once '../includes/header.php';
                                     '<small class="text-muted">' . htmlspecialchars(implode(', ', $missingFields)) . '</small>' :
                                     '<span class="badge badge-success">Complete</span>';
 
+                                // Format publisher, date, and format for display
+                                $publisher = !empty($book['publisher']) ? htmlspecialchars($book['publisher']) : '<span class="text-muted">Unknown</span>';
+                                $pubDate = !empty($book['publication_date']) ? htmlspecialchars($book['publication_date']) : '<span class="text-muted">Unknown</span>';
+                                $format = !empty($book['format']) ? htmlspecialchars($book['format']) : '<span class="text-muted">Unknown</span>';
+
                                 $tableData[] = [
                                     'id' => $book['id'],
                                     'title' => htmlspecialchars($book['title']),
                                     'isbn' => !empty($isbn) ? htmlspecialchars($isbn) : '<span class="text-danger">Missing</span>',
+                                    'publisher' => $publisher,
+                                    'pub_date' => $pubDate,
+                                    'format' => $format,
                                     'status' => '<span class="badge badge-' . $statusClass . '" title="' . htmlspecialchars($statusMessage) . '"><i class="fas fa-' . $statusIcon . '"></i> ' . ucfirst($isbnStatus) . '</span>',
                                     'missing_data' => $missingDataDisplay,
                                     'actions' => '<a href="book-import-validate-new.php?action=validate_book&book_id=' . $book['id'] . '" ' .
                                                'class="btn btn-sm btn-info" title="View detailed validation data">' .
-                                               '<i class="fas fa-search"></i> Details</a>' .
+                                               '<i class="fas fa-search"></i></a>' .
                                                ($isbnStatus === 'invalid' || $isbnStatus === 'mismatch' ?
                                                    ' <button class="btn btn-sm btn-warning fix-isbn-btn" ' .
                                                    'data-book-id="' . $book['id'] . '" ' .
                                                    'data-book-title="' . htmlspecialchars($book['title']) . '" ' .
-                                                   'data-author="' . htmlspecialchars($book['author']) . '">' .
+                                                   'data-author="' . htmlspecialchars($book['author']) . '" ' .
+                                                   'data-publisher="' . htmlspecialchars($book['publisher'] ?? '') . '" ' .
+                                                   'data-pub-date="' . htmlspecialchars($book['publication_date'] ?? '') . '" ' .
+                                                   'data-format="' . htmlspecialchars($book['format'] ?? '') . '">' .
                                                    '<i class="fas fa-wrench"></i> Fix</button>' : '')
                                 ];
                             }
 
-                            // Define table columns - include actions in the columns
+                            // Define table columns - include new fields for comparison
                             $columns = [
                                 'title' => 'Title',
                                 'isbn' => 'ISBN',
+                                'publisher' => 'Publisher',
+                                'pub_date' => 'Date',
+                                'format' => 'Format',
                                 'status' => 'Status',
                                 'missing_data' => 'Missing Data',
                                 'actions' => 'Actions'
@@ -253,7 +267,7 @@ require_once '../includes/header.php';
                                     'itemsPerPage' => $isbnPerPage,
                                     'currentPage' => $isbnPage,
                                     'totalItems' => $totalBooks,
-                                    'htmlFields' => ['isbn', 'status', 'missing_data', 'actions'],
+                                    'htmlFields' => ['isbn', 'publisher', 'pub_date', 'format', 'status', 'missing_data', 'actions'],
                                     'showPagination' => false,
                                     'showItemsPerPage' => false
                                 ]
@@ -442,7 +456,7 @@ $(document).ready(function() {
         $rows.each(function(index) {
             const $row = $(this);
             const bookId = $row.find('.item-checkbox').val(); // Use the correct checkbox class
-            const $statusCell = $row.find('td:nth-child(4)'); // Status column (adjust for checkbox column)
+            const $statusCell = $row.find('td:nth-child(7)'); // Status column (adjust for new columns: checkbox, title, isbn, publisher, date, format, status)
 
             // Add a small delay to avoid overwhelming the APIs
             setTimeout(() => {
@@ -466,7 +480,7 @@ $(document).ready(function() {
                             // Update Fix button if needed
                             const $actionsCell = $row.find('td:last-child');
                             const bookTitle = $row.find('td:nth-child(2)').text().trim(); // Title column
-                            const detailsButton = `<a href="book-import-validate-new.php?action=validate_book&book_id=${bookId}" class="btn btn-sm btn-info" title="View detailed validation data"><i class="fas fa-search"></i> Details</a>`;
+                            const detailsButton = `<a href="book-import-validate-new.php?action=validate_book&book_id=${bookId}" class="btn btn-sm btn-info" title="View detailed validation data"><i class="fas fa-search"></i></a>`;
 
                             if (validation.status === 'invalid' || validation.status === 'mismatch') {
                                 if (!$actionsCell.find('.fix-isbn-btn').length) {

@@ -123,8 +123,8 @@ require_once '../includes/header.php';
                         <div class="card-body">
 
                             <?php
-                            // Function to validate ISBN against external APIs
-                            function validateISBNQuick($isbn, $title, $author) {
+                            // Function to do basic ISBN format validation only (no API calls)
+                            function validateISBNFormat($isbn) {
                                 if (empty($isbn)) {
                                     return ['status' => 'missing', 'class' => 'danger', 'icon' => 'times-circle', 'message' => 'No ISBN'];
                                 }
@@ -132,31 +132,13 @@ require_once '../includes/header.php';
                                 // Clean ISBN
                                 $cleanIsbn = preg_replace('/[^0-9X]/i', '', $isbn);
 
-                                // Basic format check first
+                                // Basic format check
                                 if (strlen($cleanIsbn) != 10 && strlen($cleanIsbn) != 13) {
                                     return ['status' => 'invalid', 'class' => 'danger', 'icon' => 'times-circle', 'message' => 'Invalid format'];
                                 }
 
-                                // Quick OpenLibrary check (fastest)
-                                if (validateIsbnWithOpenLibrary($cleanIsbn)) {
-                                    return ['status' => 'valid', 'class' => 'success', 'icon' => 'check-circle', 'message' => 'Valid (OpenLibrary)'];
-                                }
-
-                                // Quick Google Books check
-                                if (validateIsbnWithGoogleBooks($cleanIsbn)) {
-                                    return ['status' => 'valid', 'class' => 'success', 'icon' => 'check-circle', 'message' => 'Valid (Google Books)'];
-                                }
-
-                                // If ISBN validation fails, check if we can find the book by title/author
-                                if (!empty($title)) {
-                                    // Try to find suggestions by title/author
-                                    $suggestions = searchOpenLibraryByTitleAuthor($title, $author, 1);
-                                    if (!empty($suggestions)) {
-                                        return ['status' => 'mismatch', 'class' => 'warning', 'icon' => 'exclamation-triangle', 'message' => 'ISBN invalid, but book found by title'];
-                                    }
-                                }
-
-                                return ['status' => 'invalid', 'class' => 'danger', 'icon' => 'times-circle', 'message' => 'ISBN not found'];
+                                // Format is valid, but we need to check against APIs
+                                return ['status' => 'unknown', 'class' => 'secondary', 'icon' => 'question-circle', 'message' => 'Click Validate to check'];
                             }
 
                             // Prepare table data for ISBN validation
@@ -164,8 +146,8 @@ require_once '../includes/header.php';
                             foreach ($isbnBooks as $book) {
                                 $isbn = !empty($book['isbn13']) ? $book['isbn13'] : (!empty($book['isbn']) ? $book['isbn'] : '');
 
-                                // Validate ISBN against external APIs
-                                $validation = validateISBNQuick($isbn, $book['title'], $book['author']);
+                                // Only do basic format validation (no API calls)
+                                $validation = validateISBNFormat($isbn);
                                 $isbnStatus = $validation['status'];
                                 $statusClass = $validation['class'];
                                 $statusIcon = $validation['icon'];
@@ -256,15 +238,26 @@ require_once '../includes/header.php';
                             ?>
 
                             <div class="mt-3">
-                                <button id="validate-selected-isbns" class="btn btn-primary">
+                                <button id="validate-all-isbns" class="btn btn-success">
+                                    <i class="fas fa-check-circle"></i> Validate All ISBNs
+                                </button>
+                                <button id="validate-selected-isbns" class="btn btn-primary ml-2">
                                     <i class="fas fa-check-double"></i> Validate Selected ISBNs
                                 </button>
                                 <button id="fix-invalid-isbns" class="btn btn-warning ml-2">
                                     <i class="fas fa-wrench"></i> Fix Invalid ISBNs
                                 </button>
                                 <button id="refresh-validation" class="btn btn-secondary ml-2">
-                                    <i class="fas fa-sync"></i> Refresh Validation
+                                    <i class="fas fa-sync"></i> Refresh Page
                                 </button>
+                            </div>
+
+                            <!-- Progress indicator for validation -->
+                            <div id="validation-progress" class="mt-3" style="display: none;">
+                                <div class="progress">
+                                    <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                </div>
+                                <small class="text-muted mt-1 d-block">Validating ISBNs...</small>
                             </div>
                         </div>
                     </div>
@@ -421,6 +414,110 @@ $(document).ready(function() {
         // Simply reload the page to refresh validation status
         window.location.reload();
     });
+
+    $('#validate-all-isbns').on('click', function() {
+        validateAllISBNs();
+    });
+
+    // Function to validate all ISBNs asynchronously
+    function validateAllISBNs() {
+        const $progress = $('#validation-progress');
+        const $progressBar = $progress.find('.progress-bar');
+        const $progressText = $progress.find('small');
+
+        // Get all book rows
+        const $rows = $('.isbn-validation-table tbody tr');
+        const totalBooks = $rows.length;
+        let completedBooks = 0;
+
+        if (totalBooks === 0) {
+            alert('No books found to validate.');
+            return;
+        }
+
+        // Show progress bar
+        $progress.show();
+        $progressBar.css('width', '0%');
+        $progressText.text('Starting validation...');
+
+        // Disable buttons during validation
+        $('#validate-all-isbns, #validate-selected-isbns, #fix-invalid-isbns').prop('disabled', true);
+
+        // Process each book
+        $rows.each(function(index) {
+            const $row = $(this);
+            const bookId = $row.find('.isbn-checkbox').val();
+            const $statusCell = $row.find('td:nth-child(4)'); // Status column
+
+            // Add a small delay to avoid overwhelming the APIs
+            setTimeout(() => {
+                // Show loading state
+                $statusCell.html('<span class="badge badge-info"><i class="fas fa-spinner fa-spin"></i> Checking...</span>');
+
+                // Make AJAX call to validate this book
+                $.ajax({
+                    url: 'book-validation-ajax.php',
+                    method: 'POST',
+                    data: {
+                        action: 'validate_isbn',
+                        book_id: bookId
+                    },
+                    success: function(response) {
+                        try {
+                            const result = JSON.parse(response);
+                            if (result.status === 'success') {
+                                const validation = result.validation;
+                                $statusCell.html(`<span class="badge badge-${validation.class}" title="${validation.message}"><i class="fas fa-${validation.icon}"></i> ${validation.status.charAt(0).toUpperCase() + validation.status.slice(1)}</span>`);
+
+                                // Update Fix button if needed
+                                const $actionsCell = $row.find('td:last-child');
+                                if (validation.status === 'invalid' || validation.status === 'mismatch') {
+                                    if (!$actionsCell.find('.fix-isbn-btn').length) {
+                                        $actionsCell.find('.validate-isbn-btn').after(' <button class="btn btn-sm btn-warning fix-isbn-btn" data-book-id="' + bookId + '"><i class="fas fa-wrench"></i> Fix</button>');
+                                    }
+                                }
+                            } else {
+                                $statusCell.html('<span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>');
+                            }
+                        } catch (e) {
+                            $statusCell.html('<span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>');
+                        }
+
+                        // Update progress
+                        completedBooks++;
+                        const progress = Math.round((completedBooks / totalBooks) * 100);
+                        $progressBar.css('width', progress + '%');
+                        $progressText.text(`Validated ${completedBooks} of ${totalBooks} books...`);
+
+                        // Check if all done
+                        if (completedBooks === totalBooks) {
+                            setTimeout(() => {
+                                $progress.hide();
+                                $('#validate-all-isbns, #validate-selected-isbns, #fix-invalid-isbns').prop('disabled', false);
+                                $progressText.text('Validation complete!');
+                            }, 500);
+                        }
+                    },
+                    error: function() {
+                        $statusCell.html('<span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>');
+
+                        // Update progress even on error
+                        completedBooks++;
+                        const progress = Math.round((completedBooks / totalBooks) * 100);
+                        $progressBar.css('width', progress + '%');
+                        $progressText.text(`Validated ${completedBooks} of ${totalBooks} books...`);
+
+                        if (completedBooks === totalBooks) {
+                            setTimeout(() => {
+                                $progress.hide();
+                                $('#validate-all-isbns, #validate-selected-isbns, #fix-invalid-isbns').prop('disabled', false);
+                            }, 500);
+                        }
+                    }
+                });
+            }, index * 200); // 200ms delay between each request
+        });
+    }
 
     // Data Enrichment Tab Handlers
     $('#enrichBookSelection').change(function() {

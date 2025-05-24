@@ -667,12 +667,19 @@ function updateBookAggregateValues($db, $bookId) {
                                 document.getElementById('progressBar').innerText = 'Processing reviews from {$sourceName}...';
                             </script>";
                             flushOutput();
-
+                
+                            // Debug: Show the structure of the result
+                            echo "<p class='info'><strong>DEBUG:</strong> Result structure: " . gettype($result) . "</p>";
+                            if (is_array($result)) {
+                                echo "<p class='info'><strong>DEBUG:</strong> Result keys: " . implode(', ', array_keys($result)) . "</p>";
+                            }
+                            flushOutput();
+                
                             // Check if we got a structured result (new format) or just an array of reviews (old format)
                             if (is_array($result) && isset($result['reviews'])) {
-                                // New format with structured result
+                                // New format with structured result (legacy format)
                                 $reviews = $result['reviews'];
-
+                
                                 if (empty($reviews)) {
                                     echo "<p class='warning'>No reviews found from {$sourceName} for ISBN: $isbnToUse</p>";
                                     if (isset($result['errors'][$sourceName])) {
@@ -683,10 +690,24 @@ function updateBookAggregateValues($db, $bookId) {
                                     flushOutput();
                                     continue;
                                 }
+                            } elseif (is_array($result) && isset($result['data'])) {
+                                // New format with structured result (current format)
+                                $reviews = $result['data'];
+                
+                                if (empty($reviews)) {
+                                    echo "<p class='warning'>No reviews found from {$sourceName} for ISBN: $isbnToUse</p>";
+                                    if (isset($result['message'])) {
+                                        echo "<p class='error'>Error: " . $result['message'] . "</p>";
+                                    } elseif ($fetcher->getLastError()) {
+                                        echo "<p class='error'>Error: " . $fetcher->getLastError() . "</p>";
+                                    }
+                                    flushOutput();
+                                    continue;
+                                }
                             } else {
                                 // Old format with just an array of reviews
                                 $reviews = $result;
-
+                
                                 if (empty($reviews)) {
                                     echo "<p class='warning'>No reviews found from {$sourceName} for ISBN: $isbnToUse</p>";
                                     if ($fetcher->getLastError()) {
@@ -733,7 +754,21 @@ function updateBookAggregateValues($db, $bookId) {
                         }
                         // Import reviews
                         $totalReviews = count($reviews);
+                        echo "<p class='info'><strong>DEBUG:</strong> Processing $totalReviews reviews</p>";
+                        flushOutput();
+                        
                         foreach ($reviews as $reviewIndex => $review) {
+                            // Debug: Show the structure of each review
+                            if ($reviewIndex < 3) { // Only show first 3 reviews to avoid spam
+                                echo "<p class='info'><strong>DEBUG Review $reviewIndex:</strong> " . gettype($review);
+                                if (is_array($review)) {
+                                    echo " - Keys: " . implode(', ', array_keys($review));
+                                } else {
+                                    echo " - Value: " . substr(var_export($review, true), 0, 100) . "...";
+                                }
+                                echo "</p>";
+                                flushOutput();
+                            }
                             // Update progress during review processing
                             if ($totalReviews > 10 && $reviewIndex % 5 == 0) {
                                 // Calculate progress for this review within the source

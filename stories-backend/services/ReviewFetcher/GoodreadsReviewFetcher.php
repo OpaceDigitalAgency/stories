@@ -468,7 +468,94 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         file_put_contents($debugDir . '/goodreads_book_page.html', substr($response, 0, 500000));
         $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Saved book page HTML to debug file");
 
+        // Extract book details directly from HTML
         $details = [];
+
+        // Extract title
+        if (preg_match('/<h1[^>]*class="[^"]*Text__title[^"]*"[^>]*>(.*?)<\/h1>/is', $response, $matches)) {
+            $details['title'] = trim(strip_tags($matches[1]));
+        } else if (preg_match('/<h1[^>]*class="[^"]*gr-h1[^"]*"[^>]*>(.*?)<\/h1>/is', $response, $matches)) {
+            $details['title'] = trim(strip_tags($matches[1]));
+        }
+
+        // Extract author
+        if (preg_match('/<span[^>]*class="[^"]*ContributorLink__name[^"]*"[^>]*>(.*?)<\/span>/is', $response, $matches)) {
+            $details['author'] = trim(strip_tags($matches[1]));
+        } else if (preg_match('/<a[^>]*class="[^"]*authorName[^"]*"[^>]*>(.*?)<\/a>/is', $response, $matches)) {
+            $details['author'] = trim(strip_tags($matches[1]));
+        }
+
+        // Extract ISBN
+        if (preg_match('/ISBN\s*(?:10)?:?\s*([0-9X]{10})/i', $response, $matches)) {
+            $details['isbn'] = trim($matches[1]);
+        }
+
+        // Extract ISBN13
+        if (preg_match('/ISBN\s*13:?\s*([0-9]{13})/i', $response, $matches)) {
+            $details['isbn13'] = trim($matches[1]);
+        }
+
+        // Extract publisher and publication date
+        if (preg_match('/Published\s+(?:by\s+([^,]+),\s*)?(?:on\s+)?([A-Za-z]+\s+\d+(?:,\s*\d{4})?)/i', $response, $matches)) {
+            if (!empty($matches[1])) {
+                $details['publisher'] = trim($matches[1]);
+            }
+            if (!empty($matches[2])) {
+                $details['published_date'] = trim($matches[2]);
+            }
+        }
+
+        // Extract page count
+        if (preg_match('/(\d+)\s+pages?/i', $response, $matches)) {
+            $details['page_count'] = (int)$matches[1];
+        }
+
+        // Extract format
+        if (preg_match('/<span[^>]*>Format<\/span>.*?<span[^>]*>(.*?)<\/span>/is', $response, $matches)) {
+            $details['format'] = trim(strip_tags($matches[1]));
+        }
+
+        // Extract series
+        if (preg_match('/<h2[^>]*>Series<\/h2>.*?<div[^>]*>(.*?)<\/div>/is', $response, $matches)) {
+            $details['series'] = trim(strip_tags($matches[1]));
+        }
+
+        // Extract genres
+        if (preg_match_all('/<a[^>]*class="[^"]*bookPageGenreLink[^"]*"[^>]*>(.*?)<\/a>/i', $response, $matches)) {
+            $details['genres'] = array_map('trim', $matches[1]);
+        }
+
+        // Extract awards
+        if (preg_match('/Awards:?\s*([^<\n]+)/i', $response, $matches)) {
+            $details['awards'] = array_map('trim', explode(',', $matches[1]));
+        }
+
+        // Extract characters
+        if (preg_match('/Characters:?\s*([^<\n]+)/i', $response, $matches)) {
+            $details['characters'] = array_map('trim', explode(',', $matches[1]));
+        }
+
+        // Extract settings
+        if (preg_match('/Setting:?\s*([^<\n]+)/i', $response, $matches)) {
+            $details['settings'] = array_map('trim', explode(',', $matches[1]));
+        }
+
+        // Extract cover URL
+        if (preg_match('/<img[^>]*id="coverImage"[^>]*src="([^"]+)"/i', $response, $matches)) {
+            $details['cover_url'] = $matches[1];
+        }
+
+        // Extract rating and counts
+        if (preg_match('/([0-9.]+)\s+avg\s+rating.*?([0-9,]+)\s+ratings?/is', $response, $matches)) {
+            $details['average_rating'] = (float)$matches[1];
+            $details['ratings_count'] = (int)str_replace(',', '', $matches[2]);
+        }
+
+        if (preg_match('/([0-9,]+)\s+reviews?/i', $response, $matches)) {
+            $details['review_count'] = (int)str_replace(',', '', $matches[1]);
+        }
+
+        $details['url'] = $bookUrl;
 
         // Try to use the VPS-based Headless Browser service first for comprehensive metadata
         $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Attempting to use VPS Headless Browser for comprehensive metadata");
@@ -506,7 +593,6 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         $this->logToFile($debugDir . '/goodreads-log.txt', "   - VPS_BYPASS_CACHE: " . getenv('VPS_BYPASS_CACHE'));
         $this->logToFile($debugDir . '/goodreads-log.txt', "   - FORCE_FRESH_DATA: " . getenv('FORCE_FRESH_DATA'));
         $this->logToFile($debugDir . '/goodreads-log.txt', "   - Full request URL: {$url}");
-
 
         $this->logToFile($debugDir . '/goodreads-log.txt', "🔗 Using VPS Headless Browser API URL: {$apiUrl}");
         $this->logToFile($debugDir . '/goodreads-log.txt', "🔗 Book URL being scraped: {$bookUrl}");
@@ -555,27 +641,28 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             if (isset($vpsData['book_title']) && !empty($vpsData)) {
                 $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Successfully fetched comprehensive metadata from VPS Headless Browser");
 
-                // Map the VPS response to our details array
-                $details['title'] = $vpsData['book_title'] ?? '';
-                $details['author'] = $vpsData['book_author'] ?? '';
-                $details['isbn'] = $vpsData['book_isbn'] ?? '';
-                $details['isbn13'] = $vpsData['book_isbn13'] ?? '';
-                $details['publisher'] = $vpsData['book_publisher'] ?? '';
-                $details['published_date'] = $vpsData['book_publication_date'] ?? '';
-                $details['page_count'] = $vpsData['book_page_count'] ?? '';
-                $details['language'] = $vpsData['book_language'] ?? '';
-                $details['format'] = $vpsData['book_format'] ?? '';
-                $details['series'] = $vpsData['book_series'] ?? '';
-                $details['genres'] = $vpsData['book_genres'] ?? [];
-                $details['awards'] = $vpsData['book_awards'] ?? [];
-                $details['characters'] = $vpsData['book_characters'] ?? [];
-                $details['settings'] = $vpsData['book_settings'] ?? [];
-                $details['cover_url'] = $vpsData['book_cover_url'] ?? '';
-                $details['description'] = $vpsData['book_description'] ?? '';
-                $details['average_rating'] = $vpsData['book_rating'] ?? '';
-                $details['ratings_count'] = $vpsData['book_rating_count'] ?? '';
-                $details['review_count'] = $vpsData['book_review_count'] ?? '';
+                // Only use VPS data for fields that are reliably available in GraphQL
+                // Based on analysis of goodreads.json, most book metadata is NOT in GraphQL
+                $this->logToFile($debugDir . '/goodreads-log.txt', "⚠️ VPS GraphQL data analysis: Most book metadata not available in GraphQL, using HTML scraping for all book details");
+                
+                // VPS GraphQL is only reliable for:
+                // - Review data (handled separately in review scraping)
+                // - Basic genres (if available)
+                // Everything else needs HTML scraping
+                
+                // Only extract genres if they look valid (not GraphQL fragments)
+                if (isset($vpsData['book_genres']) && $this->isValidGenreData($vpsData['book_genres'])) {
+                    $details['genres'] = $vpsData['book_genres'];
+                    $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Using valid genre data from VPS: " . json_encode($vpsData['book_genres']));
+                } else {
+                    $this->logToFile($debugDir . '/goodreads-log.txt', "⚠️ VPS genre data invalid or contains GraphQL fragments, will use HTML scraping");
+                }
+                
+                // Set URL for reference
                 $details['url'] = $bookUrl;
+                
+                // Log that we're skipping VPS metadata extraction
+                $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Skipping VPS metadata extraction - GraphQL doesn't contain: title, author, ISBN, publisher, publication_date, page_count, language, format, series, awards, characters, settings, cover_url, description, ratings");
 
                 // Log the extracted metadata
                 $this->logToFile($debugDir . '/goodreads-log.txt', "📚 Extracted metadata from VPS Headless Browser:");
@@ -590,7 +677,12 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
                 $this->logToFile($debugDir . '/goodreads-log.txt', "- Format: " . ($details['format'] ?? 'N/A'));
                 $this->logToFile($debugDir . '/goodreads-log.txt', "- Series: " . ($details['series'] ?? 'N/A'));
 
-                return $details;
+                // If we don't have character data from VPS, continue to HTML scraping for characters
+                if (!isset($details['characters'])) {
+                    $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 No valid character data from VPS, will extract from HTML");
+                } else {
+                    return $details;
+                }
             } else {
                 $this->logToFile($debugDir . '/goodreads-log.txt', "⚠️ VPS Headless Browser returned invalid data, falling back to direct scraping");
             }
@@ -2096,5 +2188,109 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         }
 
         return $reviews;
+    }
+
+    /**
+     * Validate character data to ensure it doesn't contain GraphQL fragments
+     *
+     * @param array $characters The character data to validate
+     * @return bool True if the data is valid, false if it contains GraphQL fragments
+     */
+    private function isValidCharacterData($characters): bool {
+        if (!is_array($characters) || empty($characters)) {
+            return false;
+        }
+
+        foreach ($characters as $character) {
+            if (!is_string($character)) {
+                return false;
+            }
+
+            // Check for GraphQL-specific patterns that indicate invalid data
+            $graphqlPatterns = [
+                '__typename',
+                'edges',
+                'node',
+                'data',
+                'getReviews',
+                'getSimilarBooks',
+                'getBasicGenres',
+                'kca://',
+                'amzn1.gr.',
+                'goodreads.v1',
+                '"id":',
+                '"name":',
+                '"webUrl":'
+            ];
+
+            foreach ($graphqlPatterns as $pattern) {
+                if (strpos($character, $pattern) !== false) {
+                    return false;
+                }
+            }
+
+            // Check if it looks like JSON
+            if (json_decode($character) !== null) {
+                return false;
+            }
+
+            // Check for very long strings that might be GraphQL responses
+            if (strlen($character) > 500) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Validate genre data to ensure it doesn't contain GraphQL fragments
+     *
+     * @param array $genres The genre data to validate
+     * @return bool True if the data is valid, false if it contains GraphQL fragments
+     */
+    private function isValidGenreData($genres): bool {
+        if (!is_array($genres) || empty($genres)) {
+            return false;
+        }
+
+        foreach ($genres as $genre) {
+            if (!is_string($genre)) {
+                return false;
+            }
+
+            // Check for GraphQL-specific patterns that indicate invalid data
+            $graphqlPatterns = [
+                '__typename',
+                'edges',
+                'node',
+                'data',
+                'getBasicGenres',
+                'kca://',
+                'amzn1.gr.',
+                'goodreads.v1',
+                '"id":',
+                '"name":',
+                '"webUrl":'
+            ];
+
+            foreach ($graphqlPatterns as $pattern) {
+                if (strpos($genre, $pattern) !== false) {
+                    return false;
+                }
+            }
+
+            // Check if it looks like JSON
+            if (json_decode($genre) !== null) {
+                return false;
+            }
+
+            // Check for very long strings that might be GraphQL responses
+            if (strlen($genre) > 100) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

@@ -64,6 +64,47 @@ try {
             ]);
             break;
 
+        case 'fix_isbn':
+            $bookId = intval($_POST['book_id'] ?? 0);
+
+            if (!$bookId) {
+                echo json_encode(['status' => 'error', 'message' => 'No book ID provided']);
+                exit;
+            }
+
+            // Get book details
+            $stmt = $db->prepare("
+                SELECT di.id, di.title, b.isbn, b.isbn13, b.author
+                FROM directory_items di
+                JOIN books b ON di.id = b.directory_item_id
+                WHERE di.id = ?
+            ");
+            $stmt->execute([$bookId]);
+            $book = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$book) {
+                echo json_encode(['status' => 'error', 'message' => 'Book not found']);
+                exit;
+            }
+
+            // Try to find correct ISBN by searching with title and author
+            $suggestions = searchBooksByTitleAuthor($book['title'], $book['author'], 3);
+
+            if (empty($suggestions)) {
+                echo json_encode(['status' => 'error', 'message' => 'No alternative ISBNs found for this book']);
+                exit;
+            }
+
+            // Return suggestions for user to choose from
+            echo json_encode([
+                'status' => 'success',
+                'book_id' => $bookId,
+                'suggestions' => $suggestions,
+                'current_title' => $book['title'],
+                'current_author' => $book['author']
+            ]);
+            break;
+
         default:
             echo json_encode(['status' => 'error', 'message' => 'Invalid action: ' . $action]);
             break;
@@ -95,12 +136,22 @@ function validateISBNAgainstAPIs($isbn, $title, $author) {
     }
 
     // OpenLibrary check (primary validation - faster response)
-    if (validateIsbnWithOpenLibrary($cleanIsbn)) {
+    error_log("Calling validateIsbnWithOpenLibrary for ISBN: $cleanIsbn");
+    $openLibraryResult = validateIsbnWithOpenLibrary($cleanIsbn);
+    error_log("OpenLibrary result: " . ($openLibraryResult ? 'true' : 'false'));
+
+    if ($openLibraryResult) {
+        error_log("ISBN validated successfully with OpenLibrary");
         return ['status' => 'valid', 'class' => 'success', 'icon' => 'check-circle', 'message' => 'Valid (OpenLibrary)'];
     }
 
     // Google Books check (secondary validation)
-    if (validateIsbnWithGoogleBooks($cleanIsbn)) {
+    error_log("Calling validateIsbnWithGoogleBooks for ISBN: $cleanIsbn");
+    $googleBooksResult = validateIsbnWithGoogleBooks($cleanIsbn);
+    error_log("Google Books result: " . ($googleBooksResult ? 'true' : 'false'));
+
+    if ($googleBooksResult) {
+        error_log("ISBN validated successfully with Google Books");
         return ['status' => 'valid', 'class' => 'success', 'icon' => 'check-circle', 'message' => 'Valid (Google Books)'];
     }
 

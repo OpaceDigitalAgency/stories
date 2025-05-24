@@ -443,12 +443,41 @@ $(document).ready(function() {
         const bookTitle = $(this).data('book-title');
         const author = $(this).data('author');
 
-        // Show a modal or redirect to a fix page
-        if (confirm(`Fix ISBN for "${bookTitle}" by searching with title and author?`)) {
-            // For now, just show an alert - we can implement the fix functionality later
-            alert('Fix functionality will be implemented soon. Please manually edit the book for now.');
-            // TODO: Implement proper fix functionality
-            // window.location.href = `book-import-validate-new.php?action=fix_isbn&book_id=${bookId}&title=${encodeURIComponent(bookTitle)}&author=${encodeURIComponent(author)}`;
+        // Show a confirmation dialog
+        if (confirm(`Search for correct ISBN for "${bookTitle}" by ${author}?`)) {
+            const $button = $(this);
+            $button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Searching...');
+
+            // Make AJAX call to get ISBN suggestions
+            $.ajax({
+                url: 'book-validation-ajax.php',
+                method: 'POST',
+                data: {
+                    action: 'fix_isbn',
+                    book_id: bookId
+                },
+                success: function(response) {
+                    if (typeof response === 'object' && response.status === 'success') {
+                        // Show suggestions in a modal or alert
+                        let message = `Found ${response.suggestions.length} possible matches for "${response.current_title}":\n\n`;
+                        response.suggestions.forEach((suggestion, index) => {
+                            message += `${index + 1}. ${suggestion.title} by ${suggestion.author}\n`;
+                            message += `   ISBN-10: ${suggestion.isbn || 'N/A'}\n`;
+                            message += `   ISBN-13: ${suggestion.isbn13 || 'N/A'}\n`;
+                            message += `   Publisher: ${suggestion.publisher || 'N/A'}\n\n`;
+                        });
+                        message += 'Please manually update the book with the correct ISBN from the list above.';
+                        alert(message);
+                    } else {
+                        alert('Error: ' + (response.message || 'Failed to find ISBN suggestions'));
+                    }
+                    $button.prop('disabled', false).html('<i class="fas fa-wrench"></i> Fix');
+                },
+                error: function(xhr, status, error) {
+                    alert('Error searching for ISBN: ' + error);
+                    $button.prop('disabled', false).html('<i class="fas fa-wrench"></i> Fix');
+                }
+            });
         }
     });
 

@@ -195,9 +195,12 @@ async function makeGraphQLRequest(page, workId, cursor = null) {
             headers['X-Requested-With'] = 'XMLHttpRequest';
           }
 
-          const response = await fetch('https://www.goodreads.com/graphql', {
+          const response = await fetch('https://kxbwmqov6jgg3daaamb744ycu4.appsync-api.us-east-1.amazonaws.com/graphql', {
             method: 'POST',
-            headers,
+            headers: {
+              ...headers,
+              'x-api-key': 'da2-xpgsdydkbregjhpr6ejzqdhuwy'
+            },
             body: JSON.stringify({
               operationName: 'BookPageQuery',
               query,

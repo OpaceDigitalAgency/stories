@@ -52,7 +52,23 @@ try {
                 exit;
             }
 
-            $isbn = !empty($book['isbn13']) ? $book['isbn13'] : (!empty($book['isbn']) ? $book['isbn'] : '');
+            // Get the best available ISBN (prefer isbn13, fallback to isbn)
+            $isbn = '';
+            if (!empty($book['isbn13'])) {
+                $isbn = $book['isbn13'];
+            } elseif (!empty($book['isbn'])) {
+                $isbn = $book['isbn'];
+            }
+
+            // If no ISBN found, return missing status
+            if (empty($isbn)) {
+                echo json_encode([
+                    'status' => 'success',
+                    'book_id' => $bookId,
+                    'validation' => ['status' => 'missing', 'class' => 'danger', 'icon' => 'times-circle', 'message' => 'No ISBN']
+                ]);
+                exit;
+            }
 
             // Validate ISBN against external APIs
             $validation = validateISBNAgainstAPIs($isbn, $book['title'], $book['author']);
@@ -117,59 +133,75 @@ try {
  * Validate ISBN against external APIs
  */
 function validateISBNAgainstAPIs($isbn, $title, $author) {
-    // Debug logging
-    error_log("validateISBNAgainstAPIs called with ISBN: '$isbn', Title: '$title', Author: '$author'");
-
     if (empty($isbn)) {
-        error_log("No ISBN provided");
         return ['status' => 'missing', 'class' => 'danger', 'icon' => 'times-circle', 'message' => 'No ISBN'];
     }
 
-    // Clean ISBN
+    // Clean ISBN (remove hyphens, spaces, etc.)
     $cleanIsbn = preg_replace('/[^0-9X]/i', '', $isbn);
-    error_log("Original ISBN: '$isbn', Cleaned ISBN: '$cleanIsbn', Length: " . strlen($cleanIsbn));
 
-    // Basic format check first
+    // Basic format check
     if (strlen($cleanIsbn) != 10 && strlen($cleanIsbn) != 13) {
-        error_log("Invalid ISBN format - length: " . strlen($cleanIsbn));
         return ['status' => 'invalid', 'class' => 'danger', 'icon' => 'times-circle', 'message' => 'Invalid format (' . strlen($cleanIsbn) . ' digits)'];
     }
 
-    // OpenLibrary check (primary validation - faster response)
-    error_log("Calling validateIsbnWithOpenLibrary for ISBN: $cleanIsbn");
-    $openLibraryResult = validateIsbnWithOpenLibrary($cleanIsbn);
-    error_log("OpenLibrary result: " . ($openLibraryResult ? 'true' : 'false'));
+    // ISBN-13 checksum validation for 13-digit ISBNs
+    if (strlen($cleanIsbn) == 13) {
+        $sum = 0;
+        for ($i = 0; $i < 12; $i++) {
+            $digit = intval($cleanIsbn[$i]);
+            $sum += ($i % 2 == 0) ? $digit : $digit * 3;
+        }
+        $checkDigit = (10 - ($sum % 10)) % 10;
+        $actualCheckDigit = intval($cleanIsbn[12]);
 
-    if ($openLibraryResult) {
-        error_log("ISBN validated successfully with OpenLibrary");
+        if ($checkDigit != $actualCheckDigit) {
+            return ['status' => 'invalid', 'class' => 'danger', 'icon' => 'times-circle', 'message' => 'Invalid ISBN-13 checksum'];
+        }
+    }
+
+    // ISBN-10 checksum validation for 10-digit ISBNs
+    if (strlen($cleanIsbn) == 10) {
+        $sum = 0;
+        for ($i = 0; $i < 9; $i++) {
+            $digit = intval($cleanIsbn[$i]);
+            $sum += $digit * (10 - $i);
+        }
+        $checkDigit = (11 - ($sum % 11)) % 11;
+        $actualCheckDigit = ($cleanIsbn[9] == 'X') ? 10 : intval($cleanIsbn[9]);
+
+        if ($checkDigit != $actualCheckDigit) {
+            return ['status' => 'invalid', 'class' => 'danger', 'icon' => 'times-circle', 'message' => 'Invalid ISBN-10 checksum'];
+        }
+    }
+
+    // If checksum is valid, verify against external APIs
+    // OpenLibrary check (primary validation)
+    if (validateIsbnWithOpenLibrary($cleanIsbn)) {
         return ['status' => 'valid', 'class' => 'success', 'icon' => 'check-circle', 'message' => 'Valid (OpenLibrary)'];
     }
 
     // Google Books check (secondary validation)
-    error_log("Calling validateIsbnWithGoogleBooks for ISBN: $cleanIsbn");
-    $googleBooksResult = validateIsbnWithGoogleBooks($cleanIsbn);
-    error_log("Google Books result: " . ($googleBooksResult ? 'true' : 'false'));
-
-    if ($googleBooksResult) {
-        error_log("ISBN validated successfully with Google Books");
+    if (validateIsbnWithGoogleBooks($cleanIsbn)) {
         return ['status' => 'valid', 'class' => 'success', 'icon' => 'check-circle', 'message' => 'Valid (Google Books)'];
     }
 
-    // If ISBN validation fails, check if we can find the book by title/author
+    // If ISBN validation fails but checksum is valid, check if we can find the book by title/author
     if (!empty($title)) {
-        // Try OpenLibrary search first (faster)
+        // Try OpenLibrary search first
         $openLibrarySuggestions = searchOpenLibraryByTitleAuthor($title, $author, 1);
         if (!empty($openLibrarySuggestions)) {
-            return ['status' => 'mismatch', 'class' => 'warning', 'icon' => 'exclamation-triangle', 'message' => 'ISBN invalid, but book found by title (OpenLibrary)'];
+            return ['status' => 'mismatch', 'class' => 'warning', 'icon' => 'exclamation-triangle', 'message' => 'ISBN not found, but book exists by title'];
         }
 
         // Try Google Books search as fallback
         $googleBooksSuggestions = searchBooksByTitleAuthor($title, $author, 1);
         if (!empty($googleBooksSuggestions)) {
-            return ['status' => 'mismatch', 'class' => 'warning', 'icon' => 'exclamation-triangle', 'message' => 'ISBN invalid, but book found by title (Google Books)'];
+            return ['status' => 'mismatch', 'class' => 'warning', 'icon' => 'exclamation-triangle', 'message' => 'ISBN not found, but book exists by title'];
         }
     }
 
-    return ['status' => 'invalid', 'class' => 'danger', 'icon' => 'times-circle', 'message' => 'ISBN not found'];
+    // Valid checksum but ISBN doesn't exist in any database
+    return ['status' => 'invalid', 'class' => 'danger', 'icon' => 'times-circle', 'message' => 'ISBN not found in any database'];
 }
 ?>

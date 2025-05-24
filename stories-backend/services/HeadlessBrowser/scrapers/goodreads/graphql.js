@@ -278,4 +278,57 @@ fragment SocialUserFragment on User {
     }
 }
 
-module.exports = { scrapeReviews };
+/**
+ * Legacy function for compatibility with existing index.js
+ * Bridges the old makeGraphQLRequest interface to our new scrapeReviews implementation
+ */
+async function makeGraphQLRequest(page, workId, cursor = null) {
+    try {
+        // Convert workId back to ISBN format for our scrapeReviews function
+        // The workId might be in format "work/amzn1.gr.work.v1.xxxxx" or just the ID part
+        let isbn = null;
+        
+        // Try to extract ISBN from the current page URL
+        const currentUrl = await page.url();
+        const isbnMatch = currentUrl.match(/\/book\/isbn\/(\d+)/);
+        if (isbnMatch) {
+            isbn = isbnMatch[1];
+        } else {
+            // If we can't get ISBN from URL, we'll need to extract it from the page
+            // For now, let's use a placeholder and log the issue
+            console.log('[GraphQL] Warning: Could not extract ISBN from URL, using workId as fallback');
+            isbn = workId.replace(/^work\//, '').replace(/^amzn1\.gr\.work\.v1\./, '');
+        }
+        
+        console.log(`[GraphQL] makeGraphQLRequest called with workId: ${workId}, cursor: ${cursor}`);
+        console.log(`[GraphQL] Extracted ISBN: ${isbn}`);
+        
+        // Call our new scrapeReviews function
+        const options = {
+            maxReviews: 30, // Match the limit from the working cURL
+            nextPageToken: cursor,
+            startPage: cursor ? 2 : 1 // If we have a cursor, we're on page 2+
+        };
+        
+        const result = await scrapeReviews(page, isbn, options);
+        
+        // Convert our result format to the expected format
+        return {
+            reviews: result.reviews || [],
+            hasMore: result.hasMore || false,
+            nextCursor: result.nextPageToken || null,
+            metadata: {} // We don't extract metadata in the GraphQL function
+        };
+        
+    } catch (error) {
+        console.error('[GraphQL] makeGraphQLRequest error:', error);
+        return {
+            reviews: [],
+            hasMore: false,
+            nextCursor: null,
+            metadata: {}
+        };
+    }
+}
+
+module.exports = { scrapeReviews, makeGraphQLRequest };

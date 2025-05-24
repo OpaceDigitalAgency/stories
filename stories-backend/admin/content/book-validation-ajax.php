@@ -129,8 +129,31 @@ try {
                 exit;
             }
 
+            // Log all suggestions before intelligent matching
+            error_log("DEBUG: Before intelligent matching - " . count($suggestions) . " total suggestions:");
+            foreach ($suggestions as $i => $suggestion) {
+                $isbn13 = $suggestion['isbn13'] ?? 'none';
+                $isbn10 = $suggestion['isbn'] ?? 'none';
+                error_log("DEBUG: Pre-match $i: Title='" . $suggestion['title'] . "', ISBN-13=$isbn13, ISBN-10=$isbn10, Source=" . ($suggestion['source'] ?? 'unknown'));
+                if ($isbn13 === '9780007430017') {
+                    error_log("DEBUG: *** TARGET ISBN 9780007430017 FOUND IN PRE-MATCH SUGGESTIONS! ***");
+                }
+            }
+
             // Apply intelligent matching to find the best suggestions
             $matchedSuggestions = intelligentISBNMatching($suggestions, $book);
+
+            // Log final suggestions after intelligent matching
+            error_log("DEBUG: After intelligent matching - " . count($matchedSuggestions) . " final suggestions:");
+            foreach ($matchedSuggestions as $i => $suggestion) {
+                $isbn13 = $suggestion['isbn13'] ?? 'none';
+                $isbn10 = $suggestion['isbn'] ?? 'none';
+                $score = $suggestion['match_score'] ?? 'no score';
+                error_log("DEBUG: Final $i: Title='" . $suggestion['title'] . "', ISBN-13=$isbn13, Score=$score");
+                if ($isbn13 === '9780007430017') {
+                    error_log("DEBUG: *** TARGET ISBN 9780007430017 FOUND IN FINAL SUGGESTIONS! ***");
+                }
+            }
 
             // Return suggestions for user to choose from
             echo json_encode([
@@ -415,7 +438,7 @@ function intelligentISBNMatching($suggestions, $currentBook) {
 
     // Return top suggestions with their scores and reasons
     $result = [];
-    $maxResults = 5; // Limit to top 5 matches
+    $maxResults = 10; // Increased to top 10 matches to ensure we don't miss the correct ISBN
 
     foreach (array_slice($scoredSuggestions, 0, $maxResults) as $scored) {
         $suggestion = $scored['suggestion'];

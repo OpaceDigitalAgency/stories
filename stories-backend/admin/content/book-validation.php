@@ -414,16 +414,14 @@ $(document).ready(function() {
                 book_id: bookId
             },
             success: function(response) {
-                try {
-                    const result = JSON.parse(response);
-                    if (result.status === 'success') {
-                        const validation = result.validation;
-                        $statusCell.html(`<span class="badge badge-${validation.class}" title="${validation.message}"><i class="fas fa-${validation.icon}"></i> ${validation.status.charAt(0).toUpperCase() + validation.status.slice(1)}</span>`);
-                    } else {
-                        $statusCell.html('<span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>');
-                        alert('Validation error: ' + result.message);
-                    }
-                } catch (e) {
+                // jQuery automatically parses JSON when Content-Type is application/json
+                if (typeof response === 'object' && response.status === 'success') {
+                    const validation = response.validation;
+                    $statusCell.html(`<span class="badge badge-${validation.class}" title="${validation.message}"><i class="fas fa-${validation.icon}"></i> ${validation.status.charAt(0).toUpperCase() + validation.status.slice(1)}</span>`);
+                } else if (typeof response === 'object' && response.status === 'error') {
+                    $statusCell.html('<span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>');
+                    alert('Validation error: ' + response.message);
+                } else {
                     $statusCell.html('<span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>');
                     console.log('Validation response:', response);
                     alert('Invalid response from server. Check console for details.');
@@ -507,12 +505,12 @@ $(document).ready(function() {
                 action: 'test'
             },
             success: function(response) {
-                try {
-                    const result = JSON.parse(response);
-                    alert('AJAX Test Success: ' + result.message);
-                } catch (e) {
+                // jQuery automatically parses JSON when Content-Type is application/json
+                if (typeof response === 'object' && response.status) {
+                    alert('AJAX Test Success: ' + response.message);
+                } else {
                     console.log('Raw AJAX response:', response);
-                    alert('AJAX Test - Invalid JSON. Check browser console for details. Response type: ' + typeof response);
+                    alert('AJAX Test - Unexpected response format. Response type: ' + typeof response);
                 }
             },
             error: function(xhr, status, error) {
@@ -569,23 +567,19 @@ $(document).ready(function() {
                         book_id: bookId
                     },
                     success: function(response) {
-                        try {
-                            const result = JSON.parse(response);
-                            if (result.status === 'success') {
-                                const validation = result.validation;
-                                $statusCell.html(`<span class="badge badge-${validation.class}" title="${validation.message}"><i class="fas fa-${validation.icon}"></i> ${validation.status.charAt(0).toUpperCase() + validation.status.slice(1)}</span>`);
+                        // jQuery automatically parses JSON when Content-Type is application/json
+                        if (typeof response === 'object' && response.status === 'success') {
+                            const validation = response.validation;
+                            $statusCell.html(`<span class="badge badge-${validation.class}" title="${validation.message}"><i class="fas fa-${validation.icon}"></i> ${validation.status.charAt(0).toUpperCase() + validation.status.slice(1)}</span>`);
 
-                                // Update Fix button if needed
-                                const $actionsCell = $row.find('td:last-child');
-                                if (validation.status === 'invalid' || validation.status === 'mismatch') {
-                                    if (!$actionsCell.find('.fix-isbn-btn').length) {
-                                        $actionsCell.find('.validate-isbn-btn').after(' <button class="btn btn-sm btn-warning fix-isbn-btn" data-book-id="' + bookId + '"><i class="fas fa-wrench"></i> Fix</button>');
-                                    }
+                            // Update Fix button if needed
+                            const $actionsCell = $row.find('td:last-child');
+                            if (validation.status === 'invalid' || validation.status === 'mismatch') {
+                                if (!$actionsCell.find('.fix-isbn-btn').length) {
+                                    $actionsCell.find('.validate-isbn-btn').after(' <button class="btn btn-sm btn-warning fix-isbn-btn" data-book-id="' + bookId + '"><i class="fas fa-wrench"></i> Fix</button>');
                                 }
-                            } else {
-                                $statusCell.html('<span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>');
                             }
-                        } catch (e) {
+                        } else {
                             $statusCell.html('<span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>');
                         }
 

@@ -83,6 +83,16 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
   const forceFinal = force || envForce;
   const maxPages = options.maxPages ?? 100;
   const continueFromLast = options.continueFromLast ?? false;
+  
+  // CRITICAL FIX: Handle pagination parameters from PHP
+  const nextPageToken = options.nextPageToken || null;
+  const startPage = options.startPage ? parseInt(options.startPage) : null;
+  
+  logger.info(`Pagination parameters from PHP:
+    - nextPageToken: ${nextPageToken}
+    - startPage: ${startPage}
+    - continueFromLast: ${continueFromLast}
+  `);
 
   // Log force parameter sources for debugging
   logger.info(`Force refresh sources:
@@ -839,9 +849,17 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
 
     // Initialize reviews array with cached reviews if continuing
     let reviews = cachedData?.reviews || [];
-    let nextCursor = cachedData?.graphql_state?.next_token;
+    
+    // CRITICAL FIX: Use pagination parameters from PHP if provided
+    let nextCursor = nextPageToken || cachedData?.graphql_state?.next_token;
     let hasMore = true;
-    let pageCount = cachedData?.graphql_state?.current_page || 0;
+    let pageCount = startPage ? (startPage - 1) : (cachedData?.graphql_state?.current_page || 0);
+    
+    logger.info(`Pagination state initialization:
+      - Using nextCursor: ${nextCursor} (from ${nextPageToken ? 'PHP' : 'cache'})
+      - Starting pageCount: ${pageCount} (from ${startPage ? 'PHP' : 'cache'})
+      - Cached reviews: ${reviews.length}
+    `);
 
     // Fetch reviews via GraphQL
     while (hasMore && pageCount < maxPages && (continueFromLast || reviews.length < limit)) {

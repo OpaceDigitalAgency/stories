@@ -350,9 +350,9 @@ require_once '../includes/header.php';
 <script>
 $(document).ready(function() {
     // ISBN Validation Tab Handlers
-    $('#select-all-isbn').on('change', function() {
+    $('.select-all-checkbox').on('change', function() {
         const isChecked = $(this).prop('checked');
-        $('.isbn-checkbox').prop('checked', isChecked);
+        $('.item-checkbox').prop('checked', isChecked);
     });
 
     $('.validate-isbn-btn').on('click', function() {
@@ -376,7 +376,7 @@ $(document).ready(function() {
     });
 
     $('#validate-selected-isbns').on('click', function() {
-        const selectedBooks = $('.isbn-checkbox:checked').length;
+        const selectedBooks = $('.item-checkbox:checked').length;
 
         if (selectedBooks === 0) {
             alert('Please select at least one book to validate.');
@@ -395,7 +395,7 @@ $(document).ready(function() {
             'value': 'validate_isbns'
         }));
 
-        $('.isbn-checkbox:checked').each(function() {
+        $('.item-checkbox:checked').each(function() {
             form.append($('<input>', {
                 'type': 'hidden',
                 'name': 'book_ids[]',
@@ -428,8 +428,8 @@ $(document).ready(function() {
         const $progressBar = $progress.find('.progress-bar');
         const $progressText = $progress.find('small');
 
-        // Get all book rows
-        const $rows = $('.isbn-validation-table tbody tr');
+        // Get all book rows - use ID selector for the table
+        const $rows = $('#isbn-validation-table tbody tr');
         const totalBooks = $rows.length;
         let completedBooks = 0;
 
@@ -449,8 +449,8 @@ $(document).ready(function() {
         // Process each book
         $rows.each(function(index) {
             const $row = $(this);
-            const bookId = $row.find('.isbn-checkbox').val();
-            const $statusCell = $row.find('td:nth-child(4)'); // Status column
+            const bookId = $row.find('.item-checkbox').val(); // Use the correct checkbox class
+            const $statusCell = $row.find('td:nth-child(4)'); // Status column (adjust for checkbox column)
 
             // Add a small delay to avoid overwhelming the APIs
             setTimeout(() => {

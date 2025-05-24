@@ -11,6 +11,8 @@ namespace Services\ReviewFetcher;
 use PDO;
 use Exception;
 
+require_once __DIR__ . '/GoodreadsBookMetadataFetcher.php';
+
 class GoodreadsReviewFetcher extends AbstractReviewFetcher {
     protected $sourceId = 1; // Goodreads source ID
     protected $lastError = null;
@@ -148,8 +150,9 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
 
         $this->logToFile(__DIR__ . '/debug/goodreads-log.txt', "✅ Found book URL: {$bookUrl}");
 
-        // Get book details
-        $bookDetails = $this->getBookDetails($bookUrl, $options);
+        // Get clean book details (bypassing VPS to prevent GraphQL corruption)
+        $metadataFetcher = new GoodreadsBookMetadataFetcher();
+        $bookDetails = $metadataFetcher->getCleanBookMetadata($bookUrl);
 
         if (empty($bookDetails)) {
             $errorMsg = "Failed to get book details from Goodreads for URL: {$bookUrl}";
@@ -336,7 +339,7 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
                 $url = 'https://www.goodreads.com' . html_entity_decode($matches[1][0]);
 
                 // Note: We're keeping the /reviews URL if it exists, as it might be needed for review scraping
-                // We'll handle removing it in getBookDetails() when we need the main book page for metadata
+                // The clean metadata fetcher will handle removing /reviews when needed for metadata extraction
                 $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found book URL using Pattern 5 (any book page link): {$url}");
 
                 return $url;
@@ -424,343 +427,6 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
 
         $this->logToFile($debugDir . '/goodreads-log.txt', "❌ No Goodreads ID found in OpenLibrary data for ISBN {$isbn}");
         return null;
-    }
-
-    /**
-     * Get book details from Goodreads
-     *
-     * @param string $bookUrl The book URL
-     * @return array|null The book details or null if not found
-     */
-    /**
-     * Get book details from Goodreads
-     *
-     * @param string $bookUrl The book URL
-     * @param array  $options Additional options (e.g. ['force' => true])
-     * @return array|null The book details or null if not found
-     */
-    public function getBookDetails(string $bookUrl, array $options = []): ?array {
-        // Create debug directory if it doesn't exist
-        $debugDir = __DIR__ . '/debug';
-        if (!is_dir($debugDir)) {
-            mkdir($debugDir, 0755, true);
-        }
-
-        // Make sure we're not using a reviews URL when fetching book details
-        // We only want the main book page for metadata extraction
-        if (strpos($bookUrl, '/reviews') !== false) {
-            $originalUrl = $bookUrl;
-            $bookUrl = str_replace('/reviews', '', $bookUrl);
-            $this->logToFile($debugDir . '/goodreads-log.txt', "⚠️ Found reviews URL '{$originalUrl}', converting to main book URL for metadata extraction: '{$bookUrl}'");
-        }
-
-        $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Fetching book details from URL: {$bookUrl}");
-
-        // Make the request
-        $response = $this->makeRequest($bookUrl);
-
-        if ($response === false) {
-            $this->logToFile($debugDir . '/goodreads-log.txt', "❌ Failed to fetch book details from URL: {$bookUrl}");
-            return null;
-        }
-
-        // Save the HTML for debugging
-        file_put_contents($debugDir . '/goodreads_book_page.html', substr($response, 0, 500000));
-        $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Saved book page HTML to debug file");
-
-        // Extract book details directly from HTML using proper Goodreads structure
-        $details = [];
-
-        // Extract title - from h1 with book title
-        if (preg_match('/<h1[^>]*data-testid="bookTitle"[^>]*>(.*?)<\/h1>/is', $response, $matches)) {
-            $details['title'] = trim(strip_tags($matches[1]));
-        } else if (preg_match('/<h1[^>]*>(.*?)\s+by\s+.*?<\/h1>/is', $response, $matches)) {
-            $details['title'] = trim(strip_tags($matches[1]));
-        }
-
-        // Extract author - from contributor link or author name
-        if (preg_match('/<span[^>]*class="[^"]*ContributorLink__name[^"]*"[^>]*>(.*?)<\/span>/is', $response, $matches)) {
-            $details['author'] = trim(strip_tags($matches[1]));
-        } else if (preg_match('/by\s+<a[^>]*>(.*?)<\/a>/is', $response, $matches)) {
-            $details['author'] = trim(strip_tags($matches[1]));
-        }
-
-        // Extract format - from DescListItem with Format
-        if (preg_match('/<dt[^>]*>Format<\/dt>\s*<dd[^>]*>.*?data-testid="contentContainer"[^>]*>(.*?)<\/div>/is', $response, $matches)) {
-            $details['format'] = trim(strip_tags($matches[1]));
-        }
-
-        // Extract publisher - from DescListItem with Published
-        if (preg_match('/<dt[^>]*>Published<\/dt>\s*<dd[^>]*>.*?data-testid="contentContainer"[^>]*>(.*?)<\/div>/is', $response, $matches)) {
-            $publishedText = trim(strip_tags($matches[1]));
-            // Extract publisher name (usually before "on" or date)
-            if (preg_match('/^([^,]+?)(?:\s+on\s+|\s*,\s*|\s+\d)/', $publishedText, $pubMatches)) {
-                $details['publisher'] = trim($pubMatches[1]);
-            }
-            // Extract publication date
-            if (preg_match('/(\w+\s+\d+,?\s*\d{4})/', $publishedText, $dateMatches)) {
-                $details['published_date'] = trim($dateMatches[1]);
-            }
-        }
-
-        // Extract ASIN - from DescListItem with ASIN
-        if (preg_match('/<dt[^>]*>ASIN<\/dt>\s*<dd[^>]*>.*?data-testid="asin"[^>]*>(.*?)<\/span>/is', $response, $matches)) {
-            $details['asin'] = trim(strip_tags($matches[1]));
-        }
-
-        // Extract series - from DescListItem with Series
-        if (preg_match('/<dt[^>]*>Series<\/dt>\s*<dd[^>]*>.*?<a[^>]*>(.*?)<\/a>/is', $response, $matches)) {
-            $details['series'] = trim(strip_tags($matches[1]));
-        }
-
-        // Extract characters - from DescListItem with Characters
-        if (preg_match('/<dt[^>]*>Characters<\/dt>\s*<dd[^>]*>(.*?)<\/dd>/is', $response, $matches)) {
-            $charactersHtml = $matches[1];
-            $characters = [];
-            if (preg_match_all('/<a[^>]*>(.*?)<\/a>/is', $charactersHtml, $charMatches)) {
-                foreach ($charMatches[1] as $char) {
-                    $characters[] = trim(strip_tags($char));
-                }
-                $details['characters'] = implode(', ', $characters);
-            }
-        }
-
-        // Extract original title - from DescListItem with Original title
-        if (preg_match('/<dt[^>]*>Original title<\/dt>\s*<dd[^>]*>.*?data-testid="contentContainer"[^>]*>(.*?)<\/div>/is', $response, $matches)) {
-            $details['original_title'] = trim(strip_tags($matches[1]));
-        }
-
-        // Extract ISBN from text content (not from script tags)
-        if (preg_match('/ISBN[:\s]*([0-9X]{10,13})/i', $response, $matches)) {
-            $isbn = trim($matches[1]);
-            if (strlen($isbn) == 13) {
-                $details['isbn13'] = $isbn;
-            } else if (strlen($isbn) == 10) {
-                $details['isbn'] = $isbn;
-            }
-        }
-
-        // Extract page count from text
-        if (preg_match('/(\d+)\s+pages?/i', $response, $matches)) {
-            $details['page_count'] = (int)$matches[1];
-        }
-
-        // Extract genres
-        if (preg_match_all('/<a[^>]*class="[^"]*bookPageGenreLink[^"]*"[^>]*>(.*?)<\/a>/i', $response, $matches)) {
-            $details['genres'] = array_map('trim', $matches[1]);
-        }
-
-        // Extract awards
-        if (preg_match('/Awards:?\s*([^<\n]+)/i', $response, $matches)) {
-            $details['awards'] = array_map('trim', explode(',', $matches[1]));
-        }
-
-        // Extract characters
-        if (preg_match('/Characters:?\s*([^<\n]+)/i', $response, $matches)) {
-            $details['characters'] = array_map('trim', explode(',', $matches[1]));
-        }
-
-        // Extract settings
-        if (preg_match('/Setting:?\s*([^<\n]+)/i', $response, $matches)) {
-            $details['settings'] = array_map('trim', explode(',', $matches[1]));
-        }
-
-        // Extract cover URL
-        if (preg_match('/<img[^>]*id="coverImage"[^>]*src="([^"]+)"/i', $response, $matches)) {
-            $details['cover_url'] = $matches[1];
-        }
-
-        // Extract rating and counts
-        if (preg_match('/([0-9.]+)\s+avg\s+rating.*?([0-9,]+)\s+ratings?/is', $response, $matches)) {
-            $details['average_rating'] = (float)$matches[1];
-            $details['ratings_count'] = (int)str_replace(',', '', $matches[2]);
-        }
-
-        if (preg_match('/([0-9,]+)\s+reviews?/i', $response, $matches)) {
-            $details['review_count'] = (int)str_replace(',', '', $matches[1]);
-        }
-
-        $details['url'] = $bookUrl;
-
-        // COMPLETELY BYPASS VPS for book metadata - VPS extracts corrupted GraphQL fragments
-        $this->logToFile($debugDir . '/goodreads-log.txt', "🚫 BYPASSING VPS for book metadata - VPS extracts corrupted GraphQL fragments, using clean HTML data only");
-        
-        // Skip VPS entirely for book metadata extraction
-        $vpsResponse = false;
-
-        // Return clean HTML-extracted data only (VPS bypassed to prevent GraphQL corruption)
-        $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Returning clean HTML-extracted book metadata");
-        
-        return $details;
-    }
-
-    /**
-     * Get GraphQL pagination state from database
-     *
-     * @param int $bookId The book ID
-     * @return array Pagination state
-     */
-    private function getGraphQLPaginationState(int $bookId): array {
-            $details['language'] = trim($matches[1]);
-        }
-
-        // Extract format
-        if (preg_match('/Format\s*:?\s*([^<\n]+)/i', $response, $matches)) {
-            $details['format'] = trim($matches[1]);
-        } else if (preg_match('/(\d+)\s+pages,\s+([^,<\n]+)/i', $response, $matches)) {
-            $details['format'] = trim($matches[2]);
-        }
-
-        // Extract series
-        if (preg_match('/Series\s*:?\s*([^<\n]+)/i', $response, $matches)) {
-            $details['series'] = trim($matches[1]);
-            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found series using text pattern: {$details['series']}");
-        } else if (preg_match('/<a[^>]*href="\/series\/[^"]+"[^>]*>([^<]+)<\/a>/i', $response, $matches)) {
-            $details['series'] = trim($matches[1]);
-            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found series using series link pattern: {$details['series']}");
-        } else if (preg_match('/<dt[^>]*>Series<\/dt>\s*<dd[^>]*>(.*?)<\/dd>/is', $response, $matches)) {
-            $details['series'] = trim(strip_tags($matches[1]));
-            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found series using dt/dd pattern: {$details['series']}");
-        } else if (preg_match('/<span[^>]*>Series:<\/span>\s*<span[^>]*>(.*?)<\/span>/is', $response, $matches)) {
-            $details['series'] = trim(strip_tags($matches[1]));
-            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found series using span pattern: {$details['series']}");
-        } else if (preg_match('/<div[^>]*class="DescListItem"[^>]*>.*?<dt>Series<\/dt>.*?<dd>(.*?)<\/dd>/is', $response, $matches)) {
-            // Extract series from the HTML (new Goodreads design)
-            $seriesText = trim(strip_tags($matches[1]));
-            // Clean up series format like "The Worst Witch (#1)"
-            if (preg_match('/^(.*?)\s*\(#\d+\)$/', $seriesText, $seriesMatches)) {
-                $details['series'] = trim($seriesMatches[1]);
-            } else {
-                $details['series'] = $seriesText;
-            }
-            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found series using DescListItem pattern: {$details['series']}");
-        } else if (preg_match('/\(([^)]+) #\d+\)/i', $response, $matches)) {
-            $details['series'] = trim($matches[1]);
-            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found series using series number pattern: {$details['series']}");
-        } else if (preg_match('/<a[^>]*href="\/series\/\d+[^"]*"[^>]*>([^<]+)<\/a>/i', $response, $matches)) {
-            $details['series'] = trim($matches[1]);
-            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found series using series ID link pattern: {$details['series']}");
-        } else if (preg_match('/Series<\/h2>.*?<div[^>]*>(.*?)<\/div>/is', $response, $matches)) {
-            $seriesHtml = $matches[1];
-            if (preg_match('/<a[^>]*>(.*?)<\/a>/i', $seriesHtml, $seriesMatches)) {
-                $seriesText = trim($seriesMatches[1]);
-                // Clean up series format like "The Worst Witch (#1)"
-                if (preg_match('/^(.*?)\s*\(#\d+\)$/', $seriesText, $seriesCleanMatches)) {
-                    $details['series'] = trim($seriesCleanMatches[1]);
-                } else {
-                    $details['series'] = $seriesText;
-                }
-                $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found series using h2 pattern: {$details['series']}");
-            }
-        } else if (preg_match('/Series<\/h3>.*?<div[^>]*>(.*?)<\/div>/is', $response, $matches)) {
-            $seriesHtml = $matches[1];
-            if (preg_match('/<a[^>]*>(.*?)<\/a>/i', $seriesHtml, $seriesMatches)) {
-                $seriesText = trim($seriesMatches[1]);
-                // Clean up series format like "The Worst Witch (#1)"
-                if (preg_match('/^(.*?)\s*\(#\d+\)$/', $seriesText, $seriesCleanMatches)) {
-                    $details['series'] = trim($seriesCleanMatches[1]);
-                } else {
-                    $details['series'] = $seriesText;
-                }
-                $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found series using h3 pattern: {$details['series']}");
-            }
-        } else if (preg_match('/<a[^>]*href="\/series\/[^"]*"[^>]*>.*?<span[^>]*>(.*?)<\/span>/is', $response, $matches)) {
-            $details['series'] = trim($matches[1]);
-            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found series using series link with span pattern: {$details['series']}");
-        } else if (preg_match('/Book\s+\d+\s+of\s+([^<]+)/i', $response, $matches)) {
-            $details['series'] = trim($matches[1]);
-            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found series using 'Book X of' pattern: {$details['series']}");
-        }
-
-        // Extract genres/shelves
-        if (preg_match_all('/<a class="actionLinkLite bookPageGenreLink"[^>]*>([^<]+)<\/a>/i', $response, $matches)) {
-            $details['genres'] = array_map('trim', $matches[1]);
-        } else if (preg_match_all('/<a[^>]*href="\/genres\/[^"]+"[^>]*>([^<]+)<\/a>/i', $response, $matches)) {
-            $details['genres'] = array_map('trim', $matches[1]);
-        } else if (preg_match_all('/<span[^>]*class="[^"]*Button__labelItem[^"]*"[^>]*>([^<]+)<\/span>/i', $response, $matches)) {
-            $details['genres'] = array_map('trim', $matches[1]);
-        }
-
-        // Extract awards
-        if (preg_match('/Awards\s*:?\s*([^<\n]+)/i', $response, $matches)) {
-            $details['awards'] = array_map('trim', explode(',', $matches[1]));
-        }
-
-        // Extract characters (if available)
-        if (preg_match('/Characters\s*:?\s*([^<\n]+)/i', $response, $matches)) {
-            $details['characters'] = array_map('trim', explode(',', $matches[1]));
-            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found characters using text pattern: " . implode(', ', $details['characters']));
-        } else if (preg_match('/<dt[^>]*>Characters<\/dt>\s*<dd[^>]*>(.*?)<\/dd>/is', $response, $matches)) {
-            // Extract character links from the HTML
-            preg_match_all('/<a[^>]*>([^<]+)<\/a>/i', $matches[1], $charMatches);
-            if (!empty($charMatches[1])) {
-                $details['characters'] = array_map('trim', $charMatches[1]);
-            } else {
-                $details['characters'] = [trim(strip_tags($matches[1]))];
-            }
-            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found characters using dt/dd pattern: " . implode(', ', $details['characters']));
-        } else if (preg_match('/<span[^>]*>Characters:<\/span>\s*<span[^>]*>(.*?)<\/span>/is', $response, $matches)) {
-            // Extract character links from the HTML
-            preg_match_all('/<a[^>]*>([^<]+)<\/a>/i', $matches[1], $charMatches);
-            if (!empty($charMatches[1])) {
-                $details['characters'] = array_map('trim', $charMatches[1]);
-            } else {
-                $details['characters'] = [trim(strip_tags($matches[1]))];
-            }
-            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found characters using span pattern: " . implode(', ', $details['characters']));
-        } else if (preg_match('/<div[^>]*class="DescListItem"[^>]*>.*?<dt>Characters<\/dt>.*?<dd>(.*?)<\/dd>/is', $response, $matches)) {
-            // Extract character links from the HTML (new Goodreads design)
-            preg_match_all('/<a[^>]*>([^<]+)<\/a>/i', $matches[1], $charMatches);
-            if (!empty($charMatches[1])) {
-                $details['characters'] = array_map('trim', $charMatches[1]);
-            } else {
-                $details['characters'] = [trim(strip_tags($matches[1]))];
-            }
-            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found characters using DescListItem pattern: " . implode(', ', $details['characters']));
-        } else if (preg_match('/Characters<\/h2>.*?<div[^>]*>(.*?)<\/div>/is', $response, $matches)) {
-            // Extract character links from the HTML (newer Goodreads design with h2 heading)
-            preg_match_all('/<a[^>]*>([^<]+)<\/a>/i', $matches[1], $charMatches);
-            if (!empty($charMatches[1])) {
-                $details['characters'] = array_map('trim', $charMatches[1]);
-            } else {
-                $details['characters'] = [trim(strip_tags($matches[1]))];
-            }
-            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found characters using h2 pattern: " . implode(', ', $details['characters']));
-        } else if (preg_match('/Characters<\/h3>.*?<div[^>]*>(.*?)<\/div>/is', $response, $matches)) {
-            // Extract character links from the HTML (newer Goodreads design with h3 heading)
-            preg_match_all('/<a[^>]*>([^<]+)<\/a>/i', $matches[1], $charMatches);
-            if (!empty($charMatches[1])) {
-                $details['characters'] = array_map('trim', $charMatches[1]);
-            } else {
-                $details['characters'] = [trim(strip_tags($matches[1]))];
-            }
-            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found characters using h3 pattern: " . implode(', ', $details['characters']));
-        }
-
-        // Extract settings (if available)
-        if (preg_match('/Setting\s*:?\s*([^<\n]+)/i', $response, $matches)) {
-            $details['settings'] = array_map('trim', explode(',', $matches[1]));
-        }
-
-        $details['url'] = $bookUrl;
-
-        // Log the extracted metadata
-        $this->logToFile($debugDir . '/goodreads-log.txt', "📚 Extracted metadata from direct HTML scraping:");
-        $this->logToFile($debugDir . '/goodreads-log.txt', "- Title: " . ($details['title'] ?? 'N/A'));
-        $this->logToFile($debugDir . '/goodreads-log.txt', "- Author: " . ($details['author'] ?? 'N/A'));
-        $this->logToFile($debugDir . '/goodreads-log.txt', "- ISBN: " . ($details['isbn'] ?? 'N/A'));
-        $this->logToFile($debugDir . '/goodreads-log.txt', "- ISBN-13: " . ($details['isbn13'] ?? 'N/A'));
-        $this->logToFile($debugDir . '/goodreads-log.txt', "- Publisher: " . ($details['publisher'] ?? 'N/A'));
-        $this->logToFile($debugDir . '/goodreads-log.txt', "- Publication Date: " . ($details['published_date'] ?? 'N/A'));
-        $this->logToFile($debugDir . '/goodreads-log.txt', "- Page Count: " . ($details['page_count'] ?? 'N/A'));
-        $this->logToFile($debugDir . '/goodreads-log.txt', "- Language: " . ($details['language'] ?? 'N/A'));
-        $this->logToFile($debugDir . '/goodreads-log.txt', "- Format: " . ($details['format'] ?? 'N/A'));
-        $this->logToFile($debugDir . '/goodreads-log.txt', "- Series: " . ($details['series'] ?? 'N/A'));
-        $this->logToFile($debugDir . '/goodreads-log.txt', "- Average Rating: " . ($details['average_rating'] ?? 'N/A'));
-        $this->logToFile($debugDir . '/goodreads-log.txt', "- Ratings Count: " . ($details['ratings_count'] ?? 'N/A'));
-        $this->logToFile($debugDir . '/goodreads-log.txt', "- Review Count: " . ($details['review_count'] ?? 'N/A'));
-
-        return $details;
     }
 
     /**
@@ -993,13 +659,14 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             $this->logToFile($debugDir . '/goodreads-log.txt', "🔄 Force refresh requested via environment variables");
         }
 
-        // COMPLETELY BYPASS VPS - VPS extracts corrupted GraphQL/HTML fragments
-        // Skip VPS entirely, go straight to clean HTML scraping
-        $this->logToFile($debugDir . '/goodreads-log.txt', "🚫 BYPASSING VPS - VPS extracts corrupted GraphQL fragments, using direct HTML scraping for clean data");
-        
-        $vpsReviews = []; // Force empty to skip VPS processing
+        // First try to use the VPS-based Headless Browser service
+        $vpsReviews = $this->fetchReviewsWithHeadlessBrowser($reviewsUrl, $limit, [
+            'maxPages' => $maxPages,
+            'continueFromLast' => $continueFromLast,
+            'force' => $forceRefresh
+        ]);
 
-        if (false) { // Never execute VPS block
+        if (!empty($vpsReviews)) {
             $reviewCount = count($vpsReviews);
             $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Successfully fetched {$reviewCount} reviews using VPS Headless Browser");
 
@@ -1742,15 +1409,23 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
      * @return array Array of reviews
      */
     private function fetchReviewsWithHeadlessBrowser(string $goodreadsUrl, int $limit, array $options = []): array {
-        // COMPLETELY BYPASS VPS - VPS extracts corrupted GraphQL/HTML fragments
+        // Debug: Log the limit being requested
         $debugDir = __DIR__ . '/debug';
         if (!is_dir($debugDir)) {
             mkdir($debugDir, 0755, true);
         }
-        $this->logToFile($debugDir . '/goodreads-log.txt', "🚫 BYPASSING VPS METHOD - VPS extracts corrupted GraphQL fragments, returning empty to force HTML fallback");
-        
-        // Return empty array immediately to force fallback to clean HTML scraping
-        return [];
+        $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 [DEBUG] Requesting {$limit} reviews from Headless Browser");
+        $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 [DEBUG] Options: " . json_encode($options));
+        $debugDir = __DIR__ . '/debug';
+        if (!is_dir($debugDir)) {
+            mkdir($debugDir, 0755, true);
+        }
+
+        $this->logToFile($debugDir . '/goodreads-log.txt', "� [VPS-Scraper-Goodreads] Attempting to fetch reviews using Puppeteer with full page JS evaluation for URL: {$goodreadsUrl}");
+
+        // Use the VPS IP address as the default if environment variable is not set
+        $apiUrl = getenv('HEADLESS_BROWSER_API_URL') ?: 'http://37.27.31.107:3000';
+        // Use the API key with the year suffix as specified in the server config
         $apiKey = getenv('HEADLESS_BROWSER_API_KEY') ?: 'stories-scraper-api-key-2023';
 
         // Log additional debug information
@@ -1940,109 +1615,5 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         }
 
         return $reviews;
-    }
-
-    /**
-     * Validate character data to ensure it doesn't contain GraphQL fragments
-     *
-     * @param array $characters The character data to validate
-     * @return bool True if the data is valid, false if it contains GraphQL fragments
-     */
-    private function isValidCharacterData($characters): bool {
-        if (!is_array($characters) || empty($characters)) {
-            return false;
-        }
-
-        foreach ($characters as $character) {
-            if (!is_string($character)) {
-                return false;
-            }
-
-            // Check for GraphQL-specific patterns that indicate invalid data
-            $graphqlPatterns = [
-                '__typename',
-                'edges',
-                'node',
-                'data',
-                'getReviews',
-                'getSimilarBooks',
-                'getBasicGenres',
-                'kca://',
-                'amzn1.gr.',
-                'goodreads.v1',
-                '"id":',
-                '"name":',
-                '"webUrl":'
-            ];
-
-            foreach ($graphqlPatterns as $pattern) {
-                if (strpos($character, $pattern) !== false) {
-                    return false;
-                }
-            }
-
-            // Check if it looks like JSON
-            if (json_decode($character) !== null) {
-                return false;
-            }
-
-            // Check for very long strings that might be GraphQL responses
-            if (strlen($character) > 500) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * Validate genre data to ensure it doesn't contain GraphQL fragments
-     *
-     * @param array $genres The genre data to validate
-     * @return bool True if the data is valid, false if it contains GraphQL fragments
-     */
-    private function isValidGenreData($genres): bool {
-        if (!is_array($genres) || empty($genres)) {
-            return false;
-        }
-
-        foreach ($genres as $genre) {
-            if (!is_string($genre)) {
-                return false;
-            }
-
-            // Check for GraphQL-specific patterns that indicate invalid data
-            $graphqlPatterns = [
-                '__typename',
-                'edges',
-                'node',
-                'data',
-                'getBasicGenres',
-                'kca://',
-                'amzn1.gr.',
-                'goodreads.v1',
-                '"id":',
-                '"name":',
-                '"webUrl":'
-            ];
-
-            foreach ($graphqlPatterns as $pattern) {
-                if (strpos($genre, $pattern) !== false) {
-                    return false;
-                }
-            }
-
-            // Check if it looks like JSON
-            if (json_decode($genre) !== null) {
-                return false;
-            }
-
-            // Check for very long strings that might be GraphQL responses
-            if (strlen($genre) > 100) {
-                return false;
-            }
-        }
-
-        return true;
     }
 }

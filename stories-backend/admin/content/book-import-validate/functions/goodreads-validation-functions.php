@@ -79,24 +79,22 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null, $options = []
             }
         }
 
-        // Make sure we have the required classes
-        require_once __DIR__ . '/../../../../services/ReviewFetcher/ReviewFetcherInterface.php';
-        require_once __DIR__ . '/../../../../services/ReviewFetcher/AbstractReviewFetcher.php';
-        require_once __DIR__ . '/../../../../services/ReviewFetcher/GoodreadsReviewFetcher.php';
+        // Make sure we have the required classes for clean metadata extraction
+        require_once __DIR__ . '/../../../../services/ReviewFetcher/GoodreadsBookMetadataFetcher.php';
 
-        // Create a GoodreadsReviewFetcher instance directly
-        $goodreadsFetcher = new \Services\ReviewFetcher\GoodreadsReviewFetcher($db, 1); // 1 is the Goodreads source ID
+        // Create a GoodreadsBookMetadataFetcher instance for clean metadata (no VPS corruption)
+        $metadataFetcher = new \Services\ReviewFetcher\GoodreadsBookMetadataFetcher($db);
 
         // Check if we got the correct fetcher type
-        if (!$goodreadsFetcher || !$goodreadsFetcher->isConfigured()) {
+        if (!$metadataFetcher) {
             $detailedStatus['steps'][] = [
                 'name' => 'fetcher_initialization',
                 'status' => 'error',
-                'message' => "Failed to initialize Goodreads review fetcher"
+                'message' => "Failed to initialize Goodreads metadata fetcher"
             ];
 
             $detailedStatus['status'] = 'error';
-            $detailedStatus['message'] = 'Failed to initialize Goodreads review fetcher';
+            $detailedStatus['message'] = 'Failed to initialize Goodreads metadata fetcher';
 
             return [
                 '_status' => $detailedStatus
@@ -240,53 +238,47 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null, $options = []
                         error_log("⚠️ Found reviews URL '{$originalUrl}', converting to main book URL for metadata extraction: '{$bookUrl}'");
                     }
 
-                    // Now get the book details using the URL
-                    // Check if the method exists (it should, since we checked the class type earlier)
-                    if (method_exists($goodreadsFetcher, 'getBookDetails')) {
+                    // Now get the book details using the clean metadata fetcher (no VPS corruption)
+                    $detailedStatus['steps'][] = [
+                        'name' => 'get_book_details',
+                        'status' => 'in_progress',
+                        'message' => "Fetching clean book metadata from URL (bypassing VPS to prevent GraphQL corruption)",
+                        'fetch_url' => $bookUrl,
+                        'timestamp' => date('Y-m-d H:i:s')
+                    ];
+
+                    $bookDetails = $metadataFetcher->getCleanBookMetadata($bookUrl);
+
+                    if ($bookDetails) {
                         $detailedStatus['steps'][] = [
                             'name' => 'get_book_details',
-                            'status' => 'in_progress',
-                            'message' => "Fetching book details from URL",
+                            'status' => 'success',
+                            'message' => "Successfully fetched clean book metadata (no GraphQL corruption)",
                             'fetch_url' => $bookUrl,
                             'timestamp' => date('Y-m-d H:i:s')
                         ];
 
-                        $bookDetails = $goodreadsFetcher->getBookDetails($bookUrl);
+                        // Create a response similar to fetchReviewsByISBN
+                        $response = [
+                            [
+                                'source_id' => 1,
+                                'reviewer_name' => 'Goodreads Aggregate',
+                                'book_metadata' => $bookDetails
+                            ]
+                        ];
 
-                        if ($bookDetails) {
-                            $detailedStatus['steps'][] = [
-                                'name' => 'get_book_details',
-                                'status' => 'success',
-                                'message' => "Successfully fetched book details",
-                                'fetch_url' => $bookUrl,
-                                'timestamp' => date('Y-m-d H:i:s')
-                            ];
-
-                            // Create a response similar to fetchReviewsByISBN
-                            $response = [
-                                [
-                                    'source_id' => 1,
-                                    'reviewer_name' => 'Goodreads Aggregate',
-                                    'book_metadata' => $bookDetails
-                                ]
-                            ];
-
-                            // Log the book details for debugging
-                            error_log("Goodreads book details: " . json_encode($bookDetails));
-                        } else {
-                            $detailedStatus['steps'][] = [
-                                'name' => 'get_book_details',
-                                'status' => 'error',
-                                'message' => "Failed to get book details from URL",
-                                'fetch_url' => $bookUrl,
-                                'timestamp' => date('Y-m-d H:i:s')
-                            ];
-
-                            throw new Exception("Failed to get book details from URL: $bookUrl");
-                        }
+                        // Log the clean book details for debugging
+                        error_log("Clean Goodreads book details (no VPS corruption): " . json_encode($bookDetails));
                     } else {
-                        // Fallback if the method doesn't exist
-                        throw new Exception("The getBookDetails method is not available in " . get_class($goodreadsFetcher));
+                        $detailedStatus['steps'][] = [
+                            'name' => 'get_book_details',
+                            'status' => 'error',
+                            'message' => "Failed to get clean book metadata from URL",
+                            'fetch_url' => $bookUrl,
+                            'timestamp' => date('Y-m-d H:i:s')
+                        ];
+
+                        throw new Exception("Failed to get clean book metadata from URL: $bookUrl");
                     }
                 } else {
                     throw new Exception("No book found for title: $title by author: $author");

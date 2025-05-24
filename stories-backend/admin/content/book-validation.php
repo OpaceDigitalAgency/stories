@@ -216,13 +216,15 @@ require_once '../includes/header.php';
                                     'isbn' => !empty($isbn) ? htmlspecialchars($isbn) : '<span class="text-danger">Missing</span>',
                                     'status' => '<span class="badge badge-' . $statusClass . '" title="' . htmlspecialchars($statusMessage) . '"><i class="fas fa-' . $statusIcon . '"></i> ' . ucfirst($isbnStatus) . '</span>',
                                     'missing_data' => $missingDataDisplay,
-                                    'actions' => ($isbnStatus === 'invalid' || $isbnStatus === 'mismatch' ?
-                                                   '<button class="btn btn-sm btn-warning fix-isbn-btn" ' .
+                                    'actions' => '<a href="book-import-validate-new.php?action=validate_book&book_id=' . $book['id'] . '" ' .
+                                               'class="btn btn-sm btn-info" title="View detailed validation data">' .
+                                               '<i class="fas fa-search"></i> Details</a>' .
+                                               ($isbnStatus === 'invalid' || $isbnStatus === 'mismatch' ?
+                                                   ' <button class="btn btn-sm btn-warning fix-isbn-btn" ' .
                                                    'data-book-id="' . $book['id'] . '" ' .
                                                    'data-book-title="' . htmlspecialchars($book['title']) . '" ' .
                                                    'data-author="' . htmlspecialchars($book['author']) . '">' .
-                                                   '<i class="fas fa-wrench"></i> Fix</button>' :
-                                                   '<span class="text-muted">No action needed</span>')
+                                                   '<i class="fas fa-wrench"></i> Fix</button>' : '')
                                 ];
                             }
 
@@ -462,16 +464,17 @@ $(document).ready(function() {
 
                             // Update Fix button if needed
                             const $actionsCell = $row.find('td:last-child');
+                            const bookTitle = $row.find('td:nth-child(2)').text().trim(); // Title column
+                            const detailsButton = `<a href="book-import-validate-new.php?action=validate_book&book_id=${bookId}" class="btn btn-sm btn-info" title="View detailed validation data"><i class="fas fa-search"></i> Details</a>`;
+
                             if (validation.status === 'invalid' || validation.status === 'mismatch') {
                                 if (!$actionsCell.find('.fix-isbn-btn').length) {
-                                    // Get book title and author from the row data
-                                    const bookTitle = $row.find('td:nth-child(2)').text().trim(); // Title column
                                     const author = 'Unknown'; // We'll need to get this from somewhere else
-                                    $actionsCell.html('<button class="btn btn-sm btn-warning fix-isbn-btn" data-book-id="' + bookId + '" data-book-title="' + bookTitle + '" data-author="' + author + '"><i class="fas fa-wrench"></i> Fix</button>');
+                                    $actionsCell.html(detailsButton + ' <button class="btn btn-sm btn-warning fix-isbn-btn" data-book-id="' + bookId + '" data-book-title="' + bookTitle + '" data-author="' + author + '"><i class="fas fa-wrench"></i> Fix</button>');
                                 }
                             } else {
-                                // Show "No action needed" for valid ISBNs
-                                $actionsCell.html('<span class="text-muted">No action needed</span>');
+                                // Show only Details button for valid ISBNs
+                                $actionsCell.html(detailsButton);
                             }
                         } else {
                             $statusCell.html('<span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>');

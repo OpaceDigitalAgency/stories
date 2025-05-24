@@ -236,7 +236,15 @@ require_once '../includes/header.php';
                                                    'data-publisher="' . htmlspecialchars($book['publisher'] ?? '') . '" ' .
                                                    'data-pub-date="' . htmlspecialchars($book['publication_date'] ?? '') . '" ' .
                                                    'data-format="' . htmlspecialchars($book['format'] ?? '') . '">' .
-                                                   '<i class="fas fa-wrench"></i> Fix</button>' : '')
+                                                   '<i class="fas fa-wrench"></i> Fix</button>' : '') .
+                                               (!empty($missingFields) ?
+                                                   ' <button class="btn btn-sm btn-success enrich-data-btn" ' .
+                                                   'data-book-id="' . $book['id'] . '" ' .
+                                                   'data-book-title="' . htmlspecialchars($book['title']) . '" ' .
+                                                   'data-author="' . htmlspecialchars($book['author']) . '" ' .
+                                                   'data-current-isbn="' . htmlspecialchars($book['isbn13'] ?? $book['isbn'] ?? '') . '" ' .
+                                                   'title="Enrich missing data from external sources">' .
+                                                   '<i class="fas fa-database"></i> Enrich</button>' : '')
                                 ];
                             }
 
@@ -435,6 +443,17 @@ $(document).ready(function() {
                 $button.prop('disabled', false).html('<i class="fas fa-wrench"></i> Fix');
             }
         });
+    });
+
+    // Use event delegation for dynamically created enrich data buttons
+    $(document).on('click', '.enrich-data-btn', function() {
+        const bookId = $(this).data('book-id');
+        const bookTitle = $(this).data('book-title');
+        const author = $(this).data('author');
+        const currentISBN = $(this).data('current-isbn');
+
+        // Open the data enrichment modal
+        openDataEnrichmentModal(bookId, bookTitle, author, currentISBN);
     });
 
     // Function to auto-validate all ISBNs on page load
@@ -681,6 +700,9 @@ $(document).ready(function() {
 </script>
 
 <?php
+// Include the data enrichment modal
+require_once 'book-import-validate/modals/data-enrichment-modal.php';
+
 // Include footer
 require_once '../includes/footer.php';
 ?>

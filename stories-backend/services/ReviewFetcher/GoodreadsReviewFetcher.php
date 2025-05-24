@@ -633,62 +633,12 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             }
         }
 
-        if ($vpsResponse !== false) {
-            // Parse the response
-            $vpsData = json_decode($vpsResponse, true);
-
-            // Check if we have valid data
-            if (isset($vpsData['book_title']) && !empty($vpsData)) {
-                $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Successfully fetched comprehensive metadata from VPS Headless Browser");
-
-                // Only use VPS data for fields that are reliably available in GraphQL
-                // Based on analysis of goodreads.json, most book metadata is NOT in GraphQL
-                $this->logToFile($debugDir . '/goodreads-log.txt', "⚠️ VPS GraphQL data analysis: Most book metadata not available in GraphQL, using HTML scraping for all book details");
-                
-                // VPS GraphQL is only reliable for:
-                // - Review data (handled separately in review scraping)
-                // - Basic genres (if available)
-                // Everything else needs HTML scraping
-                
-                // Only extract genres if they look valid (not GraphQL fragments)
-                if (isset($vpsData['book_genres']) && $this->isValidGenreData($vpsData['book_genres'])) {
-                    $details['genres'] = $vpsData['book_genres'];
-                    $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Using valid genre data from VPS: " . json_encode($vpsData['book_genres']));
-                } else {
-                    $this->logToFile($debugDir . '/goodreads-log.txt', "⚠️ VPS genre data invalid or contains GraphQL fragments, will use HTML scraping");
-                }
-                
-                // Set URL for reference
-                $details['url'] = $bookUrl;
-                
-                // Log that we're skipping VPS metadata extraction
-                $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Skipping VPS metadata extraction - GraphQL doesn't contain: title, author, ISBN, publisher, publication_date, page_count, language, format, series, awards, characters, settings, cover_url, description, ratings");
-
-                // Log the extracted metadata
-                $this->logToFile($debugDir . '/goodreads-log.txt', "📚 Extracted metadata from VPS Headless Browser:");
-                $this->logToFile($debugDir . '/goodreads-log.txt', "- Title: " . ($details['title'] ?? 'N/A'));
-                $this->logToFile($debugDir . '/goodreads-log.txt', "- Author: " . ($details['author'] ?? 'N/A'));
-                $this->logToFile($debugDir . '/goodreads-log.txt', "- ISBN: " . ($details['isbn'] ?? 'N/A'));
-                $this->logToFile($debugDir . '/goodreads-log.txt', "- ISBN-13: " . ($details['isbn13'] ?? 'N/A'));
-                $this->logToFile($debugDir . '/goodreads-log.txt', "- Publisher: " . ($details['publisher'] ?? 'N/A'));
-                $this->logToFile($debugDir . '/goodreads-log.txt', "- Publication Date: " . ($details['published_date'] ?? 'N/A'));
-                $this->logToFile($debugDir . '/goodreads-log.txt', "- Page Count: " . ($details['page_count'] ?? 'N/A'));
-                $this->logToFile($debugDir . '/goodreads-log.txt', "- Language: " . ($details['language'] ?? 'N/A'));
-                $this->logToFile($debugDir . '/goodreads-log.txt', "- Format: " . ($details['format'] ?? 'N/A'));
-                $this->logToFile($debugDir . '/goodreads-log.txt', "- Series: " . ($details['series'] ?? 'N/A'));
-
-                // If we don't have character data from VPS, continue to HTML scraping for characters
-                if (!isset($details['characters'])) {
-                    $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 No valid character data from VPS, will extract from HTML");
-                } else {
-                    return $details;
-                }
-            } else {
-                $this->logToFile($debugDir . '/goodreads-log.txt', "⚠️ VPS Headless Browser returned invalid data, falling back to direct scraping");
-            }
-        } else {
-            $this->logToFile($debugDir . '/goodreads-log.txt', "⚠️ Failed to fetch data from VPS Headless Browser, falling back to direct scraping");
-        }
+        // COMPLETELY SKIP VPS FOR BOOK METADATA - VPS scraper is extracting GraphQL fragments instead of clean data
+        $this->logToFile($debugDir . '/goodreads-log.txt', "🚫 SKIPPING VPS for book metadata - VPS scraper returns corrupted GraphQL/HTML fragments");
+        $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Using ONLY HTML scraping for all book metadata to ensure clean data");
+        
+        // VPS will only be used for review pagination in the review scraping section
+        // All book metadata will come from direct HTML scraping below
 
         // If VPS Headless Browser fails, fall back to direct scraping
         $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Falling back to direct HTML scraping for book details");

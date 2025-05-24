@@ -1533,6 +1533,17 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         $url .= "&force={$forceValue}";
         $this->logToFile($debugDir . '/goodreads-log.txt', "🔄 Setting force={$forceValue} parameter");
 
+        // CRITICAL FIX: Add pagination parameters for GraphQL continuation
+        if (isset($options['nextPageToken']) && $options['nextPageToken']) {
+            $url .= "&nextPageToken=" . urlencode($options['nextPageToken']);
+            $this->logToFile($debugDir . '/goodreads-log.txt', "🔄 Setting nextPageToken={$options['nextPageToken']} for GraphQL pagination");
+        }
+        
+        if (isset($options['startPage']) && $options['startPage']) {
+            $url .= "&startPage={$options['startPage']}";
+            $this->logToFile($debugDir . '/goodreads-log.txt', "🔄 Setting startPage={$options['startPage']} for GraphQL pagination");
+        }
+
         // Log the force parameter value for debugging
         $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Force parameter details:");
         $this->logToFile($debugDir . '/goodreads-log.txt', "   - options['force']: " . (isset($options['force']) ? var_export($options['force'], true) : 'not set'));
@@ -1546,6 +1557,8 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         $this->logToFile($debugDir . '/goodreads-log.txt', "   - limit: {$limit}");
         $this->logToFile($debugDir . '/goodreads-log.txt', "   - maxPages: {$maxPages}");
         $this->logToFile($debugDir . '/goodreads-log.txt', "   - continueFromLast: {$continueFromLast}" . ($continueFromLast ? " (will be sent as 1)" : " (will be sent as 0)"));
+        $this->logToFile($debugDir . '/goodreads-log.txt', "   - nextPageToken: " . (isset($options['nextPageToken']) ? $options['nextPageToken'] : 'not set'));
+        $this->logToFile($debugDir . '/goodreads-log.txt', "   - startPage: " . (isset($options['startPage']) ? $options['startPage'] : 'not set'));
         $this->logToFile($debugDir . '/goodreads-log.txt', "   - force: " . (isset($options['force']) && $options['force'] ? "true" : "false") . " (will be sent as {$forceValue})");
 
         // Log the full URL for debugging

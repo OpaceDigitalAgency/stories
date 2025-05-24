@@ -83,32 +83,8 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
                 "Skipping database checks (validation mode)");
         }
         // If continuing from last and not in validation mode, get existing reviews
-        else if ($this->continueFromLast) {
-            // Get existing reviews for duplicate checking
-            // Get the last GraphQL page token
-            $stmt = $this->db->prepare("
-                SELECT metadata->>'$.next_token' as next_token,
-                       metadata->>'$.graphql_page' as page_number
-                FROM reviews
-                WHERE book_id = ? AND source_id = ?
-                AND metadata->>'$.source' = 'graphql'
-                ORDER BY id DESC LIMIT 1
-            ");
-            $stmt->execute([$options['book_id'] ?? 0, $this->sourceId]);
-            $this->existingReviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            $stmt->execute([$options['book_id'] ?? 0, $this->sourceId]);
-            $result = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if ($result && $result['next_token']) {
-                $this->nextPageToken = $result['next_token'];
-                $this->lastGraphQLPage = (int)$result['page_number'];
-                $this->startPage = $this->lastGraphQLPage + 1;
-
-                $this->logToFile(__DIR__ . '/debug/goodreads-log.txt',
-                    "Resuming from GraphQL page {$this->lastGraphQLPage} with token {$this->nextPageToken}");
-            }
-        }
+        // Note: GraphQL pagination is now handled in scrapeReviews() method
+        // to avoid duplicate logic and conflicts
 
         // Standardize ISBN format
         $isbnData = $this->standardizeISBN($isbn);
@@ -440,10 +416,29 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
      * Get GraphQL pagination state from the database
      */
     private function getGraphQLPaginationState(int $bookId): array {
+        // First, let's see what metadata actually exists
+        $debugStmt = $this->db->prepare("
+            SELECT r.metadata, r.reviewer_name, r.id
+            FROM reviews r
+            WHERE r.book_id = ? AND r.source_id = ?
+            ORDER BY r.id DESC LIMIT 5
+        ");
+        $debugStmt->execute([$bookId, $this->sourceId]);
+        $debugResults = $debugStmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        echo "<div style='background: #f0f8ff; border: 1px solid #0066cc; padding: 10px; margin: 10px 0;'>";
+        echo "<h4>🔍 DEBUG: getGraphQLPaginationState</h4>";
+        echo "<p><strong>Found " . count($debugResults) . " reviews for book_id=$bookId, source_id={$this->sourceId}</strong></p>";
+        
+        foreach ($debugResults as $i => $row) {
+            echo "<p><strong>Review $i (ID: {$row['id']}):</strong> reviewer='{$row['reviewer_name']}', metadata=" . htmlspecialchars(json_encode($row['metadata'])) . "</p>";
+        }
+
         $stmt = $this->db->prepare("
             SELECT r.metadata->>'$.next_token' as next_token,
                    r.metadata->>'$.graphql_page' as page_number,
-                   r.metadata->>'$.total_available' as total_available
+                   r.metadata->>'$.total_available' as total_available,
+                   r.metadata
             FROM reviews r
             WHERE r.book_id = ? AND r.source_id = ?
             AND r.metadata->>'$.source' = 'graphql'
@@ -451,6 +446,10 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         ");
         $stmt->execute([$bookId, $this->sourceId]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        echo "<p><strong>GraphQL pagination query result:</strong> " . htmlspecialchars(json_encode($result)) . "</p>";
+        echo "</div>";
+        flush();
 
         return [
             'nextPageToken' => $result['next_token'] ?? null,
@@ -504,22 +503,33 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
 
         // Get GraphQL pagination state if continuing
         if ($continueFromLast) {
+            echo "<div style='background: #fff3cd; border: 1px solid #ffc107; padding: 10px; margin: 10px 0;'>";
+            echo "<h4>📄 PAGINATION LOGIC</h4>";
+            echo "<p><strong>continueFromLast = true, calling getGraphQLPaginationState($bookId)</strong></p>";
+            
             $state = $this->getGraphQLPaginationState($bookId);
+            
+            echo "<p><strong>Pagination state returned:</strong> " . htmlspecialchars(json_encode($state)) . "</p>";
+            
             if ($state['nextPageToken']) {
                 $options['nextPageToken'] = $state['nextPageToken'];
                 $options['startPage'] = $state['currentPage'] + 1;
 
-                $logMsg = "Resuming GraphQL pagination - " .
+                $logMsg = "✅ Resuming GraphQL pagination - " .
                     "Page: " . $options['startPage'] . ", " .
                     "Token: " . $options['nextPageToken'] . ", " .
                     "Total available: " . $state['totalAvailable'];
-                $this->logToFile(__DIR__ . '/debug/goodreads-log.txt', $logMsg);
+                echo "<p style='color: green;'><strong>$logMsg</strong></p>";
 
                 // Set initial state for GraphQL pagination
                 $this->nextPageToken = $state['nextPageToken'];
                 $this->lastGraphQLPage = $state['currentPage'];
                 $this->totalAvailable = $state['totalAvailable'];
+            } else {
+                echo "<p style='color: red;'><strong>❌ No nextPageToken found - will start from beginning!</strong></p>";
             }
+            echo "</div>";
+            flush();
         }
 
         // Function to check if a review is a duplicate

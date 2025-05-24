@@ -237,7 +237,7 @@ function updateBookFromSuggestion($bookId, $suggestionData, $db) {
 function getMissingFields($book) {
     $missingFields = [];
 
-    // Define required fields
+    // Define required fields based on actual database schema
     $requiredFields = [
         'title' => 'Title',
         'author' => 'Author',
@@ -246,16 +246,46 @@ function getMissingFields($book) {
         'publisher' => 'Publisher',
         'publication_date' => 'Publication Date',
         'page_count' => 'Page Count',
+        'price_range' => 'Price Range',
+        'age_range' => 'Age Range',
+        'reading_level' => 'Reading Level',
+        'language' => 'Language',
+        'format' => 'Format',
+        'cover_url' => 'Cover Image',
+        'preview_link' => 'Preview Link',
         'series' => 'Series',
-        'cover_url' => 'Cover Image'
+        'awards' => 'Awards',
+        'characters' => 'Characters',
+        'settings' => 'Settings'
     ];
 
     // Check each field
     foreach ($requiredFields as $field => $label) {
-        if (empty($book[$field]) || $book[$field] === 'unknown' || $book[$field] === 'Unknown') {
+        if (isEmpty($book[$field])) {
             $missingFields[] = $label;
         }
     }
 
     return $missingFields;
+}
+
+/**
+ * Check if a field is empty or contains placeholder values
+ *
+ * @param mixed $value The field value to check
+ * @return bool True if the field is considered empty
+ */
+function isEmpty($value) {
+    // Check for null, empty string, or zero
+    if (is_null($value) || $value === '' || $value === 0 || $value === '0') {
+        return true;
+    }
+
+    // Check for common placeholder values
+    $placeholders = ['unknown', 'Unknown', 'UNKNOWN', 'N/A', 'n/a', 'Not available', 'not available'];
+    if (is_string($value) && in_array(trim($value), $placeholders)) {
+        return true;
+    }
+
+    return false;
 }

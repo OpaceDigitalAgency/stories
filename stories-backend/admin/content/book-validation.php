@@ -74,10 +74,12 @@ try {
     // Calculate pagination
     $totalIsbnPages = ceil($totalBooks / $isbnPerPage);
 
-    // Get books with pagination for ISBN validation
+    // Get books with pagination for ISBN validation - include all fields needed for missing data detection
     $isbnBooksStmt = $db->prepare("
         SELECT di.id, di.title, di.slug, di.review_count, di.average_rating, di.cover_url,
-               b.isbn, b.isbn13, b.author, b.publisher, b.publication_date, b.page_count, b.series, b.price_range
+               b.isbn, b.isbn13, b.author, b.publisher, b.publication_date, b.page_count, b.series, b.price_range,
+               b.age_range, b.reading_level, b.language, b.format, b.cover_url as book_cover_url,
+               b.preview_link, b.awards, b.characters, b.settings
         FROM directory_items di
         JOIN books b ON di.id = b.directory_item_id
         WHERE di.type = 'book'
@@ -193,16 +195,15 @@ require_once '../includes/header.php';
                                     htmlspecialchars(formatTagsForDisplay($genreTags)) :
                                     '<span class="text-muted">No genres</span>';
 
-                                // Use the proper getMissingFields function from validation-functions.php
+                                // Use the proper getMissingFields function from search-functions.php
                                 require_once 'book-import-validate/functions/search-functions.php';
                                 $missingFields = getMissingFields($book);
 
-                                // Add additional fields that are specific to the admin interface
+                                // Add additional fields that are specific to the admin interface (tags-based)
                                 if (empty($genreTags)) $missingFields[] = 'Genre';
-                                if (empty($book['price_range'])) $missingFields[] = 'Price Range';
 
                                 $ageRangeTags = getAgeRangeTagsForDirectoryItem($db, $book['id']);
-                                if (empty($ageRangeTags)) $missingFields[] = 'Age Range';
+                                if (empty($ageRangeTags)) $missingFields[] = 'Age Range Tags';
 
                                 $missingDataDisplay = !empty($missingFields) ?
                                     '<span class="badge badge-warning" title="' . htmlspecialchars(implode(', ', $missingFields)) . '">' .

@@ -1494,9 +1494,9 @@ $(document).ready(function() {
     });
 
     // Scrape Reviews Button
-    $('.scrape-reviews-btn').click(function() {
+    $('[data-scrape-reviews]').click(function() {
         const bookId = $(this).data('book-id');
-        const bookTitle = $(this).data('book-title');
+        const bookTitle = $(this).closest('tr').find('td:first').text(); // Get book title from table row
 
         $('#scrapeModalLabel').text(`Scrape Reviews for: ${bookTitle}`);
         $('#scrapeBookId').val(bookId);

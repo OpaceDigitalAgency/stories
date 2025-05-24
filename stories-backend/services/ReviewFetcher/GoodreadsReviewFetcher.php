@@ -540,7 +540,8 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             // Skip duplicate check for GraphQL reviews
             if (isset($review['metadata'])) {
                 try {
-                    $metadata = json_decode($review['metadata'], true);
+                    // Handle both array (GraphQL) and string (HTML) metadata formats
+                    $metadata = is_array($review['metadata']) ? $review['metadata'] : json_decode($review['metadata'], true);
                     if ($metadata && isset($metadata['source']) && $metadata['source'] === 'graphql') {
                         return false;
                     }
@@ -689,7 +690,8 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             // If we have an aggregate rating from the VPS, store it separately
             foreach ($vpsReviews as $key => $review) {
                 if (isset($review['metadata'])) {
-                    $metadata = json_decode($review['metadata'], true);
+                    // Handle both array (GraphQL) and string (HTML) metadata formats
+                    $metadata = is_array($review['metadata']) ? $review['metadata'] : json_decode($review['metadata'], true);
                     if (isset($metadata['is_aggregate']) && $metadata['is_aggregate']) {
                         $this->aggregateRating = $review;
                         unset($vpsReviews[$key]);
@@ -719,7 +721,7 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
                     $seenFingerprints[$fingerprint] = true;
 
                     // Add graphql_page metadata to new review
-                    $reviewMeta = json_decode($review['metadata'] ?? '{}', true);
+                    $reviewMeta = is_array($review['metadata']) ? $review['metadata'] : json_decode($review['metadata'] ?? '{}', true);
                     if (!isset($reviewMeta['graphql_page'])) {
                         $reviewMeta['graphql_page'] = $currentPage;
                         $review['metadata'] = json_encode($reviewMeta);
@@ -772,7 +774,8 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             // If we have an aggregate rating from Puppeteer, store it separately
             foreach ($puppeteerReviews as $key => $review) {
                 if (isset($review['metadata'])) {
-                    $metadata = json_decode($review['metadata'], true);
+                    // Handle both array (GraphQL) and string (HTML) metadata formats
+                    $metadata = is_array($review['metadata']) ? $review['metadata'] : json_decode($review['metadata'], true);
                     if (isset($metadata['is_aggregate']) && $metadata['is_aggregate']) {
                         $this->aggregateRating = $review;
                         unset($puppeteerReviews[$key]);

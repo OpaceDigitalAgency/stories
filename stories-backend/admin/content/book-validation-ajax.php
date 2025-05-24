@@ -88,9 +88,9 @@ try {
                 exit;
             }
 
-            // Get book details including publisher and year
+            // Get book details including publisher and publication date
             $stmt = $db->prepare("
-                SELECT di.id, di.title, b.isbn, b.isbn13, b.author, b.publisher, b.publication_year
+                SELECT di.id, di.title, b.isbn, b.isbn13, b.author, b.publisher, b.publication_date
                 FROM directory_items di
                 JOIN books b ON di.id = b.directory_item_id
                 WHERE di.id = ?
@@ -122,7 +122,7 @@ try {
                 'current_title' => $book['title'],
                 'current_author' => $book['author'],
                 'current_publisher' => $book['publisher'],
-                'current_year' => $book['publication_year']
+                'current_year' => $book['publication_date']
             ]);
             break;
 
@@ -265,7 +265,7 @@ function validateISBNAgainstAPIs($isbn, $title, $author) {
 function intelligentISBNMatching($suggestions, $currentBook) {
     $currentTitle = strtolower(trim($currentBook['title']));
     $currentPublisher = strtolower(trim($currentBook['publisher'] ?? ''));
-    $currentYear = intval($currentBook['publication_year'] ?? 0);
+    $currentYear = intval($currentBook['publication_date'] ?? 0);
 
     // First, deduplicate suggestions by ISBN
     $uniqueSuggestions = [];
@@ -290,7 +290,7 @@ function intelligentISBNMatching($suggestions, $currentBook) {
 
         $suggestionTitle = strtolower(trim($suggestion['title'] ?? ''));
         $suggestionPublisher = strtolower(trim($suggestion['publisher'] ?? ''));
-        $suggestionYear = intval($suggestion['publication_year'] ?? 0);
+        $suggestionYear = intval($suggestion['publication_date'] ?? 0);
 
         // Skip if no valid ISBN
         if (empty($suggestion['isbn']) && empty($suggestion['isbn13'])) {

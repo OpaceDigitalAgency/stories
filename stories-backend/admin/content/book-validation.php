@@ -76,8 +76,8 @@ try {
 
     // Get books with pagination for ISBN validation
     $isbnBooksStmt = $db->prepare("
-        SELECT di.id, di.title, di.slug, di.review_count, di.average_rating,
-               b.isbn, b.isbn13, b.author, b.publisher, b.page_count, b.series, b.price_range
+        SELECT di.id, di.title, di.slug, di.review_count, di.average_rating, di.cover_url,
+               b.isbn, b.isbn13, b.author, b.publisher, b.publication_date, b.page_count, b.series, b.price_range
         FROM directory_items di
         JOIN books b ON di.id = b.directory_item_id
         WHERE di.type = 'book'
@@ -193,12 +193,12 @@ require_once '../includes/header.php';
                                     htmlspecialchars(formatTagsForDisplay($genreTags)) :
                                     '<span class="text-muted">No genres</span>';
 
-                                // Check missing fields
-                                $missingFields = [];
-                                if (empty($book['publisher']) || strtolower($book['publisher']) == 'unknown') $missingFields[] = 'Publisher';
-                                if (empty($book['page_count']) || $book['page_count'] == '0') $missingFields[] = 'Page Count';
+                                // Use the proper getMissingFields function from validation-functions.php
+                                require_once 'book-import-validate/functions/search-functions.php';
+                                $missingFields = getMissingFields($book);
+
+                                // Add additional fields that are specific to the admin interface
                                 if (empty($genreTags)) $missingFields[] = 'Genre';
-                                if (empty($book['series']) || strtolower($book['series']) == 'unknown') $missingFields[] = 'Series';
                                 if (empty($book['price_range'])) $missingFields[] = 'Price Range';
 
                                 $ageRangeTags = getAgeRangeTagsForDirectoryItem($db, $book['id']);

@@ -487,18 +487,60 @@ function searchOpenLibraryByTitleAuthor($title, $author = '', $limit = 10) {
                 foreach ($data['docs'] as $doc) {
                     if (count($suggestions) >= $limit) break;
 
-                    // Extract ISBNs
+                    // Get ISBNs from the work's editions (this is the key fix!)
+                    $workKey = $doc['key'] ?? '';
                     $isbn10 = '';
                     $isbn13 = '';
-                    if (!empty($doc['isbn'])) {
-                        foreach ($doc['isbn'] as $isbnValue) {
-                            $cleanIsbn = preg_replace('/[^0-9X]/i', '', $isbnValue);
-                            if (strlen($cleanIsbn) == 10) {
-                                $isbn10 = $isbnValue;
-                            } else if (strlen($cleanIsbn) == 13) {
-                                $isbn13 = $isbnValue;
+                    $publisher = '';
+                    $publishDate = '';
+
+                    if (!empty($workKey)) {
+                        // Get editions for this work to find ISBNs
+                        $editionsUrl = "https://openlibrary.org" . $workKey . "/editions.json";
+
+                        $editionsCh = curl_init($editionsUrl);
+                        curl_setopt($editionsCh, CURLOPT_RETURNTRANSFER, true);
+                        curl_setopt($editionsCh, CURLOPT_TIMEOUT, 5);
+                        curl_setopt($editionsCh, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+                        $editionsResponse = curl_exec($editionsCh);
+                        curl_close($editionsCh);
+
+                        $editionsData = json_decode($editionsResponse, true);
+
+                        if (!empty($editionsData['entries'])) {
+                            // Get ISBNs from the first edition that has them
+                            foreach ($editionsData['entries'] as $edition) {
+                                // Get ISBN-13
+                                if (!empty($edition['isbn_13']) && empty($isbn13)) {
+                                    $isbn13 = $edition['isbn_13'][0];
+                                }
+                                // Get ISBN-10
+                                if (!empty($edition['isbn_10']) && empty($isbn10)) {
+                                    $isbn10 = $edition['isbn_10'][0];
+                                }
+                                // Get publisher
+                                if (!empty($edition['publishers']) && empty($publisher)) {
+                                    $publisher = $edition['publishers'][0];
+                                }
+                                // Get publish date
+                                if (!empty($edition['publish_date']) && empty($publishDate)) {
+                                    $publishDate = $edition['publish_date'];
+                                }
+
+                                // If we have an ISBN, we can stop looking
+                                if (!empty($isbn13) || !empty($isbn10)) {
+                                    break;
+                                }
                             }
                         }
+                    }
+
+                    // Fallback to search result data if no editions found
+                    if (empty($publisher) && !empty($doc['publisher'])) {
+                        $publisher = implode(', ', $doc['publisher']);
+                    }
+                    if (empty($publishDate) && !empty($doc['publish_date'])) {
+                        $publishDate = $doc['publish_date'][0];
                     }
 
                     // Skip if we've already seen this ISBN
@@ -518,8 +560,8 @@ function searchOpenLibraryByTitleAuthor($title, $author = '', $limit = 10) {
                     $suggestions[] = [
                         'title' => $doc['title'] ?? '',
                         'author' => !empty($doc['author_name']) ? implode(', ', $doc['author_name']) : '',
-                        'publisher' => !empty($doc['publisher']) ? implode(', ', $doc['publisher']) : '',
-                        'publication_date' => !empty($doc['publish_date']) ? $doc['publish_date'][0] : '',
+                        'publisher' => $publisher,
+                        'publication_date' => $publishDate,
                         'isbn' => $isbn10,
                         'isbn13' => $isbn13,
                         'format' => !empty($doc['type']) ? $doc['type'] : '',

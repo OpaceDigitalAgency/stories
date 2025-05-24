@@ -104,7 +104,25 @@ try {
             }
 
             // Try to find correct ISBN by searching with title and author
-            $suggestions = searchBooksByTitleAuthor($book['title'], $book['author'], 10); // Get more results for better matching
+            error_log("DEBUG: Searching for book: Title='" . $book['title'] . "', Author='" . $book['author'] . "'");
+
+            // Use both Google Books and OpenLibrary for comprehensive search
+            $googleSuggestions = searchBooksByTitleAuthor($book['title'], $book['author'], 10);
+            $openLibrarySuggestions = searchOpenLibraryByTitleAuthor($book['title'], $book['author'], 10);
+
+            // Combine suggestions
+            $suggestions = array_merge($googleSuggestions, $openLibrarySuggestions);
+
+            error_log("DEBUG: Google Books returned " . count($googleSuggestions) . " suggestions");
+            error_log("DEBUG: OpenLibrary returned " . count($openLibrarySuggestions) . " suggestions");
+            error_log("DEBUG: Total suggestions: " . count($suggestions));
+
+            // Log the ISBNs we found
+            foreach ($suggestions as $i => $suggestion) {
+                $isbn13 = $suggestion['isbn13'] ?? 'none';
+                $isbn10 = $suggestion['isbn'] ?? 'none';
+                error_log("DEBUG: Suggestion $i: Title='" . $suggestion['title'] . "', ISBN-13=$isbn13, ISBN-10=$isbn10, Publisher='" . ($suggestion['publisher'] ?? 'none') . "'");
+            }
 
             if (empty($suggestions)) {
                 echo json_encode(['status' => 'error', 'message' => 'No alternative ISBNs found for this book']);

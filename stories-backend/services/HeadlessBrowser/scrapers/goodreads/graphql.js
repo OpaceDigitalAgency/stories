@@ -1,273 +1,283 @@
-/**
- * Goodreads GraphQL queries and processing
- */
-const logger = require('../../utils/logger');
+const { extractReviews } = require('./utils');
 
-// GraphQL query for book data and reviews
-const BOOK_QUERY = `
-query BookPageQuery($workId: ID!, $reviewsFirst: Int!, $reviewsAfter: String) {
-  work(id: $workId) {
-    id
-    title
-    originalTitle
-    description
-    language {
-      name
-      code
-    }
-    details {
-      format
-      pages
-      publishedDate
-      publisher {
-        name
-      }
-      isbn10
-      isbn13
-      awards {
-        name
-        year
-      }
-      series {
-        name
-        seriesIndex
-      }
-    }
-    stats {
-      ratingsCount
-      reviewsCount
-      averageRating
-    }
-    reviews(first: $reviewsFirst, after: $reviewsAfter) {
-      totalCount
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-      edges {
-        node {
-          id
-          rating
-          text
-          createdAt
-          updatedAt
-          user {
-            name
-            imageUrl
-          }
+async function scrapeReviews(page, isbn, options = {}) {
+    console.log(`[GraphQL] Starting GraphQL scrape for ISBN: ${isbn}`);
+    console.log(`[GraphQL] Options:`, JSON.stringify(options, null, 2));
+    
+    const maxReviews = options.maxReviews || 50;
+    const nextPageToken = options.nextPageToken || null;
+    const startPage = options.startPage || 1;
+    
+    console.log(`[GraphQL] Pagination state - nextPageToken: ${nextPageToken}, startPage: ${startPage}`);
+    
+    try {
+        // Navigate to the book page first to get the resource ID
+        const bookUrl = `https://www.goodreads.com/book/isbn/${isbn}`;
+        console.log(`[GraphQL] Navigating to: ${bookUrl}`);
+        
+        await page.goto(bookUrl, { 
+            waitUntil: 'networkidle0',
+            timeout: 30000 
+        });
+        
+        // Wait a bit for the page to fully load
+        await page.waitForTimeout(2000);
+        
+        // Extract resource ID from the page - need to find the kca://work format
+        const resourceId = await page.evaluate(() => {
+            // Look for the new resource ID format in scripts
+            const scripts = document.querySelectorAll('script');
+            for (let script of scripts) {
+                const content = script.textContent || script.innerText;
+                
+                // Look for the kca://work format
+                const kcaMatch = content.match(/kca:\/\/work\/amzn1\.gr\.work\.v1\.[A-Za-z0-9_-]+/);
+                if (kcaMatch) {
+                    console.log('[GraphQL] Found kca resource ID:', kcaMatch[0]);
+                    return kcaMatch[0];
+                }
+                
+                // Look for work ID to construct the resource ID
+                const workIdMatch = content.match(/work_id['":\s]*(\d+)/);
+                if (workIdMatch) {
+                    // Try to find the corresponding resource ID
+                    const workId = workIdMatch[1];
+                    console.log('[GraphQL] Found work ID:', workId);
+                    
+                    // Look for the resource ID pattern near the work ID
+                    const resourceMatch = content.match(new RegExp(`amzn1\\.gr\\.work\\.v1\\.[A-Za-z0-9_-]+`));
+                    if (resourceMatch) {
+                        const fullResourceId = `kca://work/${resourceMatch[0]}`;
+                        console.log('[GraphQL] Constructed resource ID:', fullResourceId);
+                        return fullResourceId;
+                    }
+                }
+            }
+            
+            return null;
+        });
+        
+        if (!resourceId) {
+            console.log('[GraphQL] Could not find resource ID, falling back to HTML scraping');
+            return { reviews: [], hasMore: false, nextPageToken: null };
         }
-      }
-    }
-  }
-}`;
-
-/**
- * Process GraphQL response into standardized format
- */
-function processGraphQLResponse(response) {
-  if (!response.data || !response.data.work) {
-    logger.warn('Invalid GraphQL response structure');
-    return {
-      metadata: {},
-      reviews: [],
-      hasMore: false,
-      nextCursor: null
-    };
-  }
-
-  const work = response.data.work;
-
-  // Extract metadata
-  const metadata = {
-    title: work.title || work.originalTitle,
-    description: work.description,
-    language: work.language?.name,
-    format: work.details?.format,
-    pages: work.details?.pages,
-    publication_date: work.details?.publishedDate,
-    publisher: work.details?.publisher?.name,
-    isbn: work.details?.isbn10,
-    isbn13: work.details?.isbn13,
-    awards: work.details?.awards?.map(a => a.name) || [],
-    series: work.details?.series?.name,
-    rating: work.stats?.averageRating,
-    rating_count: work.stats?.ratingsCount,
-    review_count: work.stats?.reviewsCount
-  };
-
-  // Helper function to clean review text
-  function cleanReviewText(text) {
-    if (!text) return '';
-
-    // Replace escaped HTML entities
-    let cleaned = text
-      .replace(/\\u003c/g, '<')
-      .replace(/\\u003e/g, '>')
-      .replace(/\\u0026/g, '&')
-      .replace(/\\u0027/g, "'")
-      .replace(/\\u0022/g, '"')
-      .replace(/\\n/g, ' ')
-      .replace(/\\t/g, ' ');
-
-    // Remove HTML tags
-    cleaned = cleaned.replace(/<[^>]*>/g, ' ');
-
-    // Normalize whitespace
-    cleaned = cleaned.replace(/\s+/g, ' ').trim();
-
-    return cleaned;
-  }
-
-  // Extract reviews
-  const reviews = work.reviews?.edges?.map(edge => {
-    const node = edge.node;
-    return {
-      reviewer_name: node.user?.name || 'Goodreads User',
-      rating: node.rating || 0,
-      rating_normalised: (node.rating || 0) / 5,
-      review_text: cleanReviewText(node.text || ''),
-      review_date: node.updatedAt || node.createdAt || new Date().toISOString().split('T')[0],
-      metadata: JSON.stringify({
-        reviewer_image: node.user?.imageUrl,
-        review_id: node.id
-      })
-    };
-  }).filter(review => review.rating > 0 && review.review_text.length > 10) || [];
-
-  return {
-    metadata,
-    reviews,
-    hasMore: work.reviews?.pageInfo?.hasNextPage || false,
-    nextCursor: work.reviews?.pageInfo?.endCursor || null
-  };
-}
-
-/**
- * Make GraphQL request with proper headers and error handling
- */
-async function makeGraphQLRequest(page, workId, cursor = null) {
-  const variables = {
-    workId,
-    reviewsFirst: 50,
-    reviewsAfter: cursor
-  };
-
-  try {
-    // First check if we're still on the book page
-    const url = await page.url();
-    if (!url.includes('goodreads.com/book/')) {
-      logger.error(`Not on a book page: ${url}`);
-      return null;
-    }
-
-    // Add a delay to avoid rate limiting
-    await page.waitForTimeout(1000);
-
-    // Make the GraphQL request with enhanced error handling
-    const response = await page.evaluate(
-      async ({ query, variables }) => {
-        try {
-          // Extract CSRF token from page if available
-          const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
-                           document.querySelector('meta[name="_token"]')?.getAttribute('content') ||
-                           window.csrfToken;
-
-          // Build headers with all required authentication
-          const headers = {
+        
+        console.log(`[GraphQL] Found resource ID: ${resourceId}`);
+        
+        // Set up headers for GraphQL request (matching the working cURL exactly)
+        const headers = {
             'Content-Type': 'application/json',
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Referer': window.location.href,
-            'Accept': 'application/json',
-            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept': '*/*',
+            'Sec-Fetch-Site': 'cross-site',
+            'Accept-Language': 'en-GB,en;q=0.9',
+            'Sec-Fetch-Mode': 'cors',
             'Accept-Encoding': 'gzip, deflate, br',
             'Origin': 'https://www.goodreads.com',
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15',
+            'Referer': 'https://www.goodreads.com/',
             'Sec-Fetch-Dest': 'empty',
-            'Sec-Fetch-Mode': 'cors',
-            'Sec-Fetch-Site': 'same-origin',
-            'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-            'Sec-Ch-Ua-Mobile': '?0',
-            'Sec-Ch-Ua-Platform': '"macOS"'
-          };
-
-          // Add CSRF token if found
-          if (csrfToken) {
-            headers['X-CSRF-Token'] = csrfToken;
-            headers['X-Requested-With'] = 'XMLHttpRequest';
-          }
-
-          const response = await fetch('https://kxbwmqov6jgg3daaamb744ycu4.appsync-api.us-east-1.amazonaws.com/graphql', {
-            method: 'POST',
-            headers: {
-              ...headers,
-              'x-api-key': 'da2-xpgsdydkbregjhpr6ejzqdhuwy'
-            },
-            body: JSON.stringify({
-              operationName: 'BookPageQuery',
-              query,
-              variables
-            }),
-            credentials: 'include' // Include cookies
-          });
-
-          // Check if response is JSON
-          const contentType = response.headers.get('content-type');
-          if (!contentType || !contentType.includes('application/json')) {
-            // If not JSON, return an error object
-            const text = await response.text();
-            return {
-              error: true,
-              message: 'Response is not JSON',
-              status: response.status,
-              contentType,
-              preview: text.substring(0, 100)
-            };
-          }
-
-          return await response.json();
-        } catch (err) {
-          return { error: true, message: err.toString() };
-        }
-      },
-      { query: BOOK_QUERY, variables }
-    );
-
-    // Check for error in response
-    if (response && response.error) {
-      logger.error(`GraphQL request returned error: ${response.message}`);
-      logger.error(`Status: ${response.status}, Content-Type: ${response.contentType}`);
-      logger.error(`Response preview: ${response.preview}`);
-
-      // If we got HTML instead of JSON, it might be a login page or rate limiting
-      if (response.preview && response.preview.includes('<!DOCTYPE')) {
-        logger.error('Received HTML instead of JSON - might be rate limited or redirected to login page');
-
-        // Try to extract more information about the HTML response
-        try {
-          await page.evaluate(() => {
-            const title = document.title;
-            const h1 = document.querySelector('h1')?.textContent;
-            const body = document.body.textContent.substring(0, 200);
-            console.error(`HTML page title: ${title}`);
-            console.error(`HTML h1: ${h1}`);
-            console.error(`HTML body preview: ${body}`);
-          });
-        } catch (e) {
-          logger.error(`Failed to extract HTML details: ${e.message}`);
-        }
-      }
-
-      return null;
-    }
-
-    return processGraphQLResponse(response);
-  } catch (error) {
-    logger.error(`GraphQL request failed: ${error.message}`);
-    return null;
+            'Priority': 'u=3, i',
+            'x-api-key': 'da2-xpgsdydkbregjhpr6ejzqdhuwy'
+        };
+        
+        // Build the GraphQL query (exact copy from working cURL)
+        const query = `query getReviews($filters: BookReviewsFilterInput!, $pagination: PaginationInput) {
+  getReviews(filters: $filters, pagination: $pagination) {
+    ...BookReviewsFragment
+    __typename
   }
 }
 
-module.exports = {
-  BOOK_QUERY,
-  processGraphQLResponse,
-  makeGraphQLRequest
-};
+fragment BookReviewsFragment on BookReviewsConnection {
+  totalCount
+  edges {
+    node {
+      ...ReviewCardFragment
+      __typename
+    }
+    __typename
+  }
+  pageInfo {
+    prevPageToken
+    nextPageToken
+    __typename
+  }
+  __typename
+}
+
+fragment ReviewCardFragment on Review {
+  __typename
+  id
+  creator {
+    ...ReviewerProfileFragment
+    __typename
+  }
+  recommendFor
+  updatedAt
+  createdAt
+  spoilerStatus
+  lastRevisionAt
+  text
+  rating
+  shelving {
+    shelf {
+      name
+      displayName
+      editable
+      default
+      webUrl
+      __typename
+    }
+    taggings {
+      tag {
+        name
+        webUrl
+        __typename
+      }
+      __typename
+    }
+    webUrl
+    __typename
+  }
+  likeCount
+  viewerHasLiked
+  commentCount
+}
+
+fragment ReviewerProfileFragment on User {
+  id: legacyId
+  imageUrlSquare
+  isAuthor
+  ...SocialUserFragment
+  textReviewsCount
+  viewerRelationshipStatus {
+    isBlockedByViewer
+    __typename
+  }
+  name
+  webUrl
+  contributor {
+    id
+    works {
+      totalCount
+      __typename
+    }
+    __typename
+  }
+  __typename
+}
+
+fragment SocialUserFragment on User {
+  viewerRelationshipStatus {
+    isFollowing
+    isFriend
+    __typename
+  }
+  followersCount
+  __typename
+}`;
+        
+        // Build variables (exact structure from working cURL)
+        const variables = {
+            filters: {
+                resourceType: "WORK",
+                resourceId: resourceId
+            },
+            pagination: {
+                limit: Math.min(maxReviews, 30) // Goodreads seems to limit to 30 per request
+            }
+        };
+        
+        // Add pagination token if we have one
+        if (nextPageToken) {
+            variables.pagination.after = nextPageToken;
+        }
+        
+        console.log(`[GraphQL] Making request with variables:`, JSON.stringify(variables, null, 2));
+        
+        // Make the GraphQL request
+        const response = await page.evaluate(async (url, headers, query, variables) => {
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({
+                        operationName: 'getReviews',
+                        variables: variables,
+                        query: query
+                    })
+                });
+                
+                const text = await response.text();
+                console.log(`[GraphQL] Response status: ${response.status}`);
+                console.log(`[GraphQL] Response text: ${text.substring(0, 500)}...`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${text}`);
+                }
+                
+                return JSON.parse(text);
+            } catch (error) {
+                console.error('[GraphQL] Request failed:', error);
+                throw error;
+            }
+        }, 'https://kxbwmqov6jgg3daaamb744ycu4.appsync-api.us-east-1.amazonaws.com/graphql', headers, query, variables);
+        
+        console.log(`[GraphQL] Successfully fetched GraphQL data`);
+        
+        if (!response.data || !response.data.getReviews) {
+            console.log('[GraphQL] No reviews data in response');
+            return { reviews: [], hasMore: false, nextPageToken: null };
+        }
+        
+        const reviewsData = response.data.getReviews;
+        const edges = reviewsData.edges || [];
+        const pageInfo = reviewsData.pageInfo || {};
+        
+        console.log(`[GraphQL] Found ${edges.length} reviews`);
+        console.log(`[GraphQL] Page info:`, JSON.stringify(pageInfo, null, 2));
+        
+        // Convert GraphQL reviews to our format
+        const reviews = edges.map(edge => {
+            const review = edge.node;
+            const creator = review.creator || {};
+            
+            return {
+                id: review.id,
+                reviewer_name: creator.name || 'Anonymous',
+                rating_value: review.rating || null,
+                review_text: review.text || '',
+                review_date: review.createdAt || review.updatedAt || null,
+                helpful_count: review.likeCount || 0,
+                verified_purchase: false, // GraphQL doesn't provide this
+                review_url: creator.webUrl || '',
+                metadata: {
+                    source: 'graphql',
+                    graphql_id: review.id,
+                    creator_id: creator.id,
+                    spoiler_status: review.spoilerStatus,
+                    comment_count: review.commentCount,
+                    like_count: review.likeCount,
+                    viewer_has_liked: review.viewerHasLiked,
+                    next_token: pageInfo.nextPageToken,
+                    graphql_page: startPage
+                }
+            };
+        });
+        
+        console.log(`[GraphQL] Converted ${reviews.length} reviews`);
+        
+        return {
+            reviews: reviews,
+            hasMore: !!pageInfo.nextPageToken,
+            nextPageToken: pageInfo.nextPageToken,
+            totalCount: reviewsData.totalCount
+        };
+        
+    } catch (error) {
+        console.error('[GraphQL] Error during GraphQL scraping:', error);
+        return { reviews: [], hasMore: false, nextPageToken: null };
+    }
+}
+
+module.exports = { scrapeReviews };

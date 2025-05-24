@@ -582,239 +582,25 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
 
         $details['url'] = $bookUrl;
 
-        // Try to use the VPS-based Headless Browser service first for comprehensive metadata
-        $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Attempting to use VPS Headless Browser for comprehensive metadata");
-
-        // Use the VPS IP address as the default if environment variable is not set
-        $apiUrl = getenv('HEADLESS_BROWSER_API_URL') ?: 'http://37.27.31.107:3000';
-        $apiKey = getenv('HEADLESS_BROWSER_API_KEY') ?: 'stories-scraper-api-key-2023';
-
-        // Build the request URL
-        $url = "{$apiUrl}/scrape/goodreads?url=" . urlencode($bookUrl) . "&limit=1";
-
-        // Always set force to 1 when the "Force Fresh Data" button is clicked
-        if (isset($_GET['force']) && $_GET['force'] == '1') {
-            $forceValue = "1";
-            // Also set environment variables to ensure force refresh
-            putenv('VPS_BYPASS_CACHE=true');
-            putenv('FORCE_FRESH_DATA=true');
-            putenv('SKIP_CACHE=true');
-
-            // Set the force option to true to ensure it's passed to the Node.js server
-            $options['force'] = true;
-        }
-        // Otherwise, use the value from options
-        else {
-            $forceValue = ($options['force'] ?? false) ? "1" : "0";
-        }
-
-        // Add force parameter to URL
-        $url .= "&force={$forceValue}";
-
-        // Log the force parameter value for debugging
-        $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Force parameter details in getBookDetails:");
-        $this->logToFile($debugDir . '/goodreads-log.txt', "   - options['force']: " . (isset($options['force']) ? var_export($options['force'], true) : 'not set'));
-        $this->logToFile($debugDir . '/goodreads-log.txt', "   - forceValue: {$forceValue}");
-        $this->logToFile($debugDir . '/goodreads-log.txt', "   - VPS_BYPASS_CACHE: " . getenv('VPS_BYPASS_CACHE'));
-        $this->logToFile($debugDir . '/goodreads-log.txt', "   - FORCE_FRESH_DATA: " . getenv('FORCE_FRESH_DATA'));
-        $this->logToFile($debugDir . '/goodreads-log.txt', "   - Full request URL: {$url}");
-
-        $this->logToFile($debugDir . '/goodreads-log.txt', "🔗 Using VPS Headless Browser API URL: {$apiUrl}");
-        $this->logToFile($debugDir . '/goodreads-log.txt', "🔗 Book URL being scraped: {$bookUrl}");
-
-        // Check if we should skip VPS headless browser (for debugging or if it's known to be down)
-        if (isset($_GET['skip_vps']) || isset($_POST['skip_vps']) || getenv('SKIP_VPS_HEADLESS') === 'true') {
-            $this->logToFile($debugDir . '/goodreads-log.txt', "⚠️ Skipping VPS Headless Browser (forced by parameter)");
-            $vpsResponse = false;
-        } else {
-            // Make the request to the VPS Headless Browser service with API key in header
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $url);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 60); // 60 second timeout
-            curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                "x-api-key: {$apiKey}"
-            ]);
-            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10); // 10 second connection timeout
-            curl_setopt($ch, CURLOPT_VERBOSE, true); // Enable verbose output
-
-            // Create a file handle for the verbose information
-            $verbose = fopen($debugDir . '/curl_verbose.log', 'w+');
-            curl_setopt($ch, CURLOPT_STDERR, $verbose);
-
-            $vpsResponse = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            $curlError = curl_error($ch);
-            $curlErrno = curl_errno($ch);
-            curl_close($ch);
-
-            // Close the file handle
-            fclose($verbose);
-
-            if ($httpCode >= 400 || $curlErrno > 0) {
-                $this->logToFile($debugDir . '/goodreads-log.txt', "❌ VPS Headless Browser API error: HTTP {$httpCode}, cURL Error: {$curlError} ({$curlErrno})");
-                $this->logToFile($debugDir . '/goodreads-log.txt', "❌ See curl_verbose.log for detailed connection information");
-                $vpsResponse = false;
-            }
-        }
-
-        // COMPLETELY SKIP VPS FOR BOOK METADATA - VPS scraper is extracting GraphQL fragments instead of clean data
-        $this->logToFile($debugDir . '/goodreads-log.txt', "🚫 SKIPPING VPS for book metadata - VPS scraper returns corrupted GraphQL/HTML fragments");
-        $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Using ONLY HTML scraping for all book metadata to ensure clean data");
+        // COMPLETELY BYPASS VPS for book metadata - VPS extracts corrupted GraphQL fragments
+        $this->logToFile($debugDir . '/goodreads-log.txt', "🚫 BYPASSING VPS for book metadata - VPS extracts corrupted GraphQL fragments, using clean HTML data only");
         
-        // VPS will only be used for review pagination in the review scraping section
-        // All book metadata will come from direct HTML scraping below
+        // Skip VPS entirely for book metadata extraction
+        $vpsResponse = false;
 
-        // If VPS Headless Browser fails, fall back to direct scraping
-        $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Falling back to direct HTML scraping for book details");
+        // Return clean HTML-extracted data only (VPS bypassed to prevent GraphQL corruption)
+        $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Returning clean HTML-extracted book metadata");
+        
+        return $details;
+    }
 
-        // Log the book URL we're scraping directly
-        $this->logToFile($debugDir . '/goodreads-log.txt', "📚 Direct scraping book URL: {$bookUrl}");
-
-        // Create a more detailed log of the response for debugging
-        if ($response) {
-            $responseLength = strlen($response);
-            $this->logToFile($debugDir . '/goodreads-log.txt', "📝 Response received: {$responseLength} bytes");
-
-            // Save a sample of the response for debugging
-            $sampleLength = min(1000, $responseLength);
-            $this->logToFile($debugDir . '/goodreads-log.txt', "📝 Response sample: " . substr($response, 0, $sampleLength) . "...");
-        } else {
-            $this->logToFile($debugDir . '/goodreads-log.txt', "❌ No response received from direct scraping");
-        }
-
-        // Extract book title
-        if (preg_match('/<h1 id="bookTitle"[^>]*>([^<]+)<\/h1>/i', $response, $matches)) {
-            $details['title'] = trim($matches[1]);
-        } else if (preg_match('/<h1[^>]*class="[^"]*BookPageTitleSection__title[^"]*"[^>]*>([^<]+)<\/h1>/i', $response, $matches)) {
-            $details['title'] = trim($matches[1]);
-        } else if (preg_match('/<h1[^>]*data-testid="bookTitle"[^>]*>([^<]+)<\/h1>/i', $response, $matches)) {
-            $details['title'] = trim($matches[1]);
-        }
-
-        // Extract book author
-        if (preg_match('/<a class="authorName"[^>]*><span[^>]*>([^<]+)<\/span><\/a>/i', $response, $matches)) {
-            $details['author'] = trim($matches[1]);
-        } else if (preg_match('/<a[^>]*class="[^"]*BookPageTitleSection__authorLink[^"]*"[^>]*>([^<]+)<\/a>/i', $response, $matches)) {
-            $details['author'] = trim($matches[1]);
-        } else if (preg_match('/<a[^>]*data-testid="authorLink"[^>]*>([^<]+)<\/a>/i', $response, $matches)) {
-            $details['author'] = trim($matches[1]);
-        }
-
-        // Extract book cover
-        if (preg_match('/<img id="coverImage"[^>]*src="([^"]+)"/i', $response, $matches)) {
-            $details['cover_url'] = $matches[1];
-        } else if (preg_match('/<img[^>]*class="[^"]*BookCover__image[^"]*"[^>]*src="([^"]+)"/i', $response, $matches)) {
-            $details['cover_url'] = $matches[1];
-        } else if (preg_match('/<img[^>]*class="[^"]*ResponsiveImage[^"]*"[^>]*src="([^"]+)"/i', $response, $matches)) {
-            $details['cover_url'] = $matches[1];
-        }
-
-        // Extract book description
-        if (preg_match('/<div id="description"[^>]*>.*?<span[^>]*>(.*?)<\/span>/is', $response, $matches)) {
-            $details['description'] = trim(strip_tags($matches[1]));
-        } else if (preg_match('/<div[^>]*class="[^"]*BookPageMetadataSection__description[^"]*"[^>]*>.*?<div[^>]*class="[^"]*Formatted[^"]*"[^>]*>(.*?)<\/div>/is', $response, $matches)) {
-            $details['description'] = trim(strip_tags($matches[1]));
-        } else if (preg_match('/<div[^>]*data-testid="description"[^>]*>(.*?)<\/div>/is', $response, $matches)) {
-            $details['description'] = trim(strip_tags($matches[1]));
-        }
-
-        // Extract average rating
-        if (preg_match('/<span itemprop="ratingValue"[^>]*>([^<]+)<\/span>/i', $response, $matches)) {
-            $details['average_rating'] = (float)trim($matches[1]);
-            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found average rating using itemprop pattern: {$details['average_rating']}");
-        } else if (preg_match('/<div[^>]*class="[^"]*RatingStatistics__rating[^"]*"[^>]*>([^<]+)<\/div>/i', $response, $matches)) {
-            $details['average_rating'] = (float)trim($matches[1]);
-            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found average rating using RatingStatistics__rating pattern: {$details['average_rating']}");
-        } else if (preg_match('/<div[^>]*data-testid="averageRating"[^>]*>([^<]+)<\/div>/i', $response, $matches)) {
-            $details['average_rating'] = (float)trim($matches[1]);
-            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found average rating using data-testid pattern: {$details['average_rating']}");
-        } else if (preg_match('/aria-label="Average rating of ([0-9.]+) stars."[^>]*>/i', $response, $matches)) {
-            $details['average_rating'] = (float)trim($matches[1]);
-            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found average rating using aria-label pattern: {$details['average_rating']}");
-        } else if (preg_match('/<span[^>]*class="RatingStars__RatingsValue[^"]*"[^>]*>([0-9.]+)<\/span>/i', $response, $matches)) {
-            $details['average_rating'] = (float)trim($matches[1]);
-            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found average rating using RatingStars__RatingsValue pattern: {$details['average_rating']}");
-        }
-
-        // Extract ratings count
-        if (preg_match('/<meta itemprop="ratingCount" content="([^"]+)"/i', $response, $matches)) {
-            $details['ratings_count'] = (int)$matches[1];
-            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found ratings count using itemprop pattern: {$details['ratings_count']}");
-        } else if (preg_match('/<div[^>]*class="[^"]*RatingStatistics__meta[^"]*"[^>]*>.*?(\d+(?:,\d+)*)[^<]*ratings/i', $response, $matches)) {
-            $details['ratings_count'] = (int)str_replace(',', '', $matches[1]);
-            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found ratings count using RatingStatistics__meta pattern: {$details['ratings_count']}");
-        } else if (preg_match('/<div[^>]*data-testid="ratingsCount"[^>]*>.*?(\d+(?:,\d+)*)[^<]*ratings/i', $response, $matches)) {
-            $details['ratings_count'] = (int)str_replace(',', '', $matches[1]);
-            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found ratings count using data-testid pattern: {$details['ratings_count']}");
-        } else if (preg_match('/<a[^>]*href="#CommunityReviews"[^>]*>([0-9,.]+) ratings/i', $response, $matches)) {
-            $details['ratings_count'] = (int)str_replace([',', '.'], '', $matches[1]);
-            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found ratings count using CommunityReviews link pattern: {$details['ratings_count']}");
-        } else if (preg_match('/([0-9,.]+) ratings and ([0-9,.]+) reviews/i', $response, $matches)) {
-            $details['ratings_count'] = (int)str_replace([',', '.'], '', $matches[1]);
-            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found ratings count using ratings and reviews pattern: {$details['ratings_count']}");
-        }
-
-        // Extract review count
-        if (preg_match('/<meta itemprop="reviewCount" content="([^"]+)"/i', $response, $matches)) {
-            $details['review_count'] = (int)$matches[1];
-            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found review count using itemprop pattern: {$details['review_count']}");
-        } else if (preg_match('/([0-9,.]+) ratings and ([0-9,.]+) reviews/i', $response, $matches)) {
-            $details['review_count'] = (int)str_replace([',', '.'], '', $matches[2]);
-            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found review count using ratings and reviews pattern: {$details['review_count']}");
-        } else if (preg_match('/<a[^>]*href="#CommunityReviews"[^>]*>[0-9,.]+ ratings ([0-9,.]+) reviews<\/a>/i', $response, $matches)) {
-            $details['review_count'] = (int)str_replace([',', '.'], '', $matches[1]);
-            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found review count using CommunityReviews link pattern: {$details['review_count']}");
-        } else if (preg_match('/(\d[\d,\.]*) reviews/i', $response, $matches)) {
-            $details['review_count'] = (int)str_replace(',', '', $matches[1]);
-            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found review count using generic reviews pattern: {$details['review_count']}");
-        }
-
-        // Extract publication info
-        if (preg_match('/Published\s+(.*?)(?:\s+by\s+(.*?))?(?:\s+\(first published\s+(.*?)\))?</is', $response, $matches)) {
-            if (!empty($matches[1])) {
-                $details['published_date'] = trim($matches[1]);
-            }
-            if (!empty($matches[2])) {
-                $details['publisher'] = trim($matches[2]);
-            }
-        } else if (preg_match('/Published\s+(.*?)(?:\s+by\s+(.*?))?/i', $response, $matches)) {
-            if (!empty($matches[1])) {
-                $details['published_date'] = trim($matches[1]);
-            }
-            if (!empty($matches[2])) {
-                $details['publisher'] = trim($matches[2]);
-            }
-        }
-
-        // Extract publication date from data-testid attribute (new Goodreads design)
-        if (empty($details['published_date']) && preg_match('/<p[^>]*data-testid="publicationInfo"[^>]*>First published\s+(.*?)<\/p>/is', $response, $matches)) {
-            $details['published_date'] = trim($matches[1]);
-        } else if (empty($details['published_date']) && preg_match('/<p[^>]*data-testid="publicationInfo"[^>]*>([^<]+)<\/p>/is', $response, $matches)) {
-            $details['published_date'] = trim($matches[1]);
-        }
-
-        // Extract ISBN
-        if (preg_match('/ISBN\s+(\d+X?)/i', $response, $matches)) {
-            $details['isbn'] = $matches[1];
-        } else if (preg_match('/ISBN10:\s*(\d+X?)/i', $response, $matches)) {
-            $details['isbn'] = $matches[1];
-        }
-
-        // Extract ISBN13
-        if (preg_match('/ISBN13\s+(\d+)/i', $response, $matches)) {
-            $details['isbn13'] = $matches[1];
-        } else if (preg_match('/ISBN\s+(\d{13})/i', $response, $matches)) {
-            $details['isbn13'] = $matches[1];
-        }
-
-        // Extract page count
-        if (preg_match('/(\d+)\s+pages/i', $response, $matches)) {
-            $details['page_count'] = (int)$matches[1];
-        }
-
-        // Extract language
-        if (preg_match('/Language\s*:?\s*([^<\n]+)/i', $response, $matches)) {
+    /**
+     * Get GraphQL pagination state from database
+     *
+     * @param int $bookId The book ID
+     * @return array Pagination state
+     */
+    private function getGraphQLPaginationState(int $bookId): array {
             $details['language'] = trim($matches[1]);
         }
 

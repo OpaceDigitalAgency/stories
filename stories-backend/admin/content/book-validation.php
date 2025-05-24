@@ -400,35 +400,41 @@ $(document).ready(function() {
         const bookId = $(this).data('book-id');
         const bookTitle = $(this).data('book-title');
         const author = $(this).data('author');
+        const publisher = $(this).data('publisher');
+        const pubDate = $(this).data('pub-date');
+        const format = $(this).data('format');
 
-        // Show a confirmation dialog
-        if (confirm(`Search for correct ISBN for "${bookTitle}" by ${author}?`)) {
-            const $button = $(this);
-            $button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Searching...');
+        const $button = $(this);
+        $button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Searching...');
 
-            // Make AJAX call to get ISBN suggestions
-            $.ajax({
-                url: 'book-validation-ajax.php',
-                method: 'POST',
-                data: {
-                    action: 'fix_isbn',
-                    book_id: bookId
-                },
-                success: function(response) {
-                    if (typeof response === 'object' && response.status === 'success') {
-                        // Create a proper selection interface
-                        showISBNSelectionModal(response.suggestions, response.current_title, bookId);
-                    } else {
-                        alert('Error: ' + (response.message || 'Failed to find ISBN suggestions'));
-                    }
-                    $button.prop('disabled', false).html('<i class="fas fa-wrench"></i> Fix');
-                },
-                error: function(xhr, status, error) {
-                    alert('Error searching for ISBN: ' + error);
-                    $button.prop('disabled', false).html('<i class="fas fa-wrench"></i> Fix');
+        // Make AJAX call to get ISBN suggestions
+        $.ajax({
+            url: 'book-validation-ajax.php',
+            method: 'POST',
+            data: {
+                action: 'fix_isbn',
+                book_id: bookId
+            },
+            success: function(response) {
+                if (typeof response === 'object' && response.status === 'success') {
+                    // Create a proper selection interface with current book data
+                    showISBNSelectionModal(response.suggestions, {
+                        title: response.current_title,
+                        author: response.current_author,
+                        publisher: response.current_publisher,
+                        year: response.current_year,
+                        format: format
+                    }, bookId);
+                } else {
+                    alert('Error: ' + (response.message || 'Failed to find ISBN suggestions'));
                 }
-            });
-        }
+                $button.prop('disabled', false).html('<i class="fas fa-wrench"></i> Fix');
+            },
+            error: function(xhr, status, error) {
+                alert('Error searching for ISBN: ' + error);
+                $button.prop('disabled', false).html('<i class="fas fa-wrench"></i> Fix');
+            }
+        });
     });
 
     // Function to auto-validate all ISBNs on page load
@@ -530,28 +536,24 @@ $(document).ready(function() {
     }
 
     // Function to show ISBN selection modal
-    function showISBNSelectionModal(suggestions, currentTitle, bookId) {
+    function showISBNSelectionModal(suggestions, currentBook, bookId) {
         if (suggestions.length === 0) {
             alert('No ISBN suggestions found for this book.');
             return;
         }
 
-        // Check if we have a very high confidence match (score >= 150)
-        const topMatch = suggestions[0];
-        if (topMatch.match_score >= 150) {
-            if (confirm(`High confidence match found!\n\n${topMatch.title}\nPublisher: ${topMatch.publisher || 'Unknown'}\nISBN-13: ${topMatch.isbn13 || 'N/A'}\nMatch reasons: ${topMatch.match_reasons}\n\nApply this ISBN automatically?`)) {
-                const selectedISBN = topMatch.isbn13 || topMatch.isbn;
-                selectISBN(selectedISBN, topMatch.isbn, bookId);
-                return;
-            }
-        }
-
         const suggestionsToShow = suggestions.slice(0, 5); // Show top 5 matches
 
-        // Create modal content
+        // Create modal content with current book info
         let modalContent = `
-            <div style="max-width: 600px;">
-                <h4>Select Correct ISBN for "${currentTitle}"</h4>
+            <div style="max-width: 700px;">
+                <h4>Select Correct ISBN for "${currentBook.title}"</h4>
+                <div style="background: #f8f9fa; padding: 10px; margin: 10px 0; border-radius: 5px; border-left: 4px solid #007bff;">
+                    <strong>Current Book Data:</strong><br>
+                    <strong>Publisher:</strong> ${currentBook.publisher || 'Unknown'} |
+                    <strong>Year:</strong> ${currentBook.year || 'Unknown'} |
+                    <strong>Format:</strong> ${currentBook.format || 'Unknown'}
+                </div>
                 <p>Found ${suggestionsToShow.length} possible matches. Select the correct one:</p>
                 <div style="max-height: 400px; overflow-y: auto;">
         `;
@@ -560,6 +562,8 @@ $(document).ready(function() {
             const isbn10 = suggestion.isbn || 'N/A';
             const isbn13 = suggestion.isbn13 || 'N/A';
             const publisher = suggestion.publisher || 'Unknown';
+            const pubYear = suggestion.publication_date || suggestion.publication_year || 'Unknown';
+            const format = suggestion.format || 'Unknown';
             const matchScore = suggestion.match_score || 0;
             const matchReasons = suggestion.match_reasons || 'No specific reasons';
 
@@ -583,9 +587,8 @@ $(document).ready(function() {
                         </span>
                     </div>
                     <p><strong>Author:</strong> ${suggestion.author}</p>
-                    <p><strong>Publisher:</strong> ${publisher}</p>
-                    <p><strong>ISBN-10:</strong> ${isbn10}</p>
-                    <p><strong>ISBN-13:</strong> ${isbn13}</p>
+                    <p><strong>Publisher:</strong> ${publisher} | <strong>Year:</strong> ${pubYear} | <strong>Format:</strong> ${format}</p>
+                    <p><strong>ISBN-10:</strong> ${isbn10} | <strong>ISBN-13:</strong> ${isbn13}</p>
                     <p><strong>Match reasons:</strong> <em>${matchReasons}</em></p>
                     <button class="btn btn-primary" onclick="selectISBN('${isbn13}', '${isbn10}', ${bookId})">
                         Select This ISBN

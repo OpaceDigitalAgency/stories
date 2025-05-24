@@ -321,6 +321,15 @@ function intelligentISBNMatching($suggestions, $currentBook) {
             } elseif (strpos($suggestionPublisher, $currentPublisher) !== false || strpos($currentPublisher, $suggestionPublisher) !== false) {
                 $score += 30;
                 $reasons[] = 'Partial publisher match';
+            } else {
+                // Only apply a small penalty for publisher mismatch if title is exact
+                if ($suggestionTitle === $currentTitle) {
+                    $score -= 5; // Small penalty for exact title but wrong publisher
+                    $reasons[] = 'Publisher mismatch (small penalty for exact title)';
+                } else {
+                    $score -= 15; // Larger penalty for both title and publisher mismatch
+                    $reasons[] = 'Publisher mismatch (penalty)';
+                }
             }
         }
 
@@ -339,14 +348,33 @@ function intelligentISBNMatching($suggestions, $currentBook) {
             }
         }
 
-        // Format preferences (exclude compilations)
+        // Format preferences (exclude compilations and wrong formats)
         $titleLower = strtolower($suggestion['title'] ?? '');
+        $suggestionFormat = strtolower($suggestion['format'] ?? '');
+
+        // Penalize compilations
         if (strpos($titleLower, ' and ') !== false ||
             strpos($titleLower, 'includes') !== false ||
             strpos($titleLower, 'collection') !== false ||
             strpos($titleLower, 'box set') !== false) {
             $score -= 20;
             $reasons[] = 'Compilation/collection (penalty)';
+        }
+
+        // Penalize audiobooks if we're looking for print books (and vice versa)
+        if (strpos($suggestionFormat, 'audio') !== false ||
+            strpos($titleLower, 'audiobook') !== false ||
+            strpos($titleLower, 'audio book') !== false) {
+            $score -= 15;
+            $reasons[] = 'Audiobook format (penalty)';
+        }
+
+        // Penalize ebooks if we're looking for print books
+        if (strpos($suggestionFormat, 'ebook') !== false ||
+            strpos($suggestionFormat, 'kindle') !== false ||
+            strpos($titleLower, 'ebook') !== false) {
+            $score -= 10;
+            $reasons[] = 'Ebook format (penalty)';
         }
 
         // Prefer ISBN-13 over ISBN-10
@@ -394,7 +422,8 @@ function publisherVariationMatch($publisher1, $publisher2) {
     $variations = [
         ['scholastic', 'scholastic uk', 'scholastic ltd', 'marion lloyd books'],
         ['penguin', 'penguin random house', 'penguin books'],
-        ['harpercollins', 'harper collins', 'harper'],
+        ['harpercollins', 'harper collins', 'harper', 'harpercollins uk', 'harpercollins children\'s books'],
+        ['simon & schuster', 'simon and schuster', 'simon & schuster children\'s books', 'simon and schuster children\'s books'],
         ['macmillan', 'macmillan children\'s books'],
         ['orion', 'orion children\'s books', 'orion publishing'],
         ['bloomsbury', 'bloomsbury children\'s books'],

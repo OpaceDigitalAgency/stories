@@ -97,8 +97,8 @@ select {
 /* ===== Table Spacing ===== */
 .table th, .table td,
 .premium-table th, .premium-table td {
-  padding: 0.5rem 0.75rem !important;
-  vertical-align: middle !important;
+    padding: 0.5rem !important;
+    vertical-align: top !important;
 }
 
 .table-container, .premium-table-container {

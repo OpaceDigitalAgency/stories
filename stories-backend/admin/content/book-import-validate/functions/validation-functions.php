@@ -116,18 +116,18 @@ function validateBookData($bookId, $isbn, $title, $db, $forceRefresh = false) {
         if ($goodreadsSourceId) {
             $goodreadsStartTime = microtime(true);
             error_log("Starting Goodreads fetch at " . date('H:i:s'));
-            
+
             $goodreadsFetcher = $reviewFetcherFactory->getFetcher($goodreadsSourceId);
             if ($goodreadsFetcher && $goodreadsFetcher->isConfigured()) {
                 // Pass force parameter through
                 $options = ['force' => $forceRefresh];
                 $goodreadsData = fetchGoodreadsDataNew($cleanIsbn, $title, $book['author'] ?? '', $db, $options);
-                
+
                 $goodreadsEndTime = microtime(true);
                 $goodreadsDuration = round($goodreadsEndTime - $goodreadsStartTime, 2);
                 error_log("Completed Goodreads fetch at " . date('H:i:s') . " (took {$goodreadsDuration}s)");
                 $sourceTiming['goodreads'] = $goodreadsDuration;
-                
+
                 if ($goodreadsData) {
                     $status = 'success';
                     $message = 'Successfully fetched data from Goodreads';
@@ -197,7 +197,7 @@ function validateBookData($bookId, $isbn, $title, $db, $forceRefresh = false) {
             $googleBooksFetcher = $reviewFetcherFactory->getFetcher($googleBooksSourceId);
             if ($googleBooksFetcher && $googleBooksFetcher->isConfigured()) {
                 $googleBooksData = fetchGoogleBooksDataNew($cleanIsbn, $title, $book['author'] ?? '');
-                
+
                 $googleBooksEndTime = microtime(true);
                 $googleBooksDuration = round($googleBooksEndTime - $googleBooksStartTime, 2);
                 error_log("Completed Google Books fetch at " . date('H:i:s') . " (took {$googleBooksDuration}s)");
@@ -243,7 +243,7 @@ function validateBookData($bookId, $isbn, $title, $db, $forceRefresh = false) {
             $openLibraryFetcher = $reviewFetcherFactory->getFetcher($openLibrarySourceId);
             if ($openLibraryFetcher && $openLibraryFetcher->isConfigured()) {
                 $openLibraryData = fetchOpenLibraryDataNew($cleanIsbn, $title, $book['author'] ?? '');
-                
+
                 $openLibraryEndTime = microtime(true);
                 $openLibraryDuration = round($openLibraryEndTime - $openLibraryStartTime, 2);
                 error_log("Completed Open Library fetch at " . date('H:i:s') . " (took {$openLibraryDuration}s)");
@@ -693,6 +693,178 @@ function getBookValidationStatus($bookId, $db) {
         return [
             'status' => 'error',
             'message' => 'Error getting book validation status: ' . $e->getMessage()
+        ];
+    }
+}
+
+/**
+ * Fix ISBN for a single book using title/author search
+ *
+ * @param int $bookId The book ID
+ * @param string $title The book title
+ * @param string $author The book author
+ * @param PDO $db Database connection
+ * @return array Fix result
+ */
+function fixBookISBN($bookId, $title, $author, $db) {
+    try {
+        error_log("Attempting to fix ISBN for book ID: $bookId, Title: $title, Author: $author");
+
+        // Search for the book using title and author
+        $suggestions = [];
+
+        // Try Google Books first
+        $googleSuggestions = searchBooksByTitleAuthor($title, $author, 3);
+        if (!empty($googleSuggestions)) {
+            $suggestions = array_merge($suggestions, $googleSuggestions);
+        }
+
+        // Try Open Library
+        $openLibrarySuggestions = searchOpenLibraryByTitleAuthor($title, $author, 3);
+        if (!empty($openLibrarySuggestions)) {
+            $suggestions = array_merge($suggestions, $openLibrarySuggestions);
+        }
+
+        if (empty($suggestions)) {
+            return [
+                'status' => 'error',
+                'message' => "No ISBN suggestions found for '$title' by '$author'"
+            ];
+        }
+
+        // Use the first suggestion with a valid ISBN
+        $bestSuggestion = null;
+        foreach ($suggestions as $suggestion) {
+            if (!empty($suggestion['isbn13']) || !empty($suggestion['isbn'])) {
+                $bestSuggestion = $suggestion;
+                break;
+            }
+        }
+
+        if (!$bestSuggestion) {
+            return [
+                'status' => 'error',
+                'message' => "Found book matches but no valid ISBNs available"
+            ];
+        }
+
+        // Update the book with the new ISBN
+        $newIsbn = !empty($bestSuggestion['isbn13']) ? $bestSuggestion['isbn13'] : $bestSuggestion['isbn'];
+        $newIsbn10 = !empty($bestSuggestion['isbn']) ? $bestSuggestion['isbn'] : '';
+        $newIsbn13 = !empty($bestSuggestion['isbn13']) ? $bestSuggestion['isbn13'] : '';
+
+        $stmt = $db->prepare("
+            UPDATE books
+            SET isbn = ?, isbn13 = ?, validation_status = 'pending', last_validated = NOW()
+            WHERE directory_item_id = ?
+        ");
+        $stmt->execute([$newIsbn10, $newIsbn13, $bookId]);
+
+        error_log("Updated book ID $bookId with new ISBN: $newIsbn");
+
+        return [
+            'status' => 'success',
+            'message' => "ISBN updated to '$newIsbn' for '$title'",
+            'old_isbn' => '',
+            'new_isbn' => $newIsbn,
+            'source' => $bestSuggestion['source'] ?? 'unknown'
+        ];
+
+    } catch (Exception $e) {
+        error_log("Error fixing ISBN for book ID $bookId: " . $e->getMessage());
+        return [
+            'status' => 'error',
+            'message' => 'Error fixing ISBN: ' . $e->getMessage()
+        ];
+    }
+}
+
+/**
+ * Fix all books with invalid ISBNs
+ *
+ * @param PDO $db Database connection
+ * @return array Fix result
+ */
+function fixAllInvalidISBNs($db) {
+    try {
+        // Get all books with potentially invalid ISBNs
+        $stmt = $db->prepare("
+            SELECT di.id, di.title, b.isbn, b.isbn13, b.author
+            FROM directory_items di
+            JOIN books b ON di.id = b.directory_item_id
+            WHERE di.type = 'book'
+            AND (b.validation_status IS NULL OR b.validation_status = 'invalid' OR b.validation_status = 'pending')
+            ORDER BY di.title ASC
+        ");
+        $stmt->execute();
+        $books = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($books)) {
+            return [
+                'status' => 'success',
+                'message' => 'No books found that need ISBN fixing'
+            ];
+        }
+
+        $results = [
+            'total' => count($books),
+            'fixed' => 0,
+            'failed' => 0,
+            'details' => []
+        ];
+
+        foreach ($books as $book) {
+            $isbn = !empty($book['isbn13']) ? $book['isbn13'] : (!empty($book['isbn']) ? $book['isbn'] : '');
+
+            // Skip if ISBN is already valid
+            if (!empty($isbn)) {
+                // Quick validation check
+                if (validateIsbnWithOpenLibrary($isbn) || validateIsbnWithGoogleBooks($isbn)) {
+                    // Mark as valid and skip
+                    $updateStmt = $db->prepare("
+                        UPDATE books
+                        SET validation_status = 'valid', last_validated = NOW()
+                        WHERE directory_item_id = ?
+                    ");
+                    $updateStmt->execute([$book['id']]);
+                    continue;
+                }
+            }
+
+            // Try to fix the ISBN
+            $fixResult = fixBookISBN($book['id'], $book['title'], $book['author'], $db);
+
+            if ($fixResult['status'] === 'success') {
+                $results['fixed']++;
+                $results['details'][] = [
+                    'title' => $book['title'],
+                    'status' => 'fixed',
+                    'old_isbn' => $isbn,
+                    'new_isbn' => $fixResult['new_isbn']
+                ];
+            } else {
+                $results['failed']++;
+                $results['details'][] = [
+                    'title' => $book['title'],
+                    'status' => 'failed',
+                    'message' => $fixResult['message']
+                ];
+            }
+        }
+
+        $message = "Processed {$results['total']} books: {$results['fixed']} fixed, {$results['failed']} failed";
+
+        return [
+            'status' => 'success',
+            'message' => $message,
+            'results' => $results
+        ];
+
+    } catch (Exception $e) {
+        error_log("Error fixing all invalid ISBNs: " . $e->getMessage());
+        return [
+            'status' => 'error',
+            'message' => 'Error fixing ISBNs: ' . $e->getMessage()
         ];
     }
 }

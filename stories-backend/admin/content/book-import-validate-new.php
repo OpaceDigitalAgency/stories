@@ -300,6 +300,62 @@ try {
                 $messageType = 'danger';
             }
             break;
+
+        case 'fix_isbn':
+            // Fix ISBN for a single book using title/author search
+            if ($bookId) {
+                $title = $_GET['title'] ?? '';
+                $author = $_GET['author'] ?? '';
+
+                if (empty($title)) {
+                    // Get book details if title not provided
+                    $stmt = $db->prepare("
+                        SELECT di.title, b.author
+                        FROM directory_items di
+                        JOIN books b ON di.id = b.directory_item_id
+                        WHERE di.id = ?
+                    ");
+                    $stmt->execute([$bookId]);
+                    $bookDetails = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                    if ($bookDetails) {
+                        $title = $bookDetails['title'];
+                        $author = $bookDetails['author'];
+                    }
+                }
+
+                if (!empty($title)) {
+                    $fixResult = fixBookISBN($bookId, $title, $author, $db);
+
+                    if ($fixResult['status'] === 'success') {
+                        $message = $fixResult['message'];
+                        $messageType = 'success';
+                    } else {
+                        $message = 'Error fixing ISBN: ' . $fixResult['message'];
+                        $messageType = 'warning';
+                    }
+                } else {
+                    $message = 'Unable to fix ISBN: missing title information.';
+                    $messageType = 'danger';
+                }
+            } else {
+                $message = 'No book ID provided for ISBN fix.';
+                $messageType = 'danger';
+            }
+            break;
+
+        case 'fix_all_invalid_isbns':
+            // Fix all books with invalid ISBNs
+            $fixResult = fixAllInvalidISBNs($db);
+
+            if ($fixResult['status'] === 'success') {
+                $message = $fixResult['message'];
+                $messageType = 'success';
+            } else {
+                $message = 'Error fixing ISBNs: ' . $fixResult['message'];
+                $messageType = 'warning';
+            }
+            break;
     }
 
     // Get book data if a book ID is provided

@@ -1,107 +1,11 @@
 <?php
-/**
- * AJAX endpoint for book validation
- */
-
-// Start session if not already started
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-// Set JSON header first
+// Minimal AJAX test - no includes, no session, just pure JSON
 header('Content-Type: application/json');
 
-// Add error logging
-error_reporting(E_ALL);
-ini_set('display_errors', 0); // Don't display errors in JSON response
+$action = $_POST['action'] ?? '';
 
-try {
-    // Get action
-    $action = $_POST['action'] ?? '';
-
-    // Debug: Log the request
-    error_log("AJAX Request - Action: $action, POST data: " . json_encode($_POST));
-
-    switch ($action) {
-        case 'test':
-            // Simple test endpoint
-            echo json_encode(['status' => 'success', 'message' => 'AJAX endpoint is working', 'timestamp' => date('Y-m-d H:i:s')]);
-            break;
-
-        case 'validate_isbn':
-            // Temporarily disabled for testing
-            echo json_encode(['status' => 'error', 'message' => 'Validation temporarily disabled for testing']);
-            break;
-
-        default:
-            echo json_encode(['status' => 'error', 'message' => 'Invalid action']);
-            break;
-    }
-} catch (Exception $e) {
-    echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+if ($action === 'test') {
+    echo json_encode(['status' => 'success', 'message' => 'AJAX working', 'timestamp' => date('Y-m-d H:i:s')]);
+} else {
+    echo json_encode(['status' => 'error', 'message' => 'Invalid action: ' . $action]);
 }
-
-/**
- * Validate ISBN against external APIs
- */
-function validateISBNAgainstAPIs($isbn, $title, $author) {
-    error_log("validateISBNAgainstAPIs called with ISBN: '$isbn', Title: '$title', Author: '$author'");
-
-    if (empty($isbn)) {
-        error_log("No ISBN provided");
-        return ['status' => 'missing', 'class' => 'danger', 'icon' => 'times-circle', 'message' => 'No ISBN'];
-    }
-
-    // Clean ISBN
-    $cleanIsbn = preg_replace('/[^0-9X]/i', '', $isbn);
-    error_log("Cleaned ISBN: '$cleanIsbn', Length: " . strlen($cleanIsbn));
-
-    // Basic format check first
-    if (strlen($cleanIsbn) != 10 && strlen($cleanIsbn) != 13) {
-        error_log("Invalid ISBN format");
-        return ['status' => 'invalid', 'class' => 'danger', 'icon' => 'times-circle', 'message' => 'Invalid format'];
-    }
-
-    // OpenLibrary check (primary validation - faster response)
-    error_log("Calling validateIsbnWithOpenLibrary for ISBN: $cleanIsbn");
-    $openLibraryResult = validateIsbnWithOpenLibrary($cleanIsbn);
-    error_log("OpenLibrary result: " . ($openLibraryResult ? 'true' : 'false'));
-
-    if ($openLibraryResult) {
-        error_log("ISBN validated successfully with OpenLibrary");
-        return ['status' => 'valid', 'class' => 'success', 'icon' => 'check-circle', 'message' => 'Valid (OpenLibrary)'];
-    }
-
-    // Google Books check (secondary validation)
-    error_log("Calling validateIsbnWithGoogleBooks for ISBN: $cleanIsbn");
-    $googleBooksResult = validateIsbnWithGoogleBooks($cleanIsbn);
-    error_log("Google Books result: " . ($googleBooksResult ? 'true' : 'false'));
-
-    if ($googleBooksResult) {
-        error_log("ISBN validated successfully with Google Books");
-        return ['status' => 'valid', 'class' => 'success', 'icon' => 'check-circle', 'message' => 'Valid (Google Books)'];
-    }
-
-    // If ISBN validation fails, check if we can find the book by title/author
-    if (!empty($title)) {
-        error_log("Searching by title/author: '$title' / '$author'");
-
-        // Try OpenLibrary search first (faster)
-        $openLibrarySuggestions = searchOpenLibraryByTitleAuthor($title, $author, 1);
-        error_log("OpenLibrary title/author search returned " . count($openLibrarySuggestions) . " suggestions");
-        if (!empty($openLibrarySuggestions)) {
-            return ['status' => 'mismatch', 'class' => 'warning', 'icon' => 'exclamation-triangle', 'message' => 'ISBN invalid, but book found by title (OpenLibrary)'];
-        }
-
-        // Try Google Books search as fallback
-        $googleBooksSuggestions = searchBooksByTitleAuthor($title, $author, 1);
-        error_log("Google Books title/author search returned " . count($googleBooksSuggestions) . " suggestions");
-        if (!empty($googleBooksSuggestions)) {
-            return ['status' => 'mismatch', 'class' => 'warning', 'icon' => 'exclamation-triangle', 'message' => 'ISBN invalid, but book found by title (Google Books)'];
-        }
-    }
-
-    error_log("ISBN not found anywhere");
-    return ['status' => 'invalid', 'class' => 'danger', 'icon' => 'times-circle', 'message' => 'ISBN not found'];
-}
-?>

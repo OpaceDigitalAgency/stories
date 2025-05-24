@@ -1616,8 +1616,11 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         // Process the reviews to match our expected format
         $reviews = [];
         foreach ($data['reviews'] as $review) {
+            // Handle both GraphQL format (rating_value) and HTML format (rating)
+            $ratingValue = $review['rating_value'] ?? $review['rating'] ?? null;
+            
             // Skip reviews without text or rating
-            if (empty($review['review_text']) || !isset($review['rating'])) {
+            if (empty($review['review_text']) || $ratingValue === null) {
                 continue;
             }
 
@@ -1627,10 +1630,10 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
                 'reviewer_name' => $review['reviewer_name'] ?? 'Goodreads User',
                 'reviewer_age' => null,
                 'review_date' => $review['review_date'] ?? date('Y-m-d'),
-                'original_rating' => "{$review['rating']}/5",
-                'rating_value' => $review['rating'],
+                'original_rating' => "{$ratingValue}/5",
+                'rating_value' => $ratingValue,
                 'rating_scale' => 5,
-                'rating_normalised' => $review['rating_normalised'] ?? $this->normalizeRating($review['rating'], 5),
+                'rating_normalised' => $review['rating_normalised'] ?? $this->normalizeRating($ratingValue, 5),
                 'review_text' => $review['review_text'],
                 'metadata' => $review['metadata'] ?? json_encode([
                     'book_url' => $goodreadsUrl,

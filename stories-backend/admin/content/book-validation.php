@@ -123,8 +123,13 @@ require_once '../includes/header.php';
                         <div class="card-body">
 
                             <?php
+                            // Debug array to collect validation info
+                            $debugInfo = [];
+
                             // Function to do basic ISBN format validation only (no API calls)
                             function validateISBNFormat($isbn) {
+                                global $debugInfo;
+
                                 if (empty($isbn)) {
                                     return ['status' => 'missing', 'class' => 'danger', 'icon' => 'times-circle', 'message' => 'No ISBN'];
                                 }
@@ -133,8 +138,8 @@ require_once '../includes/header.php';
                                 $cleanIsbn = preg_replace('/[^0-9X]/i', '', $isbn);
                                 $length = strlen($cleanIsbn);
 
-                                // Debug: log the ISBN and its length
-                                error_log("DEBUG: ISBN '$isbn' -> cleaned '$cleanIsbn' -> length $length");
+                                // Debug: collect the ISBN and its length
+                                $debugInfo[] = "ISBN '$isbn' -> cleaned '$cleanIsbn' -> length $length";
 
                                 // Basic format check
                                 if ($length != 10 && $length != 13) {
@@ -263,6 +268,20 @@ require_once '../includes/header.php';
                                 </div>
                                 <small class="text-muted mt-1 d-block">Validating ISBNs...</small>
                             </div>
+
+                            <!-- Debug Information -->
+                            <?php if (!empty($debugInfo)): ?>
+                            <div class="mt-4">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">Debug Information</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <pre class="small"><?php echo htmlspecialchars(implode("\n", $debugInfo)); ?></pre>
+                                    </div>
+                                </div>
+                            </div>
+                            <?php endif; ?>
                         </div>
                     </div>
 

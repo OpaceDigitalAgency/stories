@@ -511,7 +511,8 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             
             echo "<p><strong>Pagination state returned:</strong> " . htmlspecialchars(json_encode($state)) . "</p>";
             
-            if ($state['nextPageToken']) {
+            // Check if we have a valid (non-null) next page token
+            if ($state['nextPageToken'] && $state['nextPageToken'] !== 'null' && $state['nextPageToken'] !== null) {
                 $options['nextPageToken'] = $state['nextPageToken'];
                 $options['startPage'] = $state['currentPage'] + 1;
 
@@ -526,7 +527,9 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
                 $this->lastGraphQLPage = $state['currentPage'];
                 $this->totalAvailable = $state['totalAvailable'];
             } else {
-                echo "<p style='color: red;'><strong>❌ No nextPageToken found - will start from beginning!</strong></p>";
+                echo "<p style='color: red;'><strong>❌ No valid nextPageToken found (token is null) - starting from beginning!</strong></p>";
+                echo "<p style='color: orange;'><strong>🔄 This means all available reviews have been scraped, or this is the first scrape.</strong></p>";
+                // Don't set any pagination options - let it start from page 1
             }
             echo "</div>";
             flush();

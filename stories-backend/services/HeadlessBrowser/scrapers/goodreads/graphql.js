@@ -5,7 +5,7 @@ const logger = require('../../utils/logger');
 
 // GraphQL query for book data and reviews
 const BOOK_QUERY = `
-query BookPageQuery($workId: ID!) {
+query BookPageQuery($workId: ID!, $reviewsFirst: Int!, $reviewsAfter: String) {
   work(id: $workId) {
     id
     title
@@ -38,7 +38,7 @@ query BookPageQuery($workId: ID!) {
       reviewsCount
       averageRating
     }
-    reviews(first: 50) {
+    reviews(first: $reviewsFirst, after: $reviewsAfter) {
       totalCount
       pageInfo {
         hasNextPage

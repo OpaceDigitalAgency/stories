@@ -165,7 +165,7 @@ fragment SocialUserFragment on User {
                 
                 const text = await response.text();
                 console.log(`[GraphQL] Response status: ${response.status}`);
-                console.log(`[GraphQL] Response text: ${text.substring(0, 500)}...`);
+                console.log(`[GraphQL] Full response text:`, text);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${text}`);
@@ -445,7 +445,7 @@ fragment SocialUserFragment on User {
                 
                 const text = await response.text();
                 console.log(`[GraphQL] Response status: ${response.status}`);
-                console.log(`[GraphQL] Response text: ${text.substring(0, 500)}...`);
+                console.log(`[GraphQL] Full response text:`, text);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${text}`);

@@ -835,7 +835,7 @@ function updateBookAggregateValues($db, $bookId) {
                                         ':rating_scale' => $ratingScale,
                                         ':rating_normalised' => $ratingNormalised,
                                         ':review_text' => $review['review_text'],
-                                        ':metadata' => $review['metadata'] ?? null
+                                        ':metadata' => is_array($review['metadata']) ? json_encode($review['metadata']) : ($review['metadata'] ?? null)
                                     ]);
 
                                     echo "<p class='success'>SQL query executed successfully</p>";

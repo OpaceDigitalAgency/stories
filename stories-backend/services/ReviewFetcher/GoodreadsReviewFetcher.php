@@ -468,56 +468,81 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         file_put_contents($debugDir . '/goodreads_book_page.html', substr($response, 0, 500000));
         $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Saved book page HTML to debug file");
 
-        // Extract book details directly from HTML
+        // Extract book details directly from HTML using proper Goodreads structure
         $details = [];
 
-        // Extract title
-        if (preg_match('/<h1[^>]*class="[^"]*Text__title[^"]*"[^>]*>(.*?)<\/h1>/is', $response, $matches)) {
+        // Extract title - from h1 with book title
+        if (preg_match('/<h1[^>]*data-testid="bookTitle"[^>]*>(.*?)<\/h1>/is', $response, $matches)) {
             $details['title'] = trim(strip_tags($matches[1]));
-        } else if (preg_match('/<h1[^>]*class="[^"]*gr-h1[^"]*"[^>]*>(.*?)<\/h1>/is', $response, $matches)) {
+        } else if (preg_match('/<h1[^>]*>(.*?)\s+by\s+.*?<\/h1>/is', $response, $matches)) {
             $details['title'] = trim(strip_tags($matches[1]));
         }
 
-        // Extract author
+        // Extract author - from contributor link or author name
         if (preg_match('/<span[^>]*class="[^"]*ContributorLink__name[^"]*"[^>]*>(.*?)<\/span>/is', $response, $matches)) {
             $details['author'] = trim(strip_tags($matches[1]));
-        } else if (preg_match('/<a[^>]*class="[^"]*authorName[^"]*"[^>]*>(.*?)<\/a>/is', $response, $matches)) {
+        } else if (preg_match('/by\s+<a[^>]*>(.*?)<\/a>/is', $response, $matches)) {
             $details['author'] = trim(strip_tags($matches[1]));
         }
 
-        // Extract ISBN
-        if (preg_match('/ISBN\s*(?:10)?:?\s*([0-9X]{10})/i', $response, $matches)) {
-            $details['isbn'] = trim($matches[1]);
-        }
-
-        // Extract ISBN13
-        if (preg_match('/ISBN\s*13:?\s*([0-9]{13})/i', $response, $matches)) {
-            $details['isbn13'] = trim($matches[1]);
-        }
-
-        // Extract publisher and publication date
-        if (preg_match('/Published\s+(?:by\s+([^,]+),\s*)?(?:on\s+)?([A-Za-z]+\s+\d+(?:,\s*\d{4})?)/i', $response, $matches)) {
-            if (!empty($matches[1])) {
-                $details['publisher'] = trim($matches[1]);
-            }
-            if (!empty($matches[2])) {
-                $details['published_date'] = trim($matches[2]);
-            }
-        }
-
-        // Extract page count
-        if (preg_match('/(\d+)\s+pages?/i', $response, $matches)) {
-            $details['page_count'] = (int)$matches[1];
-        }
-
-        // Extract format
-        if (preg_match('/<span[^>]*>Format<\/span>.*?<span[^>]*>(.*?)<\/span>/is', $response, $matches)) {
+        // Extract format - from DescListItem with Format
+        if (preg_match('/<dt[^>]*>Format<\/dt>\s*<dd[^>]*>.*?data-testid="contentContainer"[^>]*>(.*?)<\/div>/is', $response, $matches)) {
             $details['format'] = trim(strip_tags($matches[1]));
         }
 
-        // Extract series
-        if (preg_match('/<h2[^>]*>Series<\/h2>.*?<div[^>]*>(.*?)<\/div>/is', $response, $matches)) {
+        // Extract publisher - from DescListItem with Published
+        if (preg_match('/<dt[^>]*>Published<\/dt>\s*<dd[^>]*>.*?data-testid="contentContainer"[^>]*>(.*?)<\/div>/is', $response, $matches)) {
+            $publishedText = trim(strip_tags($matches[1]));
+            // Extract publisher name (usually before "on" or date)
+            if (preg_match('/^([^,]+?)(?:\s+on\s+|\s*,\s*|\s+\d)/', $publishedText, $pubMatches)) {
+                $details['publisher'] = trim($pubMatches[1]);
+            }
+            // Extract publication date
+            if (preg_match('/(\w+\s+\d+,?\s*\d{4})/', $publishedText, $dateMatches)) {
+                $details['published_date'] = trim($dateMatches[1]);
+            }
+        }
+
+        // Extract ASIN - from DescListItem with ASIN
+        if (preg_match('/<dt[^>]*>ASIN<\/dt>\s*<dd[^>]*>.*?data-testid="asin"[^>]*>(.*?)<\/span>/is', $response, $matches)) {
+            $details['asin'] = trim(strip_tags($matches[1]));
+        }
+
+        // Extract series - from DescListItem with Series
+        if (preg_match('/<dt[^>]*>Series<\/dt>\s*<dd[^>]*>.*?<a[^>]*>(.*?)<\/a>/is', $response, $matches)) {
             $details['series'] = trim(strip_tags($matches[1]));
+        }
+
+        // Extract characters - from DescListItem with Characters
+        if (preg_match('/<dt[^>]*>Characters<\/dt>\s*<dd[^>]*>(.*?)<\/dd>/is', $response, $matches)) {
+            $charactersHtml = $matches[1];
+            $characters = [];
+            if (preg_match_all('/<a[^>]*>(.*?)<\/a>/is', $charactersHtml, $charMatches)) {
+                foreach ($charMatches[1] as $char) {
+                    $characters[] = trim(strip_tags($char));
+                }
+                $details['characters'] = implode(', ', $characters);
+            }
+        }
+
+        // Extract original title - from DescListItem with Original title
+        if (preg_match('/<dt[^>]*>Original title<\/dt>\s*<dd[^>]*>.*?data-testid="contentContainer"[^>]*>(.*?)<\/div>/is', $response, $matches)) {
+            $details['original_title'] = trim(strip_tags($matches[1]));
+        }
+
+        // Extract ISBN from text content (not from script tags)
+        if (preg_match('/ISBN[:\s]*([0-9X]{10,13})/i', $response, $matches)) {
+            $isbn = trim($matches[1]);
+            if (strlen($isbn) == 13) {
+                $details['isbn13'] = $isbn;
+            } else if (strlen($isbn) == 10) {
+                $details['isbn'] = $isbn;
+            }
+        }
+
+        // Extract page count from text
+        if (preg_match('/(\d+)\s+pages?/i', $response, $matches)) {
+            $details['page_count'] = (int)$matches[1];
         }
 
         // Extract genres
@@ -1931,23 +1956,15 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
      * @return array Array of reviews
      */
     private function fetchReviewsWithHeadlessBrowser(string $goodreadsUrl, int $limit, array $options = []): array {
-        // Debug: Log the limit being requested
+        // COMPLETELY BYPASS VPS - VPS extracts corrupted GraphQL/HTML fragments
         $debugDir = __DIR__ . '/debug';
         if (!is_dir($debugDir)) {
             mkdir($debugDir, 0755, true);
         }
-        $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 [DEBUG] Requesting {$limit} reviews from Headless Browser");
-        $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 [DEBUG] Options: " . json_encode($options));
-        $debugDir = __DIR__ . '/debug';
-        if (!is_dir($debugDir)) {
-            mkdir($debugDir, 0755, true);
-        }
-
-        $this->logToFile($debugDir . '/goodreads-log.txt', "� [VPS-Scraper-Goodreads] Attempting to fetch reviews using Puppeteer with full page JS evaluation for URL: {$goodreadsUrl}");
-
-        // Use the VPS IP address as the default if environment variable is not set
-        $apiUrl = getenv('HEADLESS_BROWSER_API_URL') ?: 'http://37.27.31.107:3000';
-        // Use the API key with the year suffix as specified in the server config
+        $this->logToFile($debugDir . '/goodreads-log.txt', "🚫 BYPASSING VPS METHOD - VPS extracts corrupted GraphQL fragments, returning empty to force HTML fallback");
+        
+        // Return empty array immediately to force fallback to clean HTML scraping
+        return [];
         $apiKey = getenv('HEADLESS_BROWSER_API_KEY') ?: 'stories-scraper-api-key-2023';
 
         // Log additional debug information

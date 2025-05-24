@@ -151,7 +151,7 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         $this->logToFile(__DIR__ . '/debug/goodreads-log.txt', "✅ Found book URL: {$bookUrl}");
 
         // Get clean book details (bypassing VPS to prevent GraphQL corruption)
-        $metadataFetcher = new GoodreadsBookMetadataFetcher();
+        $metadataFetcher = new GoodreadsBookMetadataFetcher($this->db);
         $bookDetails = $metadataFetcher->getCleanBookMetadata($bookUrl);
 
         if (empty($bookDetails)) {

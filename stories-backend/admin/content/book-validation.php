@@ -133,8 +133,12 @@ require_once '../includes/header.php';
                                 $cleanIsbn = preg_replace('/[^0-9X]/i', '', $isbn);
                                 $length = strlen($cleanIsbn);
 
+                                // Debug: Log the validation process
+                                error_log("Validating ISBN: '$isbn' -> cleaned: '$cleanIsbn' -> length: $length");
+
                                 // Basic format check
                                 if ($length != 10 && $length != 13) {
+                                    error_log("ISBN format invalid: $length digits");
                                     return ['status' => 'invalid', 'class' => 'danger', 'icon' => 'times-circle', 'message' => "Invalid format ($length digits)"];
                                 }
 
@@ -280,6 +284,9 @@ require_once '../includes/header.php';
                                 <button id="refresh-validation" class="btn btn-secondary ml-2">
                                     <i class="fas fa-sync"></i> Refresh Page
                                 </button>
+                                <button id="test-ajax" class="btn btn-info ml-2">
+                                    <i class="fas fa-flask"></i> Test AJAX
+                                </button>
                             </div>
 
                             <!-- Progress indicator for validation -->
@@ -400,7 +407,10 @@ $(document).ready(function() {
 
         // Show a modal or redirect to a fix page
         if (confirm(`Fix ISBN for "${bookTitle}" by searching with title and author?`)) {
-            window.location.href = `book-import-validate-new.php?action=fix_isbn&book_id=${bookId}&title=${encodeURIComponent(bookTitle)}&author=${encodeURIComponent(author)}`;
+            // For now, just show an alert - we can implement the fix functionality later
+            alert('Fix functionality will be implemented soon. Please manually edit the book for now.');
+            // TODO: Implement proper fix functionality
+            // window.location.href = `book-import-validate-new.php?action=fix_isbn&book_id=${bookId}&title=${encodeURIComponent(bookTitle)}&author=${encodeURIComponent(author)}`;
         }
     });
 
@@ -438,13 +448,38 @@ $(document).ready(function() {
 
     $('#fix-invalid-isbns').on('click', function() {
         if (confirm('This will attempt to fix all invalid ISBNs by searching with title and author. Continue?')) {
-            window.location.href = 'book-import-validate-new.php?action=fix_all_invalid_isbns';
+            // For now, just show an alert - we can implement the fix functionality later
+            alert('Bulk fix functionality will be implemented soon. Please use individual validation for now.');
+            // TODO: Implement proper bulk fix functionality
+            // window.location.href = 'book-import-validate-new.php?action=fix_all_invalid_isbns';
         }
     });
 
     $('#refresh-validation').on('click', function() {
         // Simply reload the page to refresh validation status
         window.location.reload();
+    });
+
+    $('#test-ajax').on('click', function() {
+        // Test AJAX endpoint
+        $.ajax({
+            url: 'book-validation-ajax.php',
+            method: 'POST',
+            data: {
+                action: 'test'
+            },
+            success: function(response) {
+                try {
+                    const result = JSON.parse(response);
+                    alert('AJAX Test Success: ' + result.message);
+                } catch (e) {
+                    alert('AJAX Test - Invalid JSON: ' + response);
+                }
+            },
+            error: function(xhr, status, error) {
+                alert('AJAX Test Error: ' + status + ' - ' + error);
+            }
+        });
     });
 
     $('#validate-all-isbns').on('click', function() {

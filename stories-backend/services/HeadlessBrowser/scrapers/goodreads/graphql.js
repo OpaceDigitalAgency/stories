@@ -1,5 +1,3 @@
-const { extractReviews } = require('./utils');
-
 async function scrapeReviews(page, isbn, options = {}) {
     console.log(`[GraphQL] Starting GraphQL scrape for ISBN: ${isbn}`);
     console.log(`[GraphQL] Options:`, JSON.stringify(options, null, 2));

@@ -267,9 +267,24 @@ function intelligentISBNMatching($suggestions, $currentBook) {
     $currentPublisher = strtolower(trim($currentBook['publisher'] ?? ''));
     $currentYear = intval($currentBook['publication_year'] ?? 0);
 
-    $scoredSuggestions = [];
+    // First, deduplicate suggestions by ISBN
+    $uniqueSuggestions = [];
+    $seenISBNs = [];
 
     foreach ($suggestions as $suggestion) {
+        $isbn13 = $suggestion['isbn13'] ?? '';
+        $isbn10 = $suggestion['isbn'] ?? '';
+        $primaryISBN = $isbn13 ?: $isbn10;
+
+        if (!empty($primaryISBN) && !in_array($primaryISBN, $seenISBNs)) {
+            $seenISBNs[] = $primaryISBN;
+            $uniqueSuggestions[] = $suggestion;
+        }
+    }
+
+    $scoredSuggestions = [];
+
+    foreach ($uniqueSuggestions as $suggestion) {
         $score = 0;
         $reasons = [];
 
@@ -284,18 +299,25 @@ function intelligentISBNMatching($suggestions, $currentBook) {
 
         // Title matching (most important)
         if ($suggestionTitle === $currentTitle) {
-            $score += 100;
-            $reasons[] = 'Exact title match';
+            $score += 200; // Increased for exact match
+            $reasons[] = 'EXACT title match';
         } elseif (strpos($suggestionTitle, $currentTitle) !== false || strpos($currentTitle, $suggestionTitle) !== false) {
             $score += 80;
             $reasons[] = 'Partial title match';
+        } else {
+            // Penalize completely different titles
+            $score -= 50;
+            $reasons[] = 'Different title (penalty)';
         }
 
-        // Publisher matching (very important)
+        // Publisher matching (very important) - handle variations
         if (!empty($currentPublisher) && !empty($suggestionPublisher)) {
             if ($suggestionPublisher === $currentPublisher) {
                 $score += 50;
                 $reasons[] = 'Exact publisher match';
+            } elseif (publisherVariationMatch($currentPublisher, $suggestionPublisher)) {
+                $score += 40;
+                $reasons[] = 'Publisher variation match';
             } elseif (strpos($suggestionPublisher, $currentPublisher) !== false || strpos($currentPublisher, $suggestionPublisher) !== false) {
                 $score += 30;
                 $reasons[] = 'Partial publisher match';
@@ -356,6 +378,47 @@ function intelligentISBNMatching($suggestions, $currentBook) {
         $result[] = $suggestion;
     }
 
+    // If we have a very high confidence match (exact title + good publisher), return just that one
+    if (!empty($result) && $result[0]['match_score'] >= 240) {
+        return [$result[0]]; // Return only the best match for automatic selection
+    }
+
     return $result;
+}
+
+/**
+ * Check if two publishers are variations of the same company
+ */
+function publisherVariationMatch($publisher1, $publisher2) {
+    // Common publisher variations
+    $variations = [
+        ['scholastic', 'scholastic uk', 'scholastic ltd', 'marion lloyd books'],
+        ['penguin', 'penguin random house', 'penguin books'],
+        ['harpercollins', 'harper collins', 'harper'],
+        ['macmillan', 'macmillan children\'s books'],
+        ['orion', 'orion children\'s books', 'orion publishing'],
+        ['bloomsbury', 'bloomsbury children\'s books'],
+        ['walker', 'walker books'],
+        ['usborne', 'usborne publishing']
+    ];
+
+    $pub1 = strtolower($publisher1);
+    $pub2 = strtolower($publisher2);
+
+    foreach ($variations as $group) {
+        $inGroup1 = false;
+        $inGroup2 = false;
+
+        foreach ($group as $variant) {
+            if (strpos($pub1, $variant) !== false) $inGroup1 = true;
+            if (strpos($pub2, $variant) !== false) $inGroup2 = true;
+        }
+
+        if ($inGroup1 && $inGroup2) {
+            return true;
+        }
+    }
+
+    return false;
 }
 ?>

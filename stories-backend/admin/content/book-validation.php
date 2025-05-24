@@ -391,7 +391,8 @@ $(document).ready(function() {
         $('.item-checkbox').prop('checked', isChecked);
     });
 
-    $('.validate-isbn-btn').on('click', function() {
+    // Use event delegation for dynamically created buttons
+    $(document).on('click', '.validate-isbn-btn', function() {
         const bookId = $(this).data('book-id');
         const bookTitle = $(this).data('book-title');
         const isbn = $(this).data('isbn');
@@ -436,7 +437,8 @@ $(document).ready(function() {
         });
     });
 
-    $('.fix-isbn-btn').on('click', function() {
+    // Use event delegation for dynamically created fix buttons
+    $(document).on('click', '.fix-isbn-btn', function() {
         const bookId = $(this).data('book-id');
         const bookTitle = $(this).data('book-title');
         const author = $(this).data('author');
@@ -451,35 +453,100 @@ $(document).ready(function() {
     });
 
     $('#validate-selected-isbns').on('click', function() {
-        const selectedBooks = $('.item-checkbox:checked').length;
+        const $selectedCheckboxes = $('.item-checkbox:checked');
+        const selectedBooks = $selectedCheckboxes.length;
 
         if (selectedBooks === 0) {
             alert('Please select at least one book to validate.');
             return false;
         }
 
-        // Create a form to submit the selected books
-        const form = $('<form>', {
-            'method': 'post',
-            'action': 'book-import-validate-new.php'
+        // Validate selected books using AJAX (similar to validate all)
+        const $progress = $('#validation-progress');
+        const $progressBar = $progress.find('.progress-bar');
+        const $progressText = $progress.find('small');
+
+        let completedBooks = 0;
+
+        // Show progress bar
+        $progress.show();
+        $progressBar.css('width', '0%');
+        $progressText.text('Starting validation of selected books...');
+
+        // Disable buttons during validation
+        $('#validate-all-isbns, #validate-selected-isbns, #fix-invalid-isbns').prop('disabled', true);
+
+        // Process each selected book
+        $selectedCheckboxes.each(function(index) {
+            const $checkbox = $(this);
+            const $row = $checkbox.closest('tr');
+            const bookId = $checkbox.val();
+            const $statusCell = $row.find('td:nth-child(4)'); // Status column
+
+            // Add a small delay to avoid overwhelming the APIs
+            setTimeout(() => {
+                // Show loading state
+                $statusCell.html('<span class="badge badge-info"><i class="fas fa-spinner fa-spin"></i> Checking...</span>');
+
+                // Make AJAX call to validate this book
+                $.ajax({
+                    url: 'book-validation-ajax.php',
+                    method: 'POST',
+                    data: {
+                        action: 'validate_isbn',
+                        book_id: bookId
+                    },
+                    success: function(response) {
+                        // jQuery automatically parses JSON when Content-Type is application/json
+                        if (typeof response === 'object' && response.status === 'success') {
+                            const validation = response.validation;
+                            $statusCell.html(`<span class="badge badge-${validation.class}" title="${validation.message}"><i class="fas fa-${validation.icon}"></i> ${validation.status.charAt(0).toUpperCase() + validation.status.slice(1)}</span>`);
+
+                            // Update Fix button if needed
+                            const $actionsCell = $row.find('td:last-child');
+                            if (validation.status === 'invalid' || validation.status === 'mismatch') {
+                                if (!$actionsCell.find('.fix-isbn-btn').length) {
+                                    $actionsCell.find('.validate-isbn-btn').after(' <button class="btn btn-sm btn-warning fix-isbn-btn" data-book-id="' + bookId + '"><i class="fas fa-wrench"></i> Fix</button>');
+                                }
+                            }
+                        } else {
+                            $statusCell.html('<span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>');
+                        }
+
+                        // Update progress
+                        completedBooks++;
+                        const progress = Math.round((completedBooks / selectedBooks) * 100);
+                        $progressBar.css('width', progress + '%');
+                        $progressText.text(`Validated ${completedBooks} of ${selectedBooks} selected books...`);
+
+                        // Check if all done
+                        if (completedBooks === selectedBooks) {
+                            setTimeout(() => {
+                                $progress.hide();
+                                $('#validate-all-isbns, #validate-selected-isbns, #fix-invalid-isbns').prop('disabled', false);
+                                $progressText.text('Validation complete!');
+                            }, 500);
+                        }
+                    },
+                    error: function() {
+                        $statusCell.html('<span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>');
+
+                        // Update progress even on error
+                        completedBooks++;
+                        const progress = Math.round((completedBooks / selectedBooks) * 100);
+                        $progressBar.css('width', progress + '%');
+                        $progressText.text(`Validated ${completedBooks} of ${selectedBooks} selected books...`);
+
+                        if (completedBooks === selectedBooks) {
+                            setTimeout(() => {
+                                $progress.hide();
+                                $('#validate-all-isbns, #validate-selected-isbns, #fix-invalid-isbns').prop('disabled', false);
+                            }, 500);
+                        }
+                    }
+                });
+            }, index * 200); // 200ms delay between each request
         });
-
-        form.append($('<input>', {
-            'type': 'hidden',
-            'name': 'action',
-            'value': 'validate_isbns'
-        }));
-
-        $('.item-checkbox:checked').each(function() {
-            form.append($('<input>', {
-                'type': 'hidden',
-                'name': 'book_ids[]',
-                'value': $(this).val()
-            }));
-        });
-
-        $('body').append(form);
-        form.submit();
     });
 
     $('#fix-invalid-isbns').on('click', function() {

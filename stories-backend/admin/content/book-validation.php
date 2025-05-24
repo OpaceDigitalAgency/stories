@@ -396,8 +396,46 @@ $(document).ready(function() {
         const bookTitle = $(this).data('book-title');
         const isbn = $(this).data('isbn');
 
-        // Redirect to the new validation page with the book ID
-        window.location.href = `book-import-validate-new.php?action=validate_book&book_id=${bookId}`;
+        // Use AJAX to validate this single book
+        const $button = $(this);
+        const $row = $button.closest('tr');
+        const $statusCell = $row.find('td:nth-child(4)'); // Status column
+
+        // Show loading state
+        $statusCell.html('<span class="badge badge-info"><i class="fas fa-spinner fa-spin"></i> Checking...</span>');
+        $button.prop('disabled', true);
+
+        // Make AJAX call to validate this book
+        $.ajax({
+            url: 'book-validation-ajax.php',
+            method: 'POST',
+            data: {
+                action: 'validate_isbn',
+                book_id: bookId
+            },
+            success: function(response) {
+                try {
+                    const result = JSON.parse(response);
+                    if (result.status === 'success') {
+                        const validation = result.validation;
+                        $statusCell.html(`<span class="badge badge-${validation.class}" title="${validation.message}"><i class="fas fa-${validation.icon}"></i> ${validation.status.charAt(0).toUpperCase() + validation.status.slice(1)}</span>`);
+                    } else {
+                        $statusCell.html('<span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>');
+                        alert('Validation error: ' + result.message);
+                    }
+                } catch (e) {
+                    $statusCell.html('<span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>');
+                    console.log('Validation response:', response);
+                    alert('Invalid response from server. Check console for details.');
+                }
+                $button.prop('disabled', false);
+            },
+            error: function(xhr, status, error) {
+                $statusCell.html('<span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>');
+                $button.prop('disabled', false);
+                alert('AJAX Error: ' + status + ' - ' + error);
+            }
+        });
     });
 
     $('.fix-isbn-btn').on('click', function() {
@@ -473,7 +511,8 @@ $(document).ready(function() {
                     const result = JSON.parse(response);
                     alert('AJAX Test Success: ' + result.message);
                 } catch (e) {
-                    alert('AJAX Test - Invalid JSON: ' + response);
+                    console.log('Raw AJAX response:', response);
+                    alert('AJAX Test - Invalid JSON. Check browser console for details. Response type: ' + typeof response);
                 }
             },
             error: function(xhr, status, error) {

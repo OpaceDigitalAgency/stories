@@ -131,10 +131,14 @@ require_once '../includes/header.php';
 
                                 // Clean ISBN
                                 $cleanIsbn = preg_replace('/[^0-9X]/i', '', $isbn);
+                                $length = strlen($cleanIsbn);
+
+                                // Debug: log the ISBN and its length
+                                error_log("DEBUG: ISBN '$isbn' -> cleaned '$cleanIsbn' -> length $length");
 
                                 // Basic format check
-                                if (strlen($cleanIsbn) != 10 && strlen($cleanIsbn) != 13) {
-                                    return ['status' => 'invalid', 'class' => 'danger', 'icon' => 'times-circle', 'message' => 'Invalid format'];
+                                if ($length != 10 && $length != 13) {
+                                    return ['status' => 'invalid', 'class' => 'danger', 'icon' => 'times-circle', 'message' => "Invalid format ($length digits)"];
                                 }
 
                                 // Format is valid, but we need to check against APIs

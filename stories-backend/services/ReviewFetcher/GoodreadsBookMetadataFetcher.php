@@ -71,18 +71,57 @@ class GoodreadsBookMetadataFetcher {
     private function extractCleanMetadata(string $response, string $bookUrl, string $debugDir): array {
         $details = [];
         
-        // Extract title
+        // Extract title with multiple patterns
         if (preg_match('/<h1[^>]*data-testid="bookTitle"[^>]*>(.*?)<\/h1>/is', $response, $matches)) {
             $details['title'] = trim(strip_tags($matches[1]));
         } else if (preg_match('/<h1[^>]*>(.*?)\s+by\s+.*?<\/h1>/is', $response, $matches)) {
             $details['title'] = trim(strip_tags($matches[1]));
+        } else if (preg_match('/<h1[^>]*class="[^"]*gr-h1[^"]*"[^>]*>(.*?)<\/h1>/is', $response, $matches)) {
+            $details['title'] = trim(strip_tags($matches[1]));
+        } else if (preg_match('/<h1[^>]*>(.*?)<\/h1>/is', $response, $matches)) {
+            $title = trim(strip_tags($matches[1]));
+            // Make sure it's not a navigation title or other non-book title
+            if (!preg_match('/home|browse|search|sign|login/i', $title) && strlen($title) > 2) {
+                $details['title'] = $title;
+            }
+        } else if (preg_match('/<meta[^>]*property="og:title"[^>]*content="([^"]+)"/i', $response, $matches)) {
+            $details['title'] = trim($matches[1]);
         }
         
-        // Extract author
+        // Extract author with multiple patterns
         if (preg_match('/<span[^>]*class="[^"]*ContributorLink__name[^"]*"[^>]*>(.*?)<\/span>/is', $response, $matches)) {
+            $details['author'] = trim(strip_tags($matches[1]));
+        } else if (preg_match('/by\s+<a[^>]*class="[^"]*authorName[^"]*"[^>]*>(.*?)<\/a>/is', $response, $matches)) {
             $details['author'] = trim(strip_tags($matches[1]));
         } else if (preg_match('/by\s+<a[^>]*>(.*?)<\/a>/is', $response, $matches)) {
             $details['author'] = trim(strip_tags($matches[1]));
+        } else if (preg_match('/<a[^>]*class="[^"]*authorName[^"]*"[^>]*>(.*?)<\/a>/is', $response, $matches)) {
+            $details['author'] = trim(strip_tags($matches[1]));
+        } else if (preg_match('/by\s+([^<\n]+)/i', $response, $matches)) {
+            $author = trim($matches[1]);
+            // Clean up common suffixes
+            $author = preg_replace('/\s*\(.*?\)\s*$/', '', $author);
+            if (strlen($author) > 2 && !preg_match('/\d{4}/', $author)) {
+                $details['author'] = $author;
+            }
+        }
+        
+        // Extract cover image
+        if (preg_match('/<img[^>]*class="[^"]*ResponsiveImage[^"]*"[^>]*src="([^"]+)"/i', $response, $matches)) {
+            $details['cover_url'] = $matches[1];
+        } else if (preg_match('/<img[^>]*id="coverImage"[^>]*src="([^"]+)"/i', $response, $matches)) {
+            $details['cover_url'] = $matches[1];
+        } else if (preg_match('/<meta[^>]*property="og:image"[^>]*content="([^"]+)"/i', $response, $matches)) {
+            $details['cover_url'] = $matches[1];
+        }
+        
+        // Extract description
+        if (preg_match('/<span[^>]*class="[^"]*Formatted[^"]*"[^>]*>(.*?)<\/span>/is', $response, $matches)) {
+            $details['description'] = trim(strip_tags($matches[1]));
+        } else if (preg_match('/<div[^>]*class="[^"]*DetailsLayoutRightParagraph[^"]*"[^>]*>(.*?)<\/div>/is', $response, $matches)) {
+            $details['description'] = trim(strip_tags($matches[1]));
+        } else if (preg_match('/<div[^>]*id="description"[^>]*>(.*?)<\/div>/is', $response, $matches)) {
+            $details['description'] = trim(strip_tags($matches[1]));
         }
         
         // Extract clean characters (avoiding GraphQL corruption)
@@ -113,8 +152,22 @@ class GoodreadsBookMetadataFetcher {
     private function extractCleanCharacters(string $response, string $debugDir): array {
         $characters = [];
         
-        // Pattern 1: Characters in description list
-        if (preg_match('/<dt[^>]*>Characters<\/dt>\s*<dd[^>]*>(.*?)<\/dd>/is', $response, $matches)) {
+        $this->logToFile($debugDir . '/goodreads-metadata-log.txt', "🔍 Starting character extraction...");
+        
+        // Pattern 1: Modern Goodreads character links (most specific first)
+        // Look for character links with href="/characters/" pattern
+        if (preg_match_all('/<a[^>]*href="\/characters\/[^"]*"[^>]*>([^<]+)<\/a>/i', $response, $matches)) {
+            foreach ($matches[1] as $char) {
+                $cleanChar = trim(strip_tags($char));
+                if ($this->isValidCharacterName($cleanChar)) {
+                    $characters[] = $cleanChar;
+                }
+            }
+            $this->logToFile($debugDir . '/goodreads-metadata-log.txt', "✅ Found characters using character links pattern: " . implode(', ', $characters));
+        }
+        
+        // Pattern 2: Characters section with data-testid
+        if (empty($characters) && preg_match('/<div[^>]*data-testid="characters"[^>]*>(.*?)<\/div>/is', $response, $matches)) {
             $charactersHtml = $matches[1];
             if (preg_match_all('/<a[^>]*>([^<]+)<\/a>/is', $charactersHtml, $charMatches)) {
                 foreach ($charMatches[1] as $char) {
@@ -123,23 +176,91 @@ class GoodreadsBookMetadataFetcher {
                         $characters[] = $cleanChar;
                     }
                 }
-                $this->logToFile($debugDir . '/goodreads-metadata-log.txt', "✅ Found characters using dt/dd pattern: " . implode(', ', $characters));
+                $this->logToFile($debugDir . '/goodreads-metadata-log.txt', "✅ Found characters using data-testid pattern: " . implode(', ', $characters));
             }
         }
         
-        // Pattern 2: Characters in text format
-        if (empty($characters) && preg_match('/Characters\s*:?\s*([^<\n]+)/i', $response, $matches)) {
-            $charText = trim($matches[1]);
-            $charList = array_map('trim', explode(',', $charText));
-            foreach ($charList as $char) {
-                if ($this->isValidCharacterName($char)) {
-                    $characters[] = $char;
+        // Pattern 3: Characters in DescListItem structure
+        if (empty($characters) && preg_match('/<div[^>]*class="[^"]*DescListItem[^"]*"[^>]*>.*?<dt[^>]*>Characters<\/dt>.*?<dd[^>]*>(.*?)<\/dd>/is', $response, $matches)) {
+            $charactersHtml = $matches[1];
+            if (preg_match_all('/<a[^>]*>([^<]+)<\/a>/is', $charactersHtml, $charMatches)) {
+                foreach ($charMatches[1] as $char) {
+                    $cleanChar = trim(strip_tags($char));
+                    if ($this->isValidCharacterName($cleanChar)) {
+                        $characters[] = $cleanChar;
+                    }
                 }
+                $this->logToFile($debugDir . '/goodreads-metadata-log.txt', "✅ Found characters using DescListItem pattern: " . implode(', ', $characters));
             }
-            $this->logToFile($debugDir . '/goodreads-metadata-log.txt', "✅ Found characters using text pattern: " . implode(', ', $characters));
+        }
+        
+        // Pattern 4: Characters in BookPageMetadataSection
+        if (empty($characters) && preg_match('/<div[^>]*class="[^"]*BookPageMetadataSection[^"]*"[^>]*>.*?Characters.*?<\/div>/is', $response, $matches)) {
+            $sectionHtml = $matches[0];
+            if (preg_match_all('/<a[^>]*href="\/characters\/[^"]*"[^>]*>([^<]+)<\/a>/i', $sectionHtml, $charMatches)) {
+                foreach ($charMatches[1] as $char) {
+                    $cleanChar = trim(strip_tags($char));
+                    if ($this->isValidCharacterName($cleanChar)) {
+                        $characters[] = $cleanChar;
+                    }
+                }
+                $this->logToFile($debugDir . '/goodreads-metadata-log.txt', "✅ Found characters using BookPageMetadataSection pattern: " . implode(', ', $characters));
+            }
+        }
+        
+        // Pattern 5: Generic character section (fallback)
+        if (empty($characters) && preg_match('/Characters[^<]*<[^>]*>(.*?)<\/[^>]*>/is', $response, $matches)) {
+            $charactersHtml = $matches[1];
+            if (preg_match_all('/<a[^>]*>([^<]+)<\/a>/is', $charactersHtml, $charMatches)) {
+                foreach ($charMatches[1] as $char) {
+                    $cleanChar = trim(strip_tags($char));
+                    if ($this->isValidCharacterName($cleanChar) && !$this->looksLikeReviewText($cleanChar)) {
+                        $characters[] = $cleanChar;
+                    }
+                }
+                $this->logToFile($debugDir . '/goodreads-metadata-log.txt', "✅ Found characters using generic pattern: " . implode(', ', $characters));
+            }
+        }
+        
+        if (empty($characters)) {
+            $this->logToFile($debugDir . '/goodreads-metadata-log.txt', "⚠️ No characters found with any pattern");
         }
         
         return $characters;
+    }
+    
+    /**
+     * Check if text looks like review content rather than character name
+     *
+     * @param string $text Text to check
+     * @return bool True if it looks like review text
+     */
+    private function looksLikeReviewText(string $text): bool {
+        // Check for review-like phrases
+        $reviewPhrases = [
+            'stars', 'rating', 'review', 'book', 'read', 'story', 'plot', 'author',
+            'recommend', 'love', 'hate', 'good', 'bad', 'amazing', 'terrible',
+            'reason why', 'given this', 'rather than'
+        ];
+        
+        $lowerText = strtolower($text);
+        foreach ($reviewPhrases as $phrase) {
+            if (strpos($lowerText, $phrase) !== false) {
+                return true;
+            }
+        }
+        
+        // Check if it's too long to be a character name
+        if (strlen($text) > 50) {
+            return true;
+        }
+        
+        // Check if it contains sentence-like punctuation
+        if (preg_match('/[.!?]/', $text)) {
+            return true;
+        }
+        
+        return false;
     }
     
     /**
@@ -256,33 +377,92 @@ class GoodreadsBookMetadataFetcher {
      * @param array &$details Details array to populate
      */
     private function extractPublishingInfo(string $response, array &$details): void {
-        // Extract publisher and publication date
-        if (preg_match('/<dt[^>]*>Published<\/dt>\s*<dd[^>]*>.*?data-testid="contentContainer"[^>]*>(.*?)<\/div>/is', $response, $matches)) {
+        // Extract publisher and publication date with multiple patterns
+        
+        // Pattern 1: Modern DescListItem structure
+        if (preg_match('/<div[^>]*class="[^"]*DescListItem[^"]*"[^>]*>.*?<dt[^>]*>Published<\/dt>.*?<dd[^>]*>(.*?)<\/dd>/is', $response, $matches)) {
             $publishedText = trim(strip_tags($matches[1]));
-            
-            // Extract publisher
-            if (preg_match('/^([^,]+?)(?:\s+on\s+|\s*,\s*|\s+\d)/', $publishedText, $pubMatches)) {
-                $details['publisher'] = trim($pubMatches[1]);
-            }
-            
-            // Extract publication date
-            if (preg_match('/(\w+\s+\d+,?\s*\d{4})/', $publishedText, $dateMatches)) {
-                $details['published_date'] = trim($dateMatches[1]);
+            $this->parsePublishedText($publishedText, $details);
+        }
+        
+        // Pattern 2: BookPageMetadataSection
+        if (empty($details['publisher']) && preg_match('/<div[^>]*class="[^"]*BookPageMetadataSection[^"]*"[^>]*>.*?Published.*?<\/div>/is', $response, $matches)) {
+            $sectionHtml = $matches[0];
+            if (preg_match('/Published[^<]*<[^>]*>([^<]+)</', $sectionHtml, $pubMatches)) {
+                $publishedText = trim(strip_tags($pubMatches[1]));
+                $this->parsePublishedText($publishedText, $details);
             }
         }
         
-        // Extract page count
+        // Pattern 3: Generic published pattern
+        if (empty($details['publisher']) && preg_match('/Published\s+([^<\n]+)/i', $response, $matches)) {
+            $publishedText = trim($matches[1]);
+            $this->parsePublishedText($publishedText, $details);
+        }
+        
+        // Extract page count with multiple patterns
         if (preg_match('/(\d+)\s+pages?/i', $response, $matches)) {
+            $details['page_count'] = (int)$matches[1];
+        } else if (preg_match('/<dt[^>]*>Pages<\/dt>\s*<dd[^>]*>(\d+)<\/dd>/i', $response, $matches)) {
             $details['page_count'] = (int)$matches[1];
         }
         
-        // Extract ISBN
-        if (preg_match('/ISBN[:\s]*([0-9X]{10,13})/i', $response, $matches)) {
-            $isbn = trim($matches[1]);
-            if (strlen($isbn) == 13) {
+        // Extract ISBN with multiple patterns - but be more careful about false positives
+        if (preg_match('/ISBN[:\s]*([0-9X-]{10,17})/i', $response, $matches)) {
+            $isbn = preg_replace('/[^0-9X]/i', '', $matches[1]); // Remove hyphens
+            if (strlen($isbn) == 13 && is_numeric($isbn)) {
                 $details['isbn13'] = $isbn;
-            } else if (strlen($isbn) == 10) {
+            } else if (strlen($isbn) == 10 && (is_numeric(substr($isbn, 0, 9)) || substr($isbn, -1) === 'X')) {
                 $details['isbn'] = $isbn;
+            }
+        }
+        
+        // Extract format
+        if (preg_match('/<dt[^>]*>Format<\/dt>\s*<dd[^>]*>([^<]+)<\/dd>/i', $response, $matches)) {
+            $details['format'] = trim(strip_tags($matches[1]));
+        } else if (preg_match('/(\w+),\s*\d+\s+pages/i', $response, $matches)) {
+            $details['format'] = trim($matches[1]);
+        }
+        
+        // Extract language
+        if (preg_match('/<dt[^>]*>Language<\/dt>\s*<dd[^>]*>([^<]+)<\/dd>/i', $response, $matches)) {
+            $details['language'] = trim(strip_tags($matches[1]));
+        } else if (preg_match('/Language[:\s]*([^<\n]+)/i', $response, $matches)) {
+            $details['language'] = trim($matches[1]);
+        }
+    }
+    
+    /**
+     * Parse published text to extract publisher and date
+     *
+     * @param string $publishedText Published text
+     * @param array &$details Details array to populate
+     */
+    private function parsePublishedText(string $publishedText, array &$details): void {
+        // Try to extract publisher and date from various formats
+        // Format: "Publisher on Date" or "Publisher, Date" or "Date by Publisher"
+        
+        if (preg_match('/^(.+?)\s+on\s+(.+)$/', $publishedText, $matches)) {
+            $details['publisher'] = trim($matches[1]);
+            $details['published_date'] = trim($matches[2]);
+        } else if (preg_match('/^(.+?),\s*(.+)$/', $publishedText, $matches)) {
+            // Check if first part looks like publisher or date
+            if (preg_match('/\d{4}/', $matches[1])) {
+                $details['published_date'] = trim($matches[1]);
+                $details['publisher'] = trim($matches[2]);
+            } else {
+                $details['publisher'] = trim($matches[1]);
+                $details['published_date'] = trim($matches[2]);
+            }
+        } else if (preg_match('/(.+?)\s+by\s+(.+)/', $publishedText, $matches)) {
+            $details['published_date'] = trim($matches[1]);
+            $details['publisher'] = trim($matches[2]);
+        } else {
+            // If we can't parse it, try to identify if it's a date or publisher
+            if (preg_match('/\d{4}/', $publishedText)) {
+                $details['published_date'] = $publishedText;
+            } else {
+                $details['publisher'] = $publishedText;
             }
         }
     }
@@ -294,14 +474,69 @@ class GoodreadsBookMetadataFetcher {
      * @param array &$details Details array to populate
      */
     private function extractRatingInfo(string $response, array &$details): void {
-        // Extract average rating and counts
-        if (preg_match('/([0-9.]+)\s+avg\s+rating.*?([0-9,]+)\s+ratings?/is', $response, $matches)) {
-            $details['average_rating'] = (float)$matches[1];
-            $details['ratings_count'] = (int)str_replace(',', '', $matches[2]);
+        // Pattern 1: Modern RatingStatistics structure
+        if (preg_match('/<div[^>]*class="[^"]*RatingStatistics[^"]*"[^>]*>(.*?)<\/div>/is', $response, $matches)) {
+            $ratingSection = $matches[1];
+            
+            // Extract average rating
+            if (preg_match('/([0-9.]+)/i', $ratingSection, $ratingMatches)) {
+                $details['average_rating'] = (float)$ratingMatches[1];
+            }
+            
+            // Extract ratings and reviews count
+            if (preg_match('/([0-9,]+)\s+ratings?\s+and\s+([0-9,]+)\s+reviews?/i', $ratingSection, $countMatches)) {
+                $details['ratings_count'] = (int)str_replace(',', '', $countMatches[1]);
+                $details['review_count'] = (int)str_replace(',', '', $countMatches[2]);
+            }
         }
         
-        if (preg_match('/([0-9,]+)\s+reviews?/i', $response, $matches)) {
-            $details['review_count'] = (int)str_replace(',', '', $matches[1]);
+        // Pattern 2: RatingStars with data-testid
+        if (empty($details['average_rating']) && preg_match('/<div[^>]*data-testid="ratingsCount"[^>]*>([^<]+)<\/div>/i', $response, $matches)) {
+            $ratingText = trim($matches[1]);
+            if (preg_match('/([0-9.]+)/', $ratingText, $ratingMatches)) {
+                $details['average_rating'] = (float)$ratingMatches[1];
+            }
+        }
+        
+        // Pattern 3: Classic avg rating pattern
+        if (empty($details['average_rating']) && preg_match('/([0-9.]+)\s+avg\s+rating/i', $response, $matches)) {
+            $details['average_rating'] = (float)$matches[1];
+        }
+        
+        // Pattern 4: RatingStars__RatingsValue
+        if (empty($details['average_rating']) && preg_match('/<span[^>]*class="[^"]*RatingStars__RatingsValue[^"]*"[^>]*>([0-9.]+)<\/span>/i', $response, $matches)) {
+            $details['average_rating'] = (float)$matches[1];
+        }
+        
+        // Pattern 5: Meta property for rating
+        if (empty($details['average_rating']) && preg_match('/<meta[^>]*property="books:rating:value"[^>]*content="([0-9.]+)"/i', $response, $matches)) {
+            $details['average_rating'] = (float)$matches[1];
+        }
+        
+        // Extract ratings count separately if not found above
+        if (empty($details['ratings_count'])) {
+            if (preg_match('/([0-9,]+)\s+ratings?/i', $response, $matches)) {
+                $details['ratings_count'] = (int)str_replace(',', '', $matches[1]);
+            }
+        }
+        
+        // Extract review count separately if not found above
+        if (empty($details['review_count'])) {
+            if (preg_match('/([0-9,]+)\s+reviews?/i', $response, $matches)) {
+                $details['review_count'] = (int)str_replace(',', '', $matches[1]);
+            }
+        }
+        
+        // Pattern 6: Text pattern with "ratings and reviews"
+        if ((empty($details['ratings_count']) || empty($details['review_count'])) &&
+            preg_match('/([0-9,]+)\s+ratings?\s+and\s+([0-9,]+)\s+reviews?/i', $response, $matches)) {
+            $details['ratings_count'] = (int)str_replace(',', '', $matches[1]);
+            $details['review_count'] = (int)str_replace(',', '', $matches[2]);
+        }
+        
+        // Pattern 7: Aria-label with rating information
+        if (empty($details['average_rating']) && preg_match('/aria-label="[^"]*([0-9.]+)\s+out\s+of\s+5\s+stars/i', $response, $matches)) {
+            $details['average_rating'] = (float)$matches[1];
         }
     }
     

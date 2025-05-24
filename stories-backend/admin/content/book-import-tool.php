@@ -1494,13 +1494,29 @@ $(document).ready(function() {
     });
 
     // Scrape Reviews Button
-    $('[data-scrape-reviews]').click(function() {
+    $('[data-scrape-reviews]').off('click').on('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Force close and remove any existing modal backdrops
+        $('.modal').modal('hide');
+        $('.modal-backdrop').remove();
+        $('body').removeClass('modal-open');
+        
         const bookId = $(this).data('book-id');
         const bookTitle = $(this).closest('tr').find('td:first').text(); // Get book title from table row
 
         $('#scrapeModalLabel').text(`Scrape Reviews for: ${bookTitle}`);
         $('#scrapeBookId').val(bookId);
-        $('#scrapeModal').modal('show');
+        
+        // Ensure only one modal exists and show it
+        setTimeout(function() {
+            // Remove any duplicate modals that might exist
+            if ($('#scrapeModal').length > 1) {
+                $('#scrapeModal').not(':first').remove();
+            }
+            $('#scrapeModal').modal('show');
+        }, 150);
     });
 
     // Start Scrape Button

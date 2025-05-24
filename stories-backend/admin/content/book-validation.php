@@ -29,6 +29,8 @@ require_once '../includes/pagination-component.php';
 
 // Include validation functions
 require_once 'book-import-validate/functions/validation-functions.php';
+require_once 'book-import-validate/functions/open-library-validation-functions.php';
+require_once 'book-import-validate/functions/google-books-validation-functions.php';
 
 // Set page variables for header
 $pageTitle = 'ISBN & Data Validation';
@@ -121,31 +123,53 @@ require_once '../includes/header.php';
                         <div class="card-body">
 
                             <?php
+                            // Function to validate ISBN against external APIs
+                            function validateISBNQuick($isbn, $title, $author) {
+                                if (empty($isbn)) {
+                                    return ['status' => 'missing', 'class' => 'danger', 'icon' => 'times-circle', 'message' => 'No ISBN'];
+                                }
+
+                                // Clean ISBN
+                                $cleanIsbn = preg_replace('/[^0-9X]/i', '', $isbn);
+
+                                // Basic format check first
+                                if (strlen($cleanIsbn) != 10 && strlen($cleanIsbn) != 13) {
+                                    return ['status' => 'invalid', 'class' => 'danger', 'icon' => 'times-circle', 'message' => 'Invalid format'];
+                                }
+
+                                // Quick OpenLibrary check (fastest)
+                                if (validateIsbnWithOpenLibrary($cleanIsbn)) {
+                                    return ['status' => 'valid', 'class' => 'success', 'icon' => 'check-circle', 'message' => 'Valid (OpenLibrary)'];
+                                }
+
+                                // Quick Google Books check
+                                if (validateIsbnWithGoogleBooks($cleanIsbn)) {
+                                    return ['status' => 'valid', 'class' => 'success', 'icon' => 'check-circle', 'message' => 'Valid (Google Books)'];
+                                }
+
+                                // If ISBN validation fails, check if we can find the book by title/author
+                                if (!empty($title)) {
+                                    // Try to find suggestions by title/author
+                                    $suggestions = searchOpenLibraryByTitleAuthor($title, $author, 1);
+                                    if (!empty($suggestions)) {
+                                        return ['status' => 'mismatch', 'class' => 'warning', 'icon' => 'exclamation-triangle', 'message' => 'ISBN invalid, but book found by title'];
+                                    }
+                                }
+
+                                return ['status' => 'invalid', 'class' => 'danger', 'icon' => 'times-circle', 'message' => 'ISBN not found'];
+                            }
+
                             // Prepare table data for ISBN validation
                             $tableData = [];
                             foreach ($isbnBooks as $book) {
                                 $isbn = !empty($book['isbn13']) ? $book['isbn13'] : (!empty($book['isbn']) ? $book['isbn'] : '');
-                                $isbnStatus = 'unknown';
-                                $statusClass = 'secondary';
-                                $statusIcon = 'question-circle';
 
-                                if (empty($isbn)) {
-                                    $isbnStatus = 'missing';
-                                    $statusClass = 'danger';
-                                    $statusIcon = 'times-circle';
-                                } else {
-                                    // Basic format check
-                                    $cleanIsbn = preg_replace('/[^0-9X]/i', '', $isbn);
-                                    if (strlen($cleanIsbn) != 10 && strlen($cleanIsbn) != 13) {
-                                        $isbnStatus = 'invalid';
-                                        $statusClass = 'warning';
-                                        $statusIcon = 'exclamation-circle';
-                                    } else {
-                                        $isbnStatus = 'valid';
-                                        $statusClass = 'success';
-                                        $statusIcon = 'check-circle';
-                                    }
-                                }
+                                // Validate ISBN against external APIs
+                                $validation = validateISBNQuick($isbn, $book['title'], $book['author']);
+                                $isbnStatus = $validation['status'];
+                                $statusClass = $validation['class'];
+                                $statusIcon = $validation['icon'];
+                                $statusMessage = $validation['message'];
 
                                 // Get genre tags
                                 $genreTags = getGenreTagsForDirectoryItem($db, $book['id']);
@@ -174,13 +198,19 @@ require_once '../includes/header.php';
                                     'id' => $book['id'],
                                     'title' => htmlspecialchars($book['title']),
                                     'isbn' => !empty($isbn) ? htmlspecialchars($isbn) : '<span class="text-danger">Missing</span>',
-                                    'status' => '<span class="badge badge-' . $statusClass . '"><i class="fas fa-' . $statusIcon . '"></i> ' . ucfirst($isbnStatus) . '</span>',
+                                    'status' => '<span class="badge badge-' . $statusClass . '" title="' . htmlspecialchars($statusMessage) . '"><i class="fas fa-' . $statusIcon . '"></i> ' . ucfirst($isbnStatus) . '</span>',
                                     'missing_data' => $missingDataDisplay,
                                     'actions' => '<button class="btn btn-sm btn-primary validate-isbn-btn" ' .
                                                'data-book-id="' . $book['id'] . '" ' .
                                                'data-book-title="' . htmlspecialchars($book['title']) . '" ' .
                                                'data-isbn="' . htmlspecialchars($isbn) . '">' .
-                                               '<i class="fas fa-check"></i> Validate</button>'
+                                               '<i class="fas fa-check"></i> Validate</button>' .
+                                               ($isbnStatus === 'invalid' || $isbnStatus === 'mismatch' ?
+                                                   ' <button class="btn btn-sm btn-warning fix-isbn-btn" ' .
+                                                   'data-book-id="' . $book['id'] . '" ' .
+                                                   'data-book-title="' . htmlspecialchars($book['title']) . '" ' .
+                                                   'data-author="' . htmlspecialchars($book['author']) . '">' .
+                                                   '<i class="fas fa-wrench"></i> Fix</button>' : '')
                                 ];
                             }
 
@@ -228,6 +258,12 @@ require_once '../includes/header.php';
                             <div class="mt-3">
                                 <button id="validate-selected-isbns" class="btn btn-primary">
                                     <i class="fas fa-check-double"></i> Validate Selected ISBNs
+                                </button>
+                                <button id="fix-invalid-isbns" class="btn btn-warning ml-2">
+                                    <i class="fas fa-wrench"></i> Fix Invalid ISBNs
+                                </button>
+                                <button id="refresh-validation" class="btn btn-secondary ml-2">
+                                    <i class="fas fa-sync"></i> Refresh Validation
                                 </button>
                             </div>
                         </div>
@@ -332,6 +368,17 @@ $(document).ready(function() {
         window.location.href = `book-import-validate-new.php?action=validate_book&book_id=${bookId}`;
     });
 
+    $('.fix-isbn-btn').on('click', function() {
+        const bookId = $(this).data('book-id');
+        const bookTitle = $(this).data('book-title');
+        const author = $(this).data('author');
+
+        // Show a modal or redirect to a fix page
+        if (confirm(`Fix ISBN for "${bookTitle}" by searching with title and author?`)) {
+            window.location.href = `book-import-validate-new.php?action=fix_isbn&book_id=${bookId}&title=${encodeURIComponent(bookTitle)}&author=${encodeURIComponent(author)}`;
+        }
+    });
+
     $('#validate-selected-isbns').on('click', function() {
         const selectedBooks = $('.isbn-checkbox:checked').length;
 
@@ -362,6 +409,17 @@ $(document).ready(function() {
 
         $('body').append(form);
         form.submit();
+    });
+
+    $('#fix-invalid-isbns').on('click', function() {
+        if (confirm('This will attempt to fix all invalid ISBNs by searching with title and author. Continue?')) {
+            window.location.href = 'book-import-validate-new.php?action=fix_all_invalid_isbns';
+        }
+    });
+
+    $('#refresh-validation').on('click', function() {
+        // Simply reload the page to refresh validation status
+        window.location.reload();
     });
 
     // Data Enrichment Tab Handlers

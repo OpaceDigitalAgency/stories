@@ -25,7 +25,7 @@
                     <div class="alert alert-info mb-3">
                         <div class="row align-items-center">
                             <div class="col-md-8">
-                                <strong>Match Confidence:</strong> 
+                                <strong>Match Confidence:</strong>
                                 <span id="confidence-score" class="badge badge-primary">0%</span>
                                 <span id="confidence-details" class="small text-muted ml-2"></span>
                             </div>
@@ -33,16 +33,16 @@
                                 <span id="sources-checked" class="small text-muted"></span>
                             </div>
                         </div>
-                        
+
                         <!-- ISBN Validation Status -->
                         <div id="isbn-validation-status" class="mt-2" style="display: none;">
                             <div class="row">
                                 <div class="col-md-6">
-                                    <strong>ISBN Validation:</strong> 
+                                    <strong>ISBN Validation:</strong>
                                     <span id="isbn-status-badge"></span>
                                 </div>
                                 <div class="col-md-6">
-                                    <strong>Goodreads Check:</strong> 
+                                    <strong>Goodreads Check:</strong>
                                     <span id="goodreads-status-badge"></span>
                                 </div>
                             </div>
@@ -150,24 +150,26 @@ let currentBookId = null;
 
 function openDataEnrichmentModal(bookId, title, author, currentISBN = '') {
     currentBookId = bookId;
-    
+
     // Reset modal state
     $('#enrichment-loading').show();
     $('#enrichment-results').hide();
     $('#enrichment-error').hide();
     $('#apply-enrichment-btn').prop('disabled', true);
-    
+
     // Update modal title
     $('#dataEnrichmentModalLabel').html(`<i class="fas fa-database"></i> Enrich Data: ${title}`);
-    
+
     // Show modal
     $('#dataEnrichmentModal').modal('show');
-    
+
     // Fetch enrichment data
     fetchEnrichmentData(title, author, currentISBN);
 }
 
 function fetchEnrichmentData(title, author, currentISBN) {
+    console.log('Fetching enrichment data for:', { title, author, currentISBN });
+
     $.ajax({
         url: 'book-import-validate/ajax/data-enrichment-ajax.php',
         method: 'POST',
@@ -179,8 +181,9 @@ function fetchEnrichmentData(title, author, currentISBN) {
         },
         dataType: 'json',
         success: function(response) {
+            console.log('Enrichment response:', response);
             $('#enrichment-loading').hide();
-            
+
             if (response.success) {
                 currentEnrichmentData = response.data;
                 displayEnrichmentResults(response.data);
@@ -189,8 +192,10 @@ function fetchEnrichmentData(title, author, currentISBN) {
             }
         },
         error: function(xhr, status, error) {
+            console.error('AJAX Error:', { xhr, status, error });
+            console.error('Response text:', xhr.responseText);
             $('#enrichment-loading').hide();
-            showEnrichmentError('Network error: ' + error);
+            showEnrichmentError('Network error: ' + error + ' (Check console for details)');
         }
     });
 }
@@ -200,38 +205,38 @@ function displayEnrichmentResults(data) {
         $('#no-enrichment-data').show();
         return;
     }
-    
+
     // Show confidence score
     const confidence = Math.round(data.confidence_score);
-    const confidenceClass = confidence >= 80 ? 'badge-success' : 
+    const confidenceClass = confidence >= 80 ? 'badge-success' :
                            confidence >= 60 ? 'badge-warning' : 'badge-danger';
-    
+
     $('#confidence-score').text(confidence + '%').removeClass().addClass(`badge ${confidenceClass}`);
     $('#confidence-details').text(`Based on ${data.sources_checked.join(', ')}`);
     $('#sources-checked').text(`Sources: ${data.sources_checked.join(', ')}`);
-    
+
     // Show ISBN validation if applicable
     if (data.isbn_validated !== undefined) {
         $('#isbn-validation-status').show();
-        const isbnBadge = data.isbn_validated ? 
-            '<span class="badge badge-success">Valid</span>' : 
+        const isbnBadge = data.isbn_validated ?
+            '<span class="badge badge-success">Valid</span>' :
             '<span class="badge badge-warning">Different ISBN Found</span>';
         $('#isbn-status-badge').html(isbnBadge);
-        
+
         // Check Goodreads if we have an ISBN
         checkGoodreadsStatus(data.fields.isbn13?.value || data.fields.isbn?.value);
     }
-    
+
     // Display enrichment fields
     displayEnrichmentFields(data.fields);
-    
+
     $('#enrichment-results').show();
 }
 
 function displayEnrichmentFields(fields) {
     const container = $('#enrichment-fields');
     container.empty();
-    
+
     const fieldLabels = {
         'isbn': 'ISBN-10',
         'isbn13': 'ISBN-13',
@@ -245,19 +250,19 @@ function displayEnrichmentFields(fields) {
         'preview_link': 'Preview Link',
         'series': 'Series'
     };
-    
+
     Object.keys(fields).forEach(fieldName => {
         const field = fields[fieldName];
         const label = fieldLabels[fieldName] || fieldName;
         const confidence = field.confidence;
-        const confidenceClass = confidence >= 80 ? 'confidence-high' : 
+        const confidenceClass = confidence >= 80 ? 'confidence-high' :
                                confidence >= 60 ? 'confidence-medium' : 'confidence-low';
-        
+
         const fieldHtml = `
             <div class="col-md-6">
                 <div class="enrichment-field" data-field="${fieldName}">
                     <div class="form-check">
-                        <input class="form-check-input field-checkbox" type="checkbox" 
+                        <input class="form-check-input field-checkbox" type="checkbox"
                                id="field_${fieldName}" name="fields[]" value="${fieldName}">
                         <label class="form-check-label font-weight-bold" for="field_${fieldName}">
                             ${label}
@@ -271,10 +276,10 @@ function displayEnrichmentFields(fields) {
                 </div>
             </div>
         `;
-        
+
         container.append(fieldHtml);
     });
-    
+
     // Add change handlers
     $('.field-checkbox').change(function() {
         const fieldDiv = $(this).closest('.enrichment-field');
@@ -283,7 +288,7 @@ function displayEnrichmentFields(fields) {
         } else {
             fieldDiv.removeClass('selected');
         }
-        
+
         // Enable/disable apply button
         const hasSelected = $('.field-checkbox:checked').length > 0;
         $('#apply-enrichment-btn').prop('disabled', !hasSelected);
@@ -304,9 +309,9 @@ function checkGoodreadsStatus(isbn) {
         $('#goodreads-status-badge').html('<span class="badge badge-secondary">No ISBN</span>');
         return;
     }
-    
+
     $('#goodreads-status-badge').html('<span class="badge badge-info">Checking...</span>');
-    
+
     $.ajax({
         url: 'book-import-validate/ajax/data-enrichment-ajax.php',
         method: 'POST',
@@ -316,8 +321,8 @@ function checkGoodreadsStatus(isbn) {
         },
         dataType: 'json',
         success: function(response) {
-            const badge = response.success && response.exists ? 
-                '<span class="badge badge-success">Found</span>' : 
+            const badge = response.success && response.exists ?
+                '<span class="badge badge-success">Found</span>' :
                 '<span class="badge badge-warning">Not Found</span>';
             $('#goodreads-status-badge').html(badge);
         },
@@ -339,19 +344,19 @@ $('#apply-enrichment-btn').click(function() {
         const fieldName = $(this).val();
         selectedFields[fieldName] = currentEnrichmentData.fields[fieldName];
     });
-    
+
     if (Object.keys(selectedFields).length === 0) {
         alert('Please select at least one field to update.');
         return;
     }
-    
+
     // Apply the changes
     applyEnrichmentChanges(currentBookId, selectedFields);
 });
 
 function applyEnrichmentChanges(bookId, selectedFields) {
     $('#apply-enrichment-btn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Applying...');
-    
+
     $.ajax({
         url: 'book-import-validate/ajax/data-enrichment-ajax.php',
         method: 'POST',
@@ -364,10 +369,10 @@ function applyEnrichmentChanges(bookId, selectedFields) {
         success: function(response) {
             if (response.success) {
                 $('#dataEnrichmentModal').modal('hide');
-                
+
                 // Show success message
                 showAlert('success', `Successfully updated ${Object.keys(selectedFields).length} field(s)!`);
-                
+
                 // Refresh the page or update the row
                 location.reload();
             } else {

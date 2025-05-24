@@ -305,6 +305,9 @@ require_once '../includes/header.php';
                                         <button id="test-enrichment" class="btn btn-sm btn-success">
                                             <i class="fas fa-database"></i> Test Enrichment
                                         </button>
+                                        <button id="test-ajax" class="btn btn-sm btn-info">
+                                            <i class="fas fa-wifi"></i> Test AJAX
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -516,6 +519,26 @@ $(document).ready(function() {
         } else {
             alert('No books found to test enrichment with.');
         }
+    });
+
+    // Test AJAX endpoint
+    $('#test-ajax').click(function() {
+        $.ajax({
+            url: 'book-import-validate/ajax/data-enrichment-ajax.php',
+            method: 'POST',
+            data: {
+                action: 'test'
+            },
+            dataType: 'json',
+            success: function(response) {
+                alert('AJAX Test Success: ' + response.message);
+                console.log('AJAX response:', response);
+            },
+            error: function(xhr, status, error) {
+                alert('AJAX Test Failed: ' + error);
+                console.error('AJAX Error:', { xhr, status, error, responseText: xhr.responseText });
+            }
+        });
     });
 
     // Function to auto-validate all ISBNs on page load

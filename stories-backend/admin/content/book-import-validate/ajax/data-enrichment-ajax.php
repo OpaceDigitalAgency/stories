@@ -3,12 +3,21 @@
  * AJAX handler for data enrichment operations
  */
 
-// Include necessary files
-require_once '../../../../includes/db-connect.php';
-require_once '../functions/data-enrichment-functions.php';
-
-// Set JSON header
+// Set JSON header first
 header('Content-Type: application/json');
+
+// Enable error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 0); // Don't display errors in output, but log them
+
+try {
+    // Include necessary files
+    require_once '../../../includes/db-connect.php';
+    require_once '../functions/data-enrichment-functions.php';
+} catch (Exception $e) {
+    echo json_encode(['success' => false, 'message' => 'Failed to load required files: ' . $e->getMessage()]);
+    exit;
+}
 
 // Check if action is provided
 if (!isset($_POST['action'])) {
@@ -20,20 +29,24 @@ $action = $_POST['action'];
 
 try {
     switch ($action) {
+        case 'test':
+            echo json_encode(['success' => true, 'message' => 'Data enrichment AJAX is working!', 'timestamp' => date('Y-m-d H:i:s')]);
+            break;
+
         case 'get_enrichment_data':
             handleGetEnrichmentData();
             break;
-            
+
         case 'apply_enrichment':
             handleApplyEnrichment();
             break;
-            
+
         case 'check_goodreads_isbn':
             handleCheckGoodreadsISBN();
             break;
-            
+
         default:
-            echo json_encode(['success' => false, 'message' => 'Invalid action']);
+            echo json_encode(['success' => false, 'message' => 'Invalid action: ' . $action]);
             break;
     }
 } catch (Exception $e) {
@@ -48,18 +61,18 @@ function handleGetEnrichmentData() {
     $title = $_POST['title'] ?? '';
     $author = $_POST['author'] ?? '';
     $currentISBN = $_POST['current_isbn'] ?? '';
-    
+
     if (empty($title)) {
         echo json_encode(['success' => false, 'message' => 'Title is required']);
         return;
     }
-    
+
     // Get enriched data
     $enrichedData = getEnrichedBookData($title, $author, $currentISBN);
-    
+
     // Filter out fields that are empty or same as current
     $enrichedData['fields'] = filterRelevantFields($enrichedData['fields'], $currentISBN);
-    
+
     echo json_encode([
         'success' => true,
         'data' => $enrichedData
@@ -71,28 +84,28 @@ function handleGetEnrichmentData() {
  */
 function handleApplyEnrichment() {
     global $db;
-    
+
     $bookId = $_POST['book_id'] ?? '';
     $fieldsJson = $_POST['fields'] ?? '';
-    
+
     if (empty($bookId) || empty($fieldsJson)) {
         echo json_encode(['success' => false, 'message' => 'Book ID and fields are required']);
         return;
     }
-    
+
     $fields = json_decode($fieldsJson, true);
     if (!$fields) {
         echo json_encode(['success' => false, 'message' => 'Invalid fields data']);
         return;
     }
-    
+
     // Build update query
     $updateFields = [];
     $params = [];
-    
+
     foreach ($fields as $fieldName => $fieldData) {
         $value = $fieldData['value'];
-        
+
         // Handle special field mappings
         switch ($fieldName) {
             case 'publication_date':
@@ -105,7 +118,7 @@ function handleApplyEnrichment() {
                     }
                 }
                 break;
-                
+
             case 'page_count':
                 // Ensure it's a number
                 if (is_numeric($value)) {
@@ -113,7 +126,7 @@ function handleApplyEnrichment() {
                     $params[] = intval($value);
                 }
                 break;
-                
+
             default:
                 // Standard string fields
                 if (!empty($value)) {
@@ -123,27 +136,27 @@ function handleApplyEnrichment() {
                 break;
         }
     }
-    
+
     if (empty($updateFields)) {
         echo json_encode(['success' => false, 'message' => 'No valid fields to update']);
         return;
     }
-    
+
     // Add validation status update
     $updateFields[] = "validation_status = 'partial'";
     $updateFields[] = "last_validated = NOW()";
-    
+
     // Add book ID parameter
     $params[] = $bookId;
-    
+
     // Execute update
     $sql = "UPDATE books SET " . implode(', ', $updateFields) . " WHERE directory_item_id = ?";
-    
+
     $stmt = $db->prepare($sql);
     if ($stmt->execute($params)) {
         // Log the enrichment
         logEnrichmentActivity($bookId, array_keys($fields));
-        
+
         echo json_encode([
             'success' => true,
             'message' => 'Book data updated successfully',
@@ -159,14 +172,14 @@ function handleApplyEnrichment() {
  */
 function handleCheckGoodreadsISBN() {
     $isbn = $_POST['isbn'] ?? '';
-    
+
     if (empty($isbn)) {
         echo json_encode(['success' => false, 'message' => 'ISBN is required']);
         return;
     }
-    
+
     $exists = validateISBNOnGoodreads($isbn);
-    
+
     echo json_encode([
         'success' => true,
         'exists' => $exists,
@@ -179,28 +192,28 @@ function handleCheckGoodreadsISBN() {
  */
 function filterRelevantFields($fields, $currentISBN) {
     $filtered = [];
-    
+
     foreach ($fields as $fieldName => $fieldData) {
         $value = $fieldData['value'];
-        
+
         // Skip empty values
         if (empty($value)) {
             continue;
         }
-        
+
         // Skip if it's the same as current ISBN
         if (($fieldName === 'isbn' || $fieldName === 'isbn13') && $value === $currentISBN) {
             continue;
         }
-        
+
         // Skip very low confidence fields
         if ($fieldData['confidence'] < 30) {
             continue;
         }
-        
+
         $filtered[$fieldName] = $fieldData;
     }
-    
+
     return $filtered;
 }
 
@@ -209,7 +222,7 @@ function filterRelevantFields($fields, $currentISBN) {
  */
 function logEnrichmentActivity($bookId, $updatedFields) {
     global $db;
-    
+
     try {
         $logData = [
             'book_id' => $bookId,
@@ -218,10 +231,10 @@ function logEnrichmentActivity($bookId, $updatedFields) {
             'timestamp' => date('Y-m-d H:i:s'),
             'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown'
         ];
-        
+
         // You could insert this into a log table if you have one
         error_log("Book enrichment: " . json_encode($logData));
-        
+
     } catch (Exception $e) {
         error_log("Failed to log enrichment activity: " . $e->getMessage());
     }
@@ -232,10 +245,10 @@ function logEnrichmentActivity($bookId, $updatedFields) {
  */
 function validateBookAccess($bookId) {
     global $db;
-    
+
     $stmt = $db->prepare("SELECT directory_item_id FROM books WHERE directory_item_id = ?");
     $stmt->execute([$bookId]);
-    
+
     return $stmt->fetch() !== false;
 }
 ?>

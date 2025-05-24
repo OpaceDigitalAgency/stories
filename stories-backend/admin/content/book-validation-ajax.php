@@ -88,9 +88,9 @@ try {
                 exit;
             }
 
-            // Get book details
+            // Get book details including publisher and year
             $stmt = $db->prepare("
-                SELECT di.id, di.title, b.isbn, b.isbn13, b.author
+                SELECT di.id, di.title, b.isbn, b.isbn13, b.author, b.publisher, b.publication_year
                 FROM directory_items di
                 JOIN books b ON di.id = b.directory_item_id
                 WHERE di.id = ?
@@ -104,20 +104,25 @@ try {
             }
 
             // Try to find correct ISBN by searching with title and author
-            $suggestions = searchBooksByTitleAuthor($book['title'], $book['author'], 3);
+            $suggestions = searchBooksByTitleAuthor($book['title'], $book['author'], 10); // Get more results for better matching
 
             if (empty($suggestions)) {
                 echo json_encode(['status' => 'error', 'message' => 'No alternative ISBNs found for this book']);
                 exit;
             }
 
+            // Apply intelligent matching to find the best suggestions
+            $matchedSuggestions = intelligentISBNMatching($suggestions, $book);
+
             // Return suggestions for user to choose from
             echo json_encode([
                 'status' => 'success',
                 'book_id' => $bookId,
-                'suggestions' => $suggestions,
+                'suggestions' => $matchedSuggestions,
                 'current_title' => $book['title'],
-                'current_author' => $book['author']
+                'current_author' => $book['author'],
+                'current_publisher' => $book['publisher'],
+                'current_year' => $book['publication_year']
             ]);
             break;
 
@@ -252,5 +257,105 @@ function validateISBNAgainstAPIs($isbn, $title, $author) {
 
     // Valid checksum but ISBN doesn't exist in any database
     return ['status' => 'invalid', 'class' => 'danger', 'icon' => 'times-circle', 'message' => 'ISBN not found in any database'];
+}
+
+/**
+ * Intelligent ISBN matching based on title, publisher, year, and format
+ */
+function intelligentISBNMatching($suggestions, $currentBook) {
+    $currentTitle = strtolower(trim($currentBook['title']));
+    $currentPublisher = strtolower(trim($currentBook['publisher'] ?? ''));
+    $currentYear = intval($currentBook['publication_year'] ?? 0);
+
+    $scoredSuggestions = [];
+
+    foreach ($suggestions as $suggestion) {
+        $score = 0;
+        $reasons = [];
+
+        $suggestionTitle = strtolower(trim($suggestion['title'] ?? ''));
+        $suggestionPublisher = strtolower(trim($suggestion['publisher'] ?? ''));
+        $suggestionYear = intval($suggestion['publication_year'] ?? 0);
+
+        // Skip if no valid ISBN
+        if (empty($suggestion['isbn']) && empty($suggestion['isbn13'])) {
+            continue;
+        }
+
+        // Title matching (most important)
+        if ($suggestionTitle === $currentTitle) {
+            $score += 100;
+            $reasons[] = 'Exact title match';
+        } elseif (strpos($suggestionTitle, $currentTitle) !== false || strpos($currentTitle, $suggestionTitle) !== false) {
+            $score += 80;
+            $reasons[] = 'Partial title match';
+        }
+
+        // Publisher matching (very important)
+        if (!empty($currentPublisher) && !empty($suggestionPublisher)) {
+            if ($suggestionPublisher === $currentPublisher) {
+                $score += 50;
+                $reasons[] = 'Exact publisher match';
+            } elseif (strpos($suggestionPublisher, $currentPublisher) !== false || strpos($currentPublisher, $suggestionPublisher) !== false) {
+                $score += 30;
+                $reasons[] = 'Partial publisher match';
+            }
+        }
+
+        // Year matching (important)
+        if ($currentYear > 0 && $suggestionYear > 0) {
+            $yearDiff = abs($currentYear - $suggestionYear);
+            if ($yearDiff === 0) {
+                $score += 30;
+                $reasons[] = 'Exact year match';
+            } elseif ($yearDiff <= 1) {
+                $score += 20;
+                $reasons[] = 'Close year match';
+            } elseif ($yearDiff <= 3) {
+                $score += 10;
+                $reasons[] = 'Approximate year match';
+            }
+        }
+
+        // Format preferences (exclude compilations)
+        $titleLower = strtolower($suggestion['title'] ?? '');
+        if (strpos($titleLower, ' and ') !== false ||
+            strpos($titleLower, 'includes') !== false ||
+            strpos($titleLower, 'collection') !== false ||
+            strpos($titleLower, 'box set') !== false) {
+            $score -= 20;
+            $reasons[] = 'Compilation/collection (penalty)';
+        }
+
+        // Prefer ISBN-13 over ISBN-10
+        if (!empty($suggestion['isbn13'])) {
+            $score += 5;
+            $reasons[] = 'Has ISBN-13';
+        }
+
+        $scoredSuggestions[] = [
+            'suggestion' => $suggestion,
+            'score' => $score,
+            'reasons' => $reasons
+        ];
+    }
+
+    // Sort by score (highest first)
+    usort($scoredSuggestions, function($a, $b) {
+        return $b['score'] - $a['score'];
+    });
+
+    // Return top suggestions with their scores and reasons
+    $result = [];
+    $maxResults = 5; // Limit to top 5 matches
+
+    foreach (array_slice($scoredSuggestions, 0, $maxResults) as $scored) {
+        $suggestion = $scored['suggestion'];
+        $suggestion['match_score'] = $scored['score'];
+        $suggestion['match_reasons'] = implode(', ', $scored['reasons']);
+        $result[] = $suggestion;
+    }
+
+    return $result;
 }
 ?>

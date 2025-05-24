@@ -711,21 +711,17 @@ $(document).ready(function() {
             return;
         }
 
-        // Filter suggestions to prefer exact title matches and exclude compilations
-        const filteredSuggestions = suggestions.filter(suggestion => {
-            const title = suggestion.title.toLowerCase();
-            const currentTitleLower = currentTitle.toLowerCase();
-
-            // Exclude compilations/box sets
-            if (title.includes(' and ') || title.includes('includes') || title.includes('collection')) {
-                return false;
+        // Check if we have a very high confidence match (score >= 150)
+        const topMatch = suggestions[0];
+        if (topMatch.match_score >= 150) {
+            if (confirm(`High confidence match found!\n\n${topMatch.title}\nPublisher: ${topMatch.publisher || 'Unknown'}\nISBN-13: ${topMatch.isbn13 || 'N/A'}\nMatch reasons: ${topMatch.match_reasons}\n\nApply this ISBN automatically?`)) {
+                const selectedISBN = topMatch.isbn13 || topMatch.isbn;
+                selectISBN(selectedISBN, topMatch.isbn, bookId);
+                return;
             }
+        }
 
-            // Prefer exact or close title matches
-            return title.includes(currentTitleLower) || currentTitleLower.includes(title);
-        });
-
-        const suggestionsToShow = filteredSuggestions.length > 0 ? filteredSuggestions : suggestions.slice(0, 3);
+        const suggestionsToShow = suggestions.slice(0, 5); // Show top 5 matches
 
         // Create modal content
         let modalContent = `
@@ -739,14 +735,33 @@ $(document).ready(function() {
             const isbn10 = suggestion.isbn || 'N/A';
             const isbn13 = suggestion.isbn13 || 'N/A';
             const publisher = suggestion.publisher || 'Unknown';
+            const matchScore = suggestion.match_score || 0;
+            const matchReasons = suggestion.match_reasons || 'No specific reasons';
+
+            // Color code based on match score
+            let borderColor = '#ddd';
+            let bgColor = '#fff';
+            if (matchScore >= 150) {
+                borderColor = '#28a745'; // Green for high confidence
+                bgColor = '#f8fff9';
+            } else if (matchScore >= 100) {
+                borderColor = '#ffc107'; // Yellow for medium confidence
+                bgColor = '#fffef8';
+            }
 
             modalContent += `
-                <div style="border: 1px solid #ddd; margin: 10px 0; padding: 15px; border-radius: 5px;">
-                    <h5>${suggestion.title}</h5>
+                <div style="border: 2px solid ${borderColor}; background: ${bgColor}; margin: 10px 0; padding: 15px; border-radius: 5px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h5 style="margin: 0;">${suggestion.title}</h5>
+                        <span style="background: ${borderColor}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;">
+                            Score: ${matchScore}
+                        </span>
+                    </div>
                     <p><strong>Author:</strong> ${suggestion.author}</p>
                     <p><strong>Publisher:</strong> ${publisher}</p>
                     <p><strong>ISBN-10:</strong> ${isbn10}</p>
                     <p><strong>ISBN-13:</strong> ${isbn13}</p>
+                    <p><strong>Match reasons:</strong> <em>${matchReasons}</em></p>
                     <button class="btn btn-primary" onclick="selectISBN('${isbn13}', '${isbn10}', ${bookId})">
                         Select This ISBN
                     </button>

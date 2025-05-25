@@ -62,6 +62,9 @@ try {
     echo json_encode(['success' => false, 'message' => 'Server error occurred']);
 }
 
+// Exit to prevent any further output
+exit;
+
 /**
  * Handle getting enrichment data for a book
  */
@@ -271,4 +274,3 @@ function validateBookAccess($bookId) {
 
     return $stmt->fetch() !== false;
 }
-?>

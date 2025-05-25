@@ -6,12 +6,20 @@
 // Set JSON header first
 header('Content-Type: application/json');
 
+// Start session if not already started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 // Enable error reporting for debugging
 error_reporting(E_ALL);
 ini_set('display_errors', 0); // Don't display errors in output, but log them
 
 try {
-    // Include necessary files
+    // Include auth check
+    require_once '../../includes/auth-check.php';
+
+    // Include database connection
     require_once '../../includes/db-connect.php';
     require_once '../functions/data-enrichment-functions.php';
 } catch (Exception $e) {

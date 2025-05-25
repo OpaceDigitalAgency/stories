@@ -7,7 +7,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-require_once '../../includes/db-connect.php';
+require_once '../includes/db-connect.php';
 require_once 'book-import-validate/functions/data-enrichment-functions.php';
 
 // Test if function exists

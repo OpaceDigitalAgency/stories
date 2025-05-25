@@ -257,13 +257,35 @@ function displayEnrichmentFields(fields) {
     const container = $('#enrichment-fields');
     container.empty();
 
-    // Define all possible fields in order
-    const fieldOrder = ['isbn', 'isbn13', 'author', 'publisher', 'publication_date', 'page_count', 'language', 'format', 'cover_url', 'preview_link', 'series', 'awards', 'characters', 'settings'];
+    // Define preferred field order (high priority fields first)
+    const fieldOrder = [
+        'isbn', 'isbn13', 'author', 'publisher', 'publication_date', 'page_count',
+        'language', 'format', 'cover_url', 'preview_link', 'price_range', 'age_range',
+        'reading_level', 'series', 'awards', 'characters', 'settings', 'tags', 'genres',
+        'maturity_rating', 'categories', 'subjects', 'description', 'subtitle'
+    ];
 
+    // First, display fields in preferred order
     fieldOrder.forEach(fieldName => {
         const field = fields[fieldName];
         if (!field) return; // Skip if field doesn't exist
 
+        const label = field.label || fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        const isUnknown = field.status === 'unknown';
+
+        // Handle fields with multiple source options
+        if (field.options) {
+            container.append(createMultiSourceField(fieldName, field, label));
+        } else {
+            container.append(createSingleSourceField(fieldName, field, label, isUnknown));
+        }
+    });
+
+    // Then, display any remaining fields that weren't in the preferred order
+    Object.keys(fields).forEach(fieldName => {
+        if (fieldOrder.includes(fieldName)) return; // Already displayed
+
+        const field = fields[fieldName];
         const label = field.label || fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
         const isUnknown = field.status === 'unknown';
 
@@ -369,11 +391,36 @@ function createMultiSourceField(fieldName, field, label) {
 }
 
 function formatFieldValue(fieldName, value) {
+    if (!value || value === null || value === 'null' || value === 'Unknown') {
+        return '<span class="text-muted">Unknown</span>';
+    }
+
     if (fieldName === 'cover_url') {
         return `<img src="${value}" alt="Cover" style="max-height: 60px; max-width: 100px;" class="img-thumbnail">`;
     } else if (fieldName === 'preview_link') {
         return `<a href="${value}" target="_blank" class="btn btn-sm btn-outline-primary">View Preview</a>`;
+    } else if (fieldName === 'tags' || fieldName === 'genres' || fieldName === 'categories' || fieldName === 'subjects') {
+        // Handle array values for tags/genres
+        if (Array.isArray(value)) {
+            return value.map(tag => `<span class="badge badge-secondary mr-1">${tag}</span>`).join('');
+        } else if (typeof value === 'string' && value.includes(',')) {
+            return value.split(',').map(tag => `<span class="badge badge-secondary mr-1">${tag.trim()}</span>`).join('');
+        }
+        return `<span class="badge badge-secondary">${value}</span>`;
+    } else if (fieldName === 'publication_date') {
+        // Format dates nicely
+        const date = new Date(value);
+        if (!isNaN(date.getTime())) {
+            return date.toLocaleDateString();
+        }
+        return value;
+    } else if (fieldName === 'page_count') {
+        return `${value} pages`;
+    } else if (fieldName === 'maturity_rating') {
+        const ratingClass = value === 'NOT_MATURE' ? 'success' : 'warning';
+        return `<span class="badge badge-${ratingClass}">${value}</span>`;
     }
+
     return value;
 }
 

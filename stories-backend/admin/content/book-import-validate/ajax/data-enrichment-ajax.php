@@ -235,15 +235,28 @@ function filterRelevantFields($fields, $currentISBN) {
     // This gives users complete visibility into what data is available
 
     foreach ($fields as $fieldName => $fieldData) {
-        // Ensure all fields have required properties
+        // Ensure all fields have required properties for both single and multi-source fields
         if (!isset($fieldData['label'])) {
             $fields[$fieldName]['label'] = ucfirst(str_replace('_', ' ', $fieldName));
         }
 
-        // Mark fields as unknown if they have no value
-        if (empty($fieldData['value']) && !isset($fieldData['status'])) {
-            $fields[$fieldName]['status'] = 'unknown';
-            $fields[$fieldName]['value'] = null;
+        // Handle multi-source fields (with options array)
+        if (isset($fieldData['options']) && is_array($fieldData['options'])) {
+            // Multi-source field - ensure each option has proper structure
+            foreach ($fieldData['options'] as $index => $option) {
+                if (!isset($option['label'])) {
+                    $fields[$fieldName]['options'][$index]['label'] = $fieldData['label'];
+                }
+            }
+        } else {
+            // Single source field - handle normally
+
+            // Mark fields as unknown if they have no value and no status
+            if ((empty($fieldData['value']) || $fieldData['value'] === null) && !isset($fieldData['status'])) {
+                $fields[$fieldName]['status'] = 'unknown';
+                $fields[$fieldName]['value'] = 'Unknown';
+                $fields[$fieldName]['source'] = 'unknown';
+            }
         }
 
         // Show ISBN fields when they could be useful

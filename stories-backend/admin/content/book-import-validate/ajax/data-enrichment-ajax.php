@@ -73,21 +73,38 @@ function handleGetEnrichmentData() {
     $author = $_POST['author'] ?? '';
     $currentISBN = $_POST['current_isbn'] ?? '';
 
+    error_log("Data enrichment request: title='$title', author='$author', isbn='$currentISBN'");
+
     if (empty($title)) {
         echo json_encode(['success' => false, 'message' => 'Title is required']);
         return;
     }
 
-    // Get enriched data
-    $enrichedData = getEnrichedBookData($title, $author, $currentISBN);
+    try {
+        // Get enriched data
+        $enrichedData = getEnrichedBookData($title, $author, $currentISBN);
+        error_log("Raw enriched data: " . json_encode($enrichedData));
 
-    // Filter out fields that are empty or same as current
-    $enrichedData['fields'] = filterRelevantFields($enrichedData['fields'], $currentISBN);
+        // Filter out fields that are empty or same as current
+        $enrichedData['fields'] = filterRelevantFields($enrichedData['fields'], $currentISBN);
+        error_log("Filtered enriched data: " . json_encode($enrichedData));
 
-    echo json_encode([
-        'success' => true,
-        'data' => $enrichedData
-    ]);
+        echo json_encode([
+            'success' => true,
+            'data' => $enrichedData
+        ]);
+    } catch (Exception $e) {
+        error_log("Enrichment error: " . $e->getMessage());
+        echo json_encode([
+            'success' => false,
+            'message' => 'Error getting enrichment data: ' . $e->getMessage(),
+            'debug' => [
+                'title' => $title,
+                'author' => $author,
+                'isbn' => $currentISBN
+            ]
+        ]);
+    }
 }
 
 /**

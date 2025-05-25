@@ -164,7 +164,7 @@ let currentBookISBN = null;
 
 function openDataEnrichmentModal(bookId, title, author, currentISBN = '') {
     currentBookId = bookId;
-    currentBookISBN = currentISBN;
+    currentBookISBN = String(currentISBN || ''); // Ensure it's always a string
 
     // Reset modal state
     $('#enrichment-loading').show();
@@ -234,13 +234,14 @@ function displayEnrichmentResults(data) {
     $('#isbn-validation-status').show();
 
     // For enrichment, we're validating the current ISBN, not suggesting different ones
-    if (currentBookISBN) {
-        // Show detailed ISBN information
-        const isbnLength = currentBookISBN.replace(/[^0-9X]/gi, '').length;
+    if (currentBookISBN && String(currentBookISBN).trim() !== '') {
+        // Ensure ISBN is a string and show detailed ISBN information
+        const isbnString = String(currentBookISBN);
+        const isbnLength = isbnString.replace(/[^0-9X]/gi, '').length;
         const isbnType = isbnLength === 13 ? 'ISBN-13' : isbnLength === 10 ? 'ISBN-10' : 'Unknown';
-        $('#isbn-status-badge').html(`<span class="badge badge-info" title="Validating ${isbnType}: ${currentBookISBN}">Validating ${isbnType}: ${currentBookISBN}</span>`);
+        $('#isbn-status-badge').html(`<span class="badge badge-info" title="Validating ${isbnType}: ${isbnString}">Validating ${isbnType}: ${isbnString}</span>`);
         // Check Goodreads using the current ISBN passed to the modal
-        checkGoodreadsStatus(currentBookISBN);
+        checkGoodreadsStatus(isbnString);
     } else {
         $('#isbn-status-badge').html('<span class="badge badge-warning">No ISBN to Validate</span>');
         $('#goodreads-status-badge').html('<span class="badge badge-secondary">No ISBN</span>');
@@ -333,6 +334,9 @@ function formatFieldValue(fieldName, value) {
 }
 
 function checkGoodreadsStatus(isbn) {
+    // Ensure ISBN is a string
+    isbn = String(isbn || '').trim();
+
     if (!isbn) {
         $('#goodreads-status-badge').html('<span class="badge badge-secondary">No ISBN</span>');
         return;

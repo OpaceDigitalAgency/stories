@@ -705,13 +705,18 @@ $(document).ready(function() {
                     },
                     dataType: 'json',
                     success: function(response) {
+                        console.log('Goodreads response for ISBN ' + isbn + ':', response);
                         if (response.success && response.exists) {
-                            $statusElement.html('<span class="badge badge-success"><i class="fas fa-book"></i> Goodreads</span>');
-                        } else {
+                            $statusElement.html('<span class="badge badge-success"><i class="fas fa-book"></i> Found</span>');
+                        } else if (response.success) {
                             $statusElement.html('<span class="badge badge-danger"><i class="fas fa-times"></i> Not Found</span>');
+                        } else {
+                            $statusElement.html('<span class="badge badge-warning"><i class="fas fa-exclamation-triangle"></i> Error</span>');
+                            console.error('Goodreads validation error:', response.message);
                         }
                     },
-                    error: function() {
+                    error: function(xhr, status, error) {
+                        console.error('Goodreads AJAX error for ISBN ' + isbn + ':', { xhr, status, error });
                         $statusElement.html('<span class="badge badge-warning"><i class="fas fa-exclamation-triangle"></i> Error</span>');
                     }
                 });

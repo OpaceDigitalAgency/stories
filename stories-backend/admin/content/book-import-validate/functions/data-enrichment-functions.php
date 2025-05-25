@@ -288,25 +288,72 @@ function convertToISBN13($isbn) {
  * Validate ISBN exists on Goodreads (for review scraping confidence)
  */
 function validateISBNOnGoodreads($isbn) {
-    if (empty($isbn)) return false;
-
-    $searchUrl = "https://www.goodreads.com/search?q=" . urlencode($isbn);
-
-    $ch = curl_init($searchUrl);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-    curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-
-    if ($httpCode !== 200) {
+    if (empty($isbn)) {
+        error_log("Goodreads validation: Empty ISBN provided");
         return false;
     }
 
-    // Check if we got actual results (not a "no results" page)
-    return (strpos($response, 'No results') === false &&
-            strpos($response, 'bookTitle') !== false);
+    // Clean the ISBN
+    $cleanISBN = preg_replace('/[^0-9X]/i', '', $isbn);
+
+    if (strlen($cleanISBN) < 10) {
+        error_log("Goodreads validation: Invalid ISBN length for $isbn");
+        return false;
+    }
+
+    $searchUrl = "https://www.goodreads.com/search?q=" . urlencode($cleanISBN);
+    error_log("Goodreads validation: Checking URL: $searchUrl");
+
+    $ch = curl_init($searchUrl);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+    curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language: en-US,en;q=0.5',
+        'Accept-Encoding: gzip, deflate',
+        'Connection: keep-alive',
+        'Upgrade-Insecure-Requests: 1'
+    ]);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $error = curl_error($ch);
+    curl_close($ch);
+
+    if ($error) {
+        error_log("Goodreads validation CURL error for $isbn: $error");
+        return false;
+    }
+
+    if ($httpCode !== 200) {
+        error_log("Goodreads validation HTTP error for $isbn: HTTP $httpCode");
+        return false;
+    }
+
+    if (empty($response)) {
+        error_log("Goodreads validation: Empty response for $isbn");
+        return false;
+    }
+
+    // More comprehensive checks for book existence
+    $hasResults = (
+        strpos($response, 'No results') === false &&
+        strpos($response, 'no results') === false &&
+        strpos($response, 'No books found') === false &&
+        (
+            strpos($response, 'bookTitle') !== false ||
+            strpos($response, 'book-title') !== false ||
+            strpos($response, 'class="bookTitle"') !== false ||
+            strpos($response, 'data-testid="title"') !== false ||
+            strpos($response, '/book/show/') !== false
+        )
+    );
+
+    error_log("Goodreads validation result for $isbn: " . ($hasResults ? 'FOUND' : 'NOT FOUND'));
+
+    return $hasResults;
 }
 ?>

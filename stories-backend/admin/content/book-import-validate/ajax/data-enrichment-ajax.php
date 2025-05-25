@@ -178,13 +178,25 @@ function handleCheckGoodreadsISBN() {
         return;
     }
 
-    $exists = validateISBNOnGoodreads($isbn);
+    error_log("Checking Goodreads for ISBN: $isbn");
 
-    echo json_encode([
-        'success' => true,
-        'exists' => $exists,
-        'isbn' => $isbn
-    ]);
+    try {
+        $exists = validateISBNOnGoodreads($isbn);
+
+        echo json_encode([
+            'success' => true,
+            'exists' => $exists,
+            'isbn' => $isbn,
+            'debug' => "Checked ISBN $isbn on Goodreads: " . ($exists ? 'FOUND' : 'NOT FOUND')
+        ]);
+    } catch (Exception $e) {
+        error_log("Goodreads validation error for $isbn: " . $e->getMessage());
+        echo json_encode([
+            'success' => false,
+            'message' => 'Error checking Goodreads: ' . $e->getMessage(),
+            'isbn' => $isbn
+        ]);
+    }
 }
 
 /**
@@ -201,8 +213,8 @@ function filterRelevantFields($fields, $currentISBN) {
             continue;
         }
 
-        // Skip if it's the same as current ISBN
-        if (($fieldName === 'isbn' || $fieldName === 'isbn13') && $value === $currentISBN) {
+        // IMPORTANT: Skip ISBN fields entirely - we only want to validate our current ISBN, not suggest different ones
+        if ($fieldName === 'isbn' || $fieldName === 'isbn13') {
             continue;
         }
 

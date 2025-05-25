@@ -183,7 +183,7 @@ function openDataEnrichmentModal(bookId, title, author, currentISBN = '') {
 }
 
 function fetchEnrichmentData(title, author, currentISBN) {
-    console.log('Fetching enrichment data for:', { title, author, currentISBN });
+    console.log('Fetching enrichment data for:', { title, author, currentISBN, bookId: currentBookId });
 
     $.ajax({
         url: 'book-import-validate/ajax/data-enrichment-ajax.php',
@@ -192,7 +192,8 @@ function fetchEnrichmentData(title, author, currentISBN) {
             action: 'get_enrichment_data',
             title: title,
             author: author,
-            current_isbn: currentISBN
+            current_isbn: currentISBN,
+            book_id: currentBookId
         },
         dataType: 'json',
         success: function(response) {
@@ -257,12 +258,11 @@ function displayEnrichmentFields(fields) {
     const container = $('#enrichment-fields');
     container.empty();
 
-    // Define preferred field order (high priority fields first)
+    // Define preferred field order (only actual database fields)
     const fieldOrder = [
         'isbn', 'isbn13', 'author', 'publisher', 'publication_date', 'page_count',
         'language', 'format', 'cover_url', 'preview_link', 'price_range', 'age_range',
-        'reading_level', 'series', 'awards', 'characters', 'settings', 'tags', 'genres',
-        'maturity_rating', 'categories', 'subjects', 'description', 'subtitle'
+        'reading_level', 'series', 'awards', 'characters', 'settings', 'tags'
     ];
 
     // First, display fields in preferred order
@@ -271,13 +271,17 @@ function displayEnrichmentFields(fields) {
         if (!field) return; // Skip if field doesn't exist
 
         const label = field.label || fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-        const isUnknown = field.status === 'unknown';
 
-        // Handle fields with multiple source options
-        if (field.options) {
+        // Handle fields with multiple source options in new_data
+        if (field.new_data && field.new_data.options) {
             container.append(createMultiSourceField(fieldName, field, label));
-        } else {
+        } else if (field.new_data) {
+            // Single source field with new data
+            const isUnknown = field.new_data.status === 'unknown';
             container.append(createSingleSourceField(fieldName, field, label, isUnknown));
+        } else {
+            // Field with no new data - show current value only (disabled)
+            container.append(createCurrentOnlyField(fieldName, field, label));
         }
     });
 
@@ -287,13 +291,17 @@ function displayEnrichmentFields(fields) {
 
         const field = fields[fieldName];
         const label = field.label || fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-        const isUnknown = field.status === 'unknown';
 
-        // Handle fields with multiple source options
-        if (field.options) {
+        // Handle fields with multiple source options in new_data
+        if (field.new_data && field.new_data.options) {
             container.append(createMultiSourceField(fieldName, field, label));
-        } else {
+        } else if (field.new_data) {
+            // Single source field with new data
+            const isUnknown = field.new_data.status === 'unknown';
             container.append(createSingleSourceField(fieldName, field, label, isUnknown));
+        } else {
+            // Field with no new data - show current value only (disabled)
+            container.append(createCurrentOnlyField(fieldName, field, label));
         }
     });
 
@@ -319,12 +327,12 @@ function displayEnrichmentFields(fields) {
         Object.keys(currentEnrichmentData.fields).forEach(fieldName => {
             const fieldData = currentEnrichmentData.fields[fieldName];
 
-            if (fieldData && fieldData.options) {
+            if (fieldData && fieldData.new_data && fieldData.new_data.options) {
                 // Find the option with highest confidence
                 let highestConfidence = 0;
                 let bestOptionIndex = 0;
 
-                fieldData.options.forEach((option, index) => {
+                fieldData.new_data.options.forEach((option, index) => {
                     if (option.confidence > highestConfidence) {
                         highestConfidence = option.confidence;
                         bestOptionIndex = index;
@@ -343,9 +351,10 @@ function displayEnrichmentFields(fields) {
 }
 
 function createSingleSourceField(fieldName, field, label, isUnknown) {
-    const confidence = field.confidence || 0;
-    const source = field.source || 'unknown';
-    const displayValue = isUnknown ? '<span class="text-muted">Unknown</span>' : formatFieldValue(fieldName, field.value);
+    const newData = field.new_data || {};
+    const confidence = newData.confidence || 0;
+    const source = newData.source || 'unknown';
+    const displayValue = isUnknown ? '<span class="text-muted">Unknown</span>' : formatFieldValue(fieldName, newData.value);
 
     const confidenceClass = confidence >= 80 ? 'success' : confidence >= 60 ? 'warning' : confidence >= 30 ? 'info' : 'secondary';
     const sourceClass = source.includes('+') ? 'primary' : source === 'google_books' ? 'success' : source === 'open_library' ? 'info' : 'secondary';
@@ -363,6 +372,9 @@ function createSingleSourceField(fieldName, field, label, isUnknown) {
                     </label>
                 </div>
                 <div class="mt-2 p-2 ${isUnknown ? 'bg-light text-muted' : 'bg-light'} rounded">
+                    <div class="mb-2">
+                        <strong>Current Value:</strong> ${formatCurrentValue(fieldName, field.current_value)}
+                    </div>
                     <strong>New Value:</strong> ${displayValue}
                 </div>
             </div>
@@ -372,7 +384,8 @@ function createSingleSourceField(fieldName, field, label, isUnknown) {
 
 function createMultiSourceField(fieldName, field, label) {
     let optionsHtml = '';
-    field.options.forEach((option, index) => {
+    const options = field.new_data.options || [];
+    options.forEach((option, index) => {
         const confidence = option.confidence || 0;
         const source = option.source || 'unknown';
         const displayValue = formatFieldValue(fieldName, option.value);
@@ -403,12 +416,68 @@ function createMultiSourceField(fieldName, field, label) {
                     </label>
                 </div>
                 <div class="mt-2 p-2 bg-light rounded">
+                    <div class="mb-2">
+                        <strong>Current Value:</strong> ${formatCurrentValue(fieldName, field.current_value)}
+                    </div>
                     <strong>Choose Source:</strong>
                     ${optionsHtml}
                 </div>
             </div>
         </div>
     `;
+}
+
+function createCurrentOnlyField(fieldName, field, label) {
+    return `
+        <div class="col-md-6 mb-3">
+            <div class="enrichment-field" data-field="${fieldName}">
+                <div class="form-check">
+                    <input class="form-check-input field-checkbox" type="checkbox"
+                           id="field_${fieldName}" name="fields[]" value="${fieldName}" disabled>
+                    <label class="form-check-label font-weight-bold text-muted" for="field_${fieldName}">
+                        ${label}
+                        <span class="badge badge-secondary ml-2">No New Data</span>
+                    </label>
+                </div>
+                <div class="mt-2 p-2 bg-light text-muted rounded">
+                    <strong>Current Value:</strong> ${formatCurrentValue(fieldName, field.current_value)}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function formatCurrentValue(fieldName, value) {
+    if (!value || value === null || value === 'null' || value === '' || (Array.isArray(value) && value.length === 0)) {
+        return '<span class="text-muted">None</span>';
+    }
+
+    if (fieldName === 'cover_url') {
+        return `<img src="${value}" alt="Current Cover" style="max-height: 40px; max-width: 60px;" class="img-thumbnail">`;
+    } else if (fieldName === 'preview_link') {
+        return `<a href="${value}" target="_blank" class="btn btn-sm btn-outline-secondary">Current Preview</a>`;
+    } else if (fieldName === 'tags') {
+        // Handle array values for tags
+        if (Array.isArray(value)) {
+            return value.map(tag => `<span class="badge badge-light mr-1">${tag}</span>`).join('');
+        } else if (typeof value === 'string' && value.includes(',')) {
+            return value.split(',').map(tag => `<span class="badge badge-light mr-1">${tag.trim()}</span>`).join('');
+        }
+        return `<span class="badge badge-light">${value}</span>`;
+    } else if (fieldName === 'publication_date') {
+        // Format dates nicely
+        const date = new Date(value);
+        if (!isNaN(date.getTime())) {
+            return date.toLocaleDateString();
+        }
+        return value;
+    } else if (fieldName === 'page_count') {
+        return `${value} pages`;
+    } else if (fieldName === 'age_range') {
+        return `<span class="badge badge-light">${value}</span>`;
+    }
+
+    return value;
 }
 
 function formatFieldValue(fieldName, value) {
@@ -420,8 +489,8 @@ function formatFieldValue(fieldName, value) {
         return `<img src="${value}" alt="Cover" style="max-height: 60px; max-width: 100px;" class="img-thumbnail">`;
     } else if (fieldName === 'preview_link') {
         return `<a href="${value}" target="_blank" class="btn btn-sm btn-outline-primary">View Preview</a>`;
-    } else if (fieldName === 'tags' || fieldName === 'genres' || fieldName === 'categories' || fieldName === 'subjects') {
-        // Handle array values for tags/genres
+    } else if (fieldName === 'tags') {
+        // Handle array values for tags
         if (Array.isArray(value)) {
             return value.map(tag => `<span class="badge badge-secondary mr-1">${tag}</span>`).join('');
         } else if (typeof value === 'string' && value.includes(',')) {
@@ -489,18 +558,18 @@ $('#apply-enrichment-btn').click(function() {
         const fieldData = currentEnrichmentData.fields[fieldName];
 
         // Handle multi-source fields
-        if (fieldData.options) {
+        if (fieldData.new_data && fieldData.new_data.options) {
             const selectedOption = $(`input[name="field_${fieldName}_option"]:checked`);
             if (selectedOption.length > 0) {
                 const optionIndex = parseInt(selectedOption.val());
                 selectedFields[fieldName] = {
-                    value: fieldData.options[optionIndex].value,
-                    source: fieldData.options[optionIndex].source,
-                    confidence: fieldData.options[optionIndex].confidence
+                    value: fieldData.new_data.options[optionIndex].value,
+                    source: fieldData.new_data.options[optionIndex].source,
+                    confidence: fieldData.new_data.options[optionIndex].confidence
                 };
             }
-        } else {
-            selectedFields[fieldName] = fieldData;
+        } else if (fieldData.new_data) {
+            selectedFields[fieldName] = fieldData.new_data;
         }
     });
 
@@ -527,12 +596,12 @@ $('#fix-all-btn').click(function() {
     Object.keys(currentEnrichmentData.fields).forEach(fieldName => {
         const fieldData = currentEnrichmentData.fields[fieldName];
 
-        if (fieldData && fieldData.options) {
+        if (fieldData && fieldData.new_data && fieldData.new_data.options) {
             // Find the option with highest confidence
             let highestConfidence = 0;
             let bestOptionIndex = 0;
 
-            fieldData.options.forEach((option, index) => {
+            fieldData.new_data.options.forEach((option, index) => {
                 if (option.confidence > highestConfidence) {
                     highestConfidence = option.confidence;
                     bestOptionIndex = index;
@@ -551,18 +620,18 @@ $('#fix-all-btn').click(function() {
         const fieldData = currentEnrichmentData.fields[fieldName];
 
         // Handle multi-source fields
-        if (fieldData.options) {
+        if (fieldData.new_data && fieldData.new_data.options) {
             const selectedOption = $(`input[name="field_${fieldName}_option"]:checked`);
             if (selectedOption.length > 0) {
                 const optionIndex = parseInt(selectedOption.val());
                 selectedFields[fieldName] = {
-                    value: fieldData.options[optionIndex].value,
-                    source: fieldData.options[optionIndex].source,
-                    confidence: fieldData.options[optionIndex].confidence
+                    value: fieldData.new_data.options[optionIndex].value,
+                    source: fieldData.new_data.options[optionIndex].source,
+                    confidence: fieldData.new_data.options[optionIndex].confidence
                 };
             }
-        } else {
-            selectedFields[fieldName] = fieldData;
+        } else if (fieldData.new_data) {
+            selectedFields[fieldName] = fieldData.new_data;
         }
     });
 

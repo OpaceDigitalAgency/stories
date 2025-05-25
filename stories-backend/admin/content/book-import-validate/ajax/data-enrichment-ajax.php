@@ -69,11 +69,14 @@ exit;
  * Handle getting enrichment data for a book
  */
 function handleGetEnrichmentData() {
+    global $db;
+
     $title = $_POST['title'] ?? '';
     $author = $_POST['author'] ?? '';
     $currentISBN = $_POST['current_isbn'] ?? '';
+    $bookId = $_POST['book_id'] ?? '';
 
-    error_log("Data enrichment request: title='$title', author='$author', isbn='$currentISBN'");
+    error_log("Data enrichment request: title='$title', author='$author', isbn='$currentISBN', bookId='$bookId'");
 
     if (empty($title)) {
         echo json_encode(['success' => false, 'message' => 'Title is required']);
@@ -81,12 +84,16 @@ function handleGetEnrichmentData() {
     }
 
     try {
-        // Get enriched data
+        // Get current book data from database
+        $currentBookData = getCurrentBookData($bookId);
+
+        // Get enriched data from APIs
         $enrichedData = getEnrichedBookData($title, $author, $currentISBN);
         error_log("Raw enriched data: " . json_encode($enrichedData));
 
-        // Filter out fields that are empty or same as current
-        $enrichedData['fields'] = filterRelevantFields($enrichedData['fields'], $currentISBN);
+        // Filter and combine with current data
+        $enrichedData['fields'] = filterRelevantFields($enrichedData['fields'], $currentBookData);
+        $enrichedData['current_data'] = $currentBookData;
         error_log("Filtered enriched data: " . json_encode($enrichedData));
 
         echo json_encode([
@@ -101,7 +108,8 @@ function handleGetEnrichmentData() {
             'debug' => [
                 'title' => $title,
                 'author' => $author,
-                'isbn' => $currentISBN
+                'isbn' => $currentISBN,
+                'book_id' => $bookId
             ]
         ]);
     }
@@ -305,52 +313,120 @@ function handleCheckGoodreadsISBN() {
 }
 
 /**
- * Process enrichment fields for display - show ALL fields including unknown ones
+ * Get current book data from database
  */
-function filterRelevantFields($fields, $currentISBN) {
-    // Don't filter anything - show all fields including unknown ones
-    // This gives users complete visibility into what data is available
+function getCurrentBookData($bookId) {
+    global $db;
 
-    foreach ($fields as $fieldName => $fieldData) {
-        // Ensure all fields have required properties for both single and multi-source fields
-        if (!isset($fieldData['label'])) {
-            $fields[$fieldName]['label'] = ucfirst(str_replace('_', ' ', $fieldName));
+    if (empty($bookId)) {
+        return [];
+    }
+
+    try {
+        // Get book data from books table
+        $stmt = $db->prepare("
+            SELECT b.*, di.title as directory_title
+            FROM books b
+            JOIN directory_items di ON b.directory_item_id = di.id
+            WHERE b.directory_item_id = ?
+        ");
+        $stmt->execute([$bookId]);
+        $bookData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$bookData) {
+            return [];
         }
 
-        // Handle multi-source fields (with options array)
-        if (isset($fieldData['options']) && is_array($fieldData['options'])) {
-            // Multi-source field - ensure each option has proper structure
-            foreach ($fieldData['options'] as $index => $option) {
-                if (!isset($option['label'])) {
-                    $fields[$fieldName]['options'][$index]['label'] = $fieldData['label'];
-                }
-            }
+        // Get current tags from directory_item_tags junction table
+        $stmt = $db->prepare("
+            SELECT t.id, t.name
+            FROM tags t
+            JOIN directory_item_tags dit ON t.id = dit.tag_id
+            WHERE dit.directory_item_id = ?
+            ORDER BY t.name ASC
+        ");
+        $stmt->execute([$bookId]);
+        $tags = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $bookData['current_tags'] = $tags;
+
+        return $bookData;
+
+    } catch (Exception $e) {
+        error_log("Error getting current book data: " . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * Process enrichment fields for display - show only database fields with current vs new values
+ */
+function filterRelevantFields($fields, $currentBookData) {
+    // Define actual database fields that exist in books table
+    $validDbFields = [
+        'isbn' => 'ISBN-10',
+        'isbn13' => 'ISBN-13',
+        'author' => 'Author',
+        'publisher' => 'Publisher',
+        'publication_date' => 'Publication Date',
+        'page_count' => 'Page Count',
+        'age_range' => 'Age Range',
+        'reading_level' => 'Reading Level',
+        'cover_url' => 'Cover Image',
+        'series' => 'Series',
+        'language' => 'Language',
+        'format' => 'Format',
+        'preview_link' => 'Preview Link',
+        'price_range' => 'Price Range',
+        'awards' => 'Awards',
+        'characters' => 'Characters',
+        'settings' => 'Settings',
+        'tags' => 'Tags' // Special case - uses directory_item_tags junction table
+    ];
+
+    $filteredFields = [];
+
+    foreach ($validDbFields as $fieldName => $label) {
+        // Get current value from database
+        $currentValue = null;
+        if ($fieldName === 'tags') {
+            // Special handling for tags
+            $currentValue = isset($currentBookData['current_tags']) ?
+                array_column($currentBookData['current_tags'], 'name') : [];
         } else {
-            // Single source field - handle normally
-
-            // Mark fields as unknown if they have no value and no status
-            if ((empty($fieldData['value']) || $fieldData['value'] === null) && !isset($fieldData['status'])) {
-                $fields[$fieldName]['status'] = 'unknown';
-                $fields[$fieldName]['value'] = 'Unknown';
-                $fields[$fieldName]['source'] = 'unknown';
-            }
+            $currentValue = $currentBookData[$fieldName] ?? null;
         }
 
-        // Show ISBN fields when they could be useful
-        if (($fieldName === 'isbn' || $fieldName === 'isbn13') && !empty($currentISBN)) {
-            // Only show ISBN fields if we're missing the complementary one
-            $currentLength = strlen(preg_replace('/[^0-9X]/i', '', $currentISBN));
-            if ($fieldName === 'isbn' && $currentLength === 13) {
-                // Show ISBN-10 option when we have ISBN-13
-                $fields[$fieldName]['helpful'] = true;
-            } elseif ($fieldName === 'isbn13' && $currentLength === 10) {
-                // Show ISBN-13 option when we have ISBN-10
-                $fields[$fieldName]['helpful'] = true;
+        // Get new value from API data
+        $newFieldData = $fields[$fieldName] ?? null;
+
+        // Only include field if we have new data OR it's a field we want to show
+        if ($newFieldData || $fieldName === 'tags') {
+            $filteredFields[$fieldName] = [
+                'label' => $label,
+                'current_value' => $currentValue,
+                'new_data' => $newFieldData
+            ];
+
+            // Handle multi-source fields
+            if ($newFieldData && isset($newFieldData['options'])) {
+                $filteredFields[$fieldName]['options'] = $newFieldData['options'];
+            } elseif ($newFieldData) {
+                $filteredFields[$fieldName]['value'] = $newFieldData['value'] ?? null;
+                $filteredFields[$fieldName]['source'] = $newFieldData['source'] ?? 'unknown';
+                $filteredFields[$fieldName]['confidence'] = $newFieldData['confidence'] ?? 0;
+                $filteredFields[$fieldName]['status'] = $newFieldData['status'] ?? 'available';
+            } else {
+                // No new data available
+                $filteredFields[$fieldName]['status'] = 'unknown';
+                $filteredFields[$fieldName]['value'] = null;
+                $filteredFields[$fieldName]['source'] = 'unknown';
+                $filteredFields[$fieldName]['confidence'] = 0;
             }
         }
     }
 
-    return $fields;
+    return $filteredFields;
 }
 
 /**

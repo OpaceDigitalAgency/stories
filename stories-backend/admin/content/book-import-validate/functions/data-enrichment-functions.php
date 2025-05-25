@@ -48,7 +48,7 @@ function getEnrichedBookData($title, $author, $currentISBN = '') {
  * Combine data from multiple sources intelligently
  */
 function combineMultiSourceData($googleResults, $openLibraryResults, $title, $author, $currentISBN) {
-    // Define all possible fields we want to enrich
+    // Define fields that match actual database structure
     $allFields = [
         'isbn' => ['confidence' => 95, 'label' => 'ISBN-10'],
         'isbn13' => ['confidence' => 95, 'label' => 'ISBN-13'],
@@ -58,17 +58,11 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
         'page_count' => ['confidence' => 75, 'label' => 'Page Count'],
         'language' => ['confidence' => 70, 'label' => 'Language'],
         'format' => ['confidence' => 70, 'label' => 'Format'],
-        'summary' => ['confidence' => 65, 'label' => 'Summary/Description'],
         'cover_url' => ['confidence' => 60, 'label' => 'Cover Image'],
         'preview_link' => ['confidence' => 60, 'label' => 'Preview Link'],
-        'maturity_rating' => ['confidence' => 55, 'label' => 'Maturity Rating'],
         'series' => ['confidence' => 50, 'label' => 'Series'],
-        'categories' => ['confidence' => 45, 'label' => 'Categories/Genres'],
-        'subjects' => ['confidence' => 45, 'label' => 'Subjects/Tags'],
-        'tags' => ['confidence' => 45, 'label' => 'Tags'],
-        'genres' => ['confidence' => 45, 'label' => 'Genres'],
-        'ratings_average' => ['confidence' => 40, 'label' => 'Average Rating'],
-        'ratings_count' => ['confidence' => 40, 'label' => 'Rating Count'],
+        'tags' => ['confidence' => 45, 'label' => 'Tags'], // Maps from API categories/subjects
+        'maturity_rating' => ['confidence' => 55, 'label' => 'Maturity Rating'], // Maps to age_range
         // Fields that don't exist in APIs - always show as unknown
         'price_range' => ['confidence' => 0, 'label' => 'Price Range'],
         'age_range' => ['confidence' => 0, 'label' => 'Age Range'],
@@ -503,48 +497,35 @@ function extractFieldValue($match, $fieldName) {
 
     // Handle special field mappings and transformations
     switch ($fieldName) {
-        case 'categories':
-            // Google Books: categories array, OpenLibrary: subjects array
-            if (isset($match['categories']) && is_array($match['categories'])) {
-                return implode(', ', $match['categories']);
-            }
-            break;
-
-        case 'subjects':
-            // OpenLibrary: subjects, subject_facet arrays
-            if (isset($match['subjects']) && is_array($match['subjects'])) {
-                return implode(', ', array_slice($match['subjects'], 0, 10)); // Limit to first 10
-            } elseif (isset($match['subject_facet']) && is_array($match['subject_facet'])) {
-                return implode(', ', array_slice($match['subject_facet'], 0, 10));
-            }
-            break;
-
         case 'tags':
-            // Map from categories or subjects for tags
-            if (isset($match['categories']) && is_array($match['categories'])) {
-                return implode(', ', array_slice($match['categories'], 0, 8));
-            } elseif (isset($match['subjects']) && is_array($match['subjects'])) {
-                return implode(', ', array_slice($match['subjects'], 0, 8));
-            }
-            break;
+            // Combine categories and subjects from both APIs to create comprehensive tag list
+            $allTags = [];
 
-        case 'genres':
-            // Map from categories for genres (filter for fiction/genre terms)
+            // Get Google Books categories
             if (isset($match['categories']) && is_array($match['categories'])) {
-                $genreTerms = array_filter($match['categories'], function($cat) {
-                    return stripos($cat, 'fiction') !== false ||
-                           stripos($cat, 'fantasy') !== false ||
-                           stripos($cat, 'mystery') !== false ||
-                           stripos($cat, 'romance') !== false ||
-                           stripos($cat, 'thriller') !== false ||
-                           stripos($cat, 'horror') !== false ||
-                           stripos($cat, 'adventure') !== false ||
-                           stripos($cat, 'drama') !== false ||
-                           stripos($cat, 'comedy') !== false;
-                });
-                if (!empty($genreTerms)) {
-                    return implode(', ', array_slice($genreTerms, 0, 5));
+                $allTags = array_merge($allTags, $match['categories']);
+            }
+
+            // Get OpenLibrary subjects
+            if (isset($match['subjects']) && is_array($match['subjects'])) {
+                $allTags = array_merge($allTags, array_slice($match['subjects'], 0, 10));
+            } elseif (isset($match['subject_facet']) && is_array($match['subject_facet'])) {
+                $allTags = array_merge($allTags, array_slice($match['subject_facet'], 0, 10));
+            }
+
+            // Clean and filter tags
+            if (!empty($allTags)) {
+                $cleanTags = [];
+                foreach ($allTags as $tag) {
+                    $cleanTag = trim($tag);
+                    if (!empty($cleanTag) && strlen($cleanTag) > 2 && strlen($cleanTag) < 50) {
+                        $cleanTags[] = $cleanTag;
+                    }
                 }
+
+                // Remove duplicates and limit to reasonable number
+                $uniqueTags = array_unique($cleanTags);
+                return implode(', ', array_slice($uniqueTags, 0, 12));
             }
             break;
 

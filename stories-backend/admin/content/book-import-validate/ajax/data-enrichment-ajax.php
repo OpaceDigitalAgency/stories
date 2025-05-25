@@ -12,7 +12,7 @@ ini_set('display_errors', 0); // Don't display errors in output, but log them
 
 try {
     // Include necessary files
-    require_once '../../../includes/db-connect.php';
+    require_once '../../../../includes/db-connect.php';
     require_once '../functions/data-enrichment-functions.php';
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'message' => 'Failed to load required files: ' . $e->getMessage()]);

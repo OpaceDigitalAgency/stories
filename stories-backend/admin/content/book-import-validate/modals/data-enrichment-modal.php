@@ -52,9 +52,19 @@
                     <!-- Enrichment Fields -->
                     <div class="card">
                         <div class="card-header">
-                            <h6 class="mb-0">
-                                <i class="fas fa-edit"></i> Available Data Enrichments
-                                <small class="text-muted ml-2">Select fields to update</small>
+                            <h6 class="mb-0 d-flex justify-content-between align-items-center">
+                                <span>
+                                    <i class="fas fa-edit"></i> Available Data Enrichments
+                                    <small class="text-muted ml-2">Select fields to update</small>
+                                </span>
+                                <div>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" id="select-all-fields">
+                                        <i class="fas fa-check-square"></i> Select All
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary ml-1" id="deselect-all-fields">
+                                        <i class="fas fa-square"></i> Deselect All
+                                    </button>
+                                </div>
                             </h6>
                         </div>
                         <div class="card-body">
@@ -83,6 +93,9 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="fix-all-btn">
+                    <i class="fas fa-magic"></i> Fix All
+                </button>
                 <button type="button" class="btn btn-primary" id="apply-enrichment-btn" disabled>
                     <i class="fas fa-save"></i> Apply Selected Changes
                 </button>
@@ -222,7 +235,10 @@ function displayEnrichmentResults(data) {
 
     // For enrichment, we're validating the current ISBN, not suggesting different ones
     if (currentBookISBN) {
-        $('#isbn-status-badge').html('<span class="badge badge-info">Validating Current ISBN</span>');
+        // Show detailed ISBN information
+        const isbnLength = currentBookISBN.replace(/[^0-9X]/gi, '').length;
+        const isbnType = isbnLength === 13 ? 'ISBN-13' : isbnLength === 10 ? 'ISBN-10' : 'Unknown';
+        $('#isbn-status-badge').html(`<span class="badge badge-info" title="Validating ${isbnType}: ${currentBookISBN}">Validating ${isbnType}: ${currentBookISBN}</span>`);
         // Check Goodreads using the current ISBN passed to the modal
         checkGoodreadsStatus(currentBookISBN);
     } else {
@@ -296,6 +312,15 @@ function displayEnrichmentFields(fields) {
         const hasSelected = $('.field-checkbox:checked').length > 0;
         $('#apply-enrichment-btn').prop('disabled', !hasSelected);
     });
+
+    // Add Select All / Deselect All handlers
+    $('#select-all-fields').off('click').on('click', function() {
+        $('.field-checkbox').prop('checked', true).trigger('change');
+    });
+
+    $('#deselect-all-fields').off('click').on('click', function() {
+        $('.field-checkbox').prop('checked', false).trigger('change');
+    });
 }
 
 function formatFieldValue(fieldName, value) {
@@ -355,6 +380,21 @@ $('#apply-enrichment-btn').click(function() {
 
     // Apply the changes
     applyEnrichmentChanges(currentBookId, selectedFields);
+});
+
+// Fix All button - selects all fields and applies them
+$('#fix-all-btn').click(function() {
+    if (!currentEnrichmentData || !currentEnrichmentData.fields) {
+        alert('No enrichment data available.');
+        return;
+    }
+
+    // Select all checkboxes
+    $('.field-checkbox').prop('checked', true).trigger('change');
+
+    // Apply all changes
+    const allFields = currentEnrichmentData.fields;
+    applyEnrichmentChanges(currentBookId, allFields);
 });
 
 function applyEnrichmentChanges(bookId, selectedFields) {

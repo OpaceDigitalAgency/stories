@@ -218,9 +218,25 @@ function displayEnrichmentResults(data) {
     // Show ISBN validation if applicable
     if (data.isbn_validated !== undefined) {
         $('#isbn-validation-status').show();
-        const isbnBadge = data.isbn_validated ?
-            '<span class="badge badge-success">Valid</span>' :
-            '<span class="badge badge-warning">Different ISBN Found</span>';
+        let isbnBadge = '';
+
+        switch (data.isbn_validated) {
+            case 'new':
+                isbnBadge = '<span class="badge badge-info">New ISBN Found</span>';
+                break;
+            case 'exact_match':
+                isbnBadge = '<span class="badge badge-success">Exact Match</span>';
+                break;
+            case 'converted_match':
+                isbnBadge = '<span class="badge badge-success">ISBN-10/13 Match</span>';
+                break;
+            case 'different':
+                isbnBadge = '<span class="badge badge-warning">Different ISBN Found</span>';
+                break;
+            default:
+                isbnBadge = '<span class="badge badge-secondary">Unknown</span>';
+        }
+
         $('#isbn-status-badge').html(isbnBadge);
 
         // Check Goodreads if we have an ISBN

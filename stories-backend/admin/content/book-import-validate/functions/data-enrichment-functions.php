@@ -1,7 +1,7 @@
 <?php
 /**
  * Data Enrichment Functions
- * 
+ *
  * Functions for enriching book data from multiple sources
  */
 
@@ -23,35 +23,35 @@ function getEnrichedBookData($title, $author, $currentISBN = '') {
         'isbn_validated' => false,
         'fields' => []
     ];
-    
+
     // Get data from Google Books
     $googleResults = searchBooksByTitleAuthor($title, $author, 5);
     $enrichedData['sources_checked'][] = 'google_books';
-    
+
     // Get data from OpenLibrary
     $openLibraryResults = searchOpenLibraryByTitleAuthor($title, $author, 5);
     $enrichedData['sources_checked'][] = 'open_library';
-    
+
     // Combine and analyze results
     $allResults = array_merge($googleResults, $openLibraryResults);
-    
+
     if (empty($allResults)) {
         return $enrichedData;
     }
-    
+
     // Find the best match based on title/author similarity
     $bestMatch = findBestDataMatch($allResults, $title, $author, $currentISBN);
-    
+
     if ($bestMatch) {
         $enrichedData = extractEnrichmentData($bestMatch, $enrichedData);
         $enrichedData['confidence_score'] = calculateConfidenceScore($bestMatch, $title, $author, $currentISBN);
-        
+
         // Validate ISBN if we have one
         if (!empty($bestMatch['isbn13']) || !empty($bestMatch['isbn'])) {
             $enrichedData['isbn_validated'] = validateISBNMatch($bestMatch, $currentISBN);
         }
     }
-    
+
     return $enrichedData;
 }
 
@@ -61,18 +61,18 @@ function getEnrichedBookData($title, $author, $currentISBN = '') {
 function findBestDataMatch($results, $title, $author, $currentISBN) {
     $bestMatch = null;
     $bestScore = 0;
-    
+
     foreach ($results as $result) {
         $score = 0;
-        
+
         // Title matching (most important)
         $titleSimilarity = calculateStringSimilarity($title, $result['title'] ?? '');
         $score += $titleSimilarity * 100;
-        
+
         // Author matching
         $authorSimilarity = calculateStringSimilarity($author, $result['author'] ?? '');
         $score += $authorSimilarity * 50;
-        
+
         // ISBN matching (if we have current ISBN)
         if (!empty($currentISBN)) {
             $resultISBN = $result['isbn13'] ?? $result['isbn'] ?? '';
@@ -80,18 +80,18 @@ function findBestDataMatch($results, $title, $author, $currentISBN) {
                 $score += 200; // High bonus for exact ISBN match
             }
         }
-        
+
         // Prefer results with more complete data
         $dataCompleteness = calculateDataCompleteness($result);
         $score += $dataCompleteness * 10;
-        
+
         if ($score > $bestScore) {
             $bestScore = $score;
             $bestMatch = $result;
             $bestMatch['match_score'] = $score;
         }
     }
-    
+
     return $bestMatch;
 }
 
@@ -112,7 +112,7 @@ function extractEnrichmentData($match, $enrichedData) {
         'preview_link' => 'preview_link',
         'series' => 'series'
     ];
-    
+
     foreach ($fieldMappings as $sourceField => $dbField) {
         if (!empty($match[$sourceField])) {
             $enrichedData['fields'][$dbField] = [
@@ -122,7 +122,7 @@ function extractEnrichmentData($match, $enrichedData) {
             ];
         }
     }
-    
+
     return $enrichedData;
 }
 
@@ -132,15 +132,15 @@ function extractEnrichmentData($match, $enrichedData) {
 function calculateStringSimilarity($str1, $str2) {
     $str1 = strtolower(trim($str1));
     $str2 = strtolower(trim($str2));
-    
+
     if (empty($str1) || empty($str2)) {
         return 0;
     }
-    
+
     // Use Levenshtein distance for similarity
     $maxLen = max(strlen($str1), strlen($str2));
     if ($maxLen === 0) return 1;
-    
+
     $distance = levenshtein($str1, $str2);
     return 1 - ($distance / $maxLen);
 }
@@ -151,13 +151,13 @@ function calculateStringSimilarity($str1, $str2) {
 function calculateDataCompleteness($data) {
     $importantFields = ['title', 'author', 'publisher', 'publication_date', 'isbn13', 'isbn'];
     $filledFields = 0;
-    
+
     foreach ($importantFields as $field) {
         if (!empty($data[$field])) {
             $filledFields++;
         }
     }
-    
+
     return $filledFields / count($importantFields);
 }
 
@@ -167,23 +167,23 @@ function calculateDataCompleteness($data) {
 function calculateConfidenceScore($match, $title, $author, $currentISBN) {
     $score = 0;
     $maxScore = 100;
-    
+
     // Title similarity (40% weight)
     $titleSim = calculateStringSimilarity($title, $match['title'] ?? '');
     $score += $titleSim * 40;
-    
+
     // Author similarity (30% weight)
     $authorSim = calculateStringSimilarity($author, $match['author'] ?? '');
     $score += $authorSim * 30;
-    
+
     // Data completeness (20% weight)
     $completeness = calculateDataCompleteness($match);
     $score += $completeness * 20;
-    
+
     // Source reliability (10% weight)
     $sourceScore = ($match['source'] === 'google_books') ? 10 : 8; // Google Books slightly more reliable
     $score += $sourceScore;
-    
+
     return min($score, $maxScore);
 }
 
@@ -192,7 +192,7 @@ function calculateConfidenceScore($match, $title, $author, $currentISBN) {
  */
 function calculateFieldConfidence($fieldName, $value) {
     if (empty($value)) return 0;
-    
+
     // Different fields have different reliability
     $fieldReliability = [
         'isbn' => 95,
@@ -208,7 +208,7 @@ function calculateFieldConfidence($fieldName, $value) {
         'preview_link' => 60,
         'series' => 50
     ];
-    
+
     return $fieldReliability[$fieldName] ?? 50;
 }
 
@@ -217,11 +217,71 @@ function calculateFieldConfidence($fieldName, $value) {
  */
 function validateISBNMatch($match, $currentISBN) {
     if (empty($currentISBN)) {
-        return true; // No current ISBN to validate against
+        return 'new'; // No current ISBN, so any found ISBN is new data
     }
-    
-    $foundISBN = $match['isbn13'] ?? $match['isbn'] ?? '';
-    return $foundISBN === $currentISBN;
+
+    $foundISBN13 = $match['isbn13'] ?? '';
+    $foundISBN10 = $match['isbn'] ?? '';
+
+    // Clean current ISBN for comparison
+    $cleanCurrentISBN = preg_replace('/[^0-9X]/i', '', $currentISBN);
+
+    // Check exact matches first
+    if ($foundISBN13 === $cleanCurrentISBN || $foundISBN10 === $cleanCurrentISBN) {
+        return 'exact_match';
+    }
+
+    // Check if they're ISBN-10/ISBN-13 conversions of each other
+    if (areISBNsEquivalent($cleanCurrentISBN, $foundISBN13) ||
+        areISBNsEquivalent($cleanCurrentISBN, $foundISBN10)) {
+        return 'converted_match';
+    }
+
+    // Different ISBN entirely
+    return 'different';
+}
+
+/**
+ * Check if two ISBNs are equivalent (ISBN-10 vs ISBN-13 conversion)
+ */
+function areISBNsEquivalent($isbn1, $isbn2) {
+    if (empty($isbn1) || empty($isbn2)) {
+        return false;
+    }
+
+    // Convert both to ISBN-13 for comparison
+    $isbn1_13 = convertToISBN13($isbn1);
+    $isbn2_13 = convertToISBN13($isbn2);
+
+    return $isbn1_13 === $isbn2_13;
+}
+
+/**
+ * Convert ISBN-10 to ISBN-13 (basic conversion)
+ */
+function convertToISBN13($isbn) {
+    $clean = preg_replace('/[^0-9X]/i', '', $isbn);
+
+    if (strlen($clean) === 13) {
+        return $clean; // Already ISBN-13
+    }
+
+    if (strlen($clean) === 10) {
+        // Convert ISBN-10 to ISBN-13
+        $isbn13 = '978' . substr($clean, 0, 9);
+
+        // Calculate ISBN-13 checksum
+        $sum = 0;
+        for ($i = 0; $i < 12; $i++) {
+            $digit = intval($isbn13[$i]);
+            $sum += ($i % 2 == 0) ? $digit : $digit * 3;
+        }
+        $checkDigit = (10 - ($sum % 10)) % 10;
+
+        return $isbn13 . $checkDigit;
+    }
+
+    return $isbn; // Return as-is if not valid format
 }
 
 /**
@@ -229,9 +289,9 @@ function validateISBNMatch($match, $currentISBN) {
  */
 function validateISBNOnGoodreads($isbn) {
     if (empty($isbn)) return false;
-    
+
     $searchUrl = "https://www.goodreads.com/search?q=" . urlencode($isbn);
-    
+
     $ch = curl_init($searchUrl);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_TIMEOUT, 10);
@@ -240,13 +300,13 @@ function validateISBNOnGoodreads($isbn) {
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
-    
+
     if ($httpCode !== 200) {
         return false;
     }
-    
+
     // Check if we got actual results (not a "no results" page)
-    return (strpos($response, 'No results') === false && 
+    return (strpos($response, 'No results') === false &&
             strpos($response, 'bookTitle') !== false);
 }
 ?>

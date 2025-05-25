@@ -223,7 +223,8 @@ require_once '../includes/header.php';
                                     'publisher' => $publisher,
                                     'pub_date' => $pubDate,
                                     'format' => $format,
-                                    'status' => '<span class="badge badge-' . $statusClass . '" title="' . htmlspecialchars($statusMessage) . '"><i class="fas fa-' . $statusIcon . '"></i> ' . ucfirst($isbnStatus) . '</span>',
+                                    'status' => '<span class="badge badge-' . $statusClass . '" title="' . htmlspecialchars($statusMessage) . '"><i class="fas fa-' . $statusIcon . '"></i> ' . ucfirst($isbnStatus) . '</span>' .
+                                               '<br><span class="goodreads-status badge badge-secondary" data-book-id="' . $book['id'] . '" data-isbn="' . htmlspecialchars($book['isbn13'] ?? $book['isbn'] ?? '') . '"><i class="fas fa-spinner fa-spin"></i> Checking...</span>',
                                     'missing_data' => $missingDataDisplay,
                                     'actions' => '<a href="book-import-validate-new.php?action=validate_book&book_id=' . $book['id'] . '" ' .
                                                'class="btn btn-sm btn-info" title="View detailed validation data">' .
@@ -413,6 +414,9 @@ $(document).ready(function() {
     if (autoValidationEnabled) {
         autoValidateAllISBNs();
     }
+
+    // Check Goodreads status for all books
+    checkAllGoodreadsStatus();
 
     // ISBN Validation Tab Handlers
     $('.select-all-checkbox').on('change', function() {
@@ -640,6 +644,42 @@ $(document).ready(function() {
                     }
                 });
             }, index * 200); // 200ms delay between each request
+        });
+    }
+
+    // Function to check Goodreads status for all books
+    function checkAllGoodreadsStatus() {
+        $('.goodreads-status').each(function(index) {
+            const $statusElement = $(this);
+            const isbn = $statusElement.data('isbn');
+
+            if (!isbn) {
+                $statusElement.html('<span class="badge badge-secondary">No ISBN</span>');
+                return;
+            }
+
+            // Add delay to avoid overwhelming Goodreads
+            setTimeout(() => {
+                $.ajax({
+                    url: 'book-import-validate/ajax/data-enrichment-ajax.php',
+                    method: 'POST',
+                    data: {
+                        action: 'check_goodreads_isbn',
+                        isbn: isbn
+                    },
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success && response.exists) {
+                            $statusElement.html('<span class="badge badge-success"><i class="fas fa-book"></i> Goodreads</span>');
+                        } else {
+                            $statusElement.html('<span class="badge badge-danger"><i class="fas fa-times"></i> Not Found</span>');
+                        }
+                    },
+                    error: function() {
+                        $statusElement.html('<span class="badge badge-warning"><i class="fas fa-exclamation-triangle"></i> Error</span>');
+                    }
+                });
+            }, index * 500); // 500ms delay between each request
         });
     }
 

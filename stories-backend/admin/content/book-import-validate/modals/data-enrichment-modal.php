@@ -465,7 +465,22 @@ $('#apply-enrichment-btn').click(function() {
     const selectedFields = {};
     $('.field-checkbox:checked').each(function() {
         const fieldName = $(this).val();
-        selectedFields[fieldName] = currentEnrichmentData.fields[fieldName];
+        const fieldData = currentEnrichmentData.fields[fieldName];
+
+        // Handle multi-source fields
+        if (fieldData.options) {
+            const selectedOption = $(`input[name="field_${fieldName}_option"]:checked`);
+            if (selectedOption.length > 0) {
+                const optionIndex = parseInt(selectedOption.val());
+                selectedFields[fieldName] = {
+                    value: fieldData.options[optionIndex].value,
+                    source: fieldData.options[optionIndex].source,
+                    confidence: fieldData.options[optionIndex].confidence
+                };
+            }
+        } else {
+            selectedFields[fieldName] = fieldData;
+        }
     });
 
     if (Object.keys(selectedFields).length === 0) {
@@ -488,8 +503,7 @@ $('#fix-all-btn').click(function() {
     $('.field-checkbox:not(:disabled)').prop('checked', true).trigger('change');
 
     // For fields with multiple options, auto-select the highest confidence option
-    $('input[type="radio"][name*="_option"]').each(function() {
-        const fieldName = $(this).attr('name').replace('_option', '').replace('field_', '');
+    Object.keys(currentEnrichmentData.fields).forEach(fieldName => {
         const fieldData = currentEnrichmentData.fields[fieldName];
 
         if (fieldData && fieldData.options) {
@@ -505,15 +519,34 @@ $('#fix-all-btn').click(function() {
             });
 
             // Select the best option
-            if ($(this).val() == bestOptionIndex) {
-                $(this).prop('checked', true);
+            $(`input[name="field_${fieldName}_option"][value="${bestOptionIndex}"]`).prop('checked', true);
+        }
+    });
+
+    // Build the selected fields object with proper structure
+    const selectedFields = {};
+    $('.field-checkbox:checked').each(function() {
+        const fieldName = $(this).val();
+        const fieldData = currentEnrichmentData.fields[fieldName];
+
+        // Handle multi-source fields
+        if (fieldData.options) {
+            const selectedOption = $(`input[name="field_${fieldName}_option"]:checked`);
+            if (selectedOption.length > 0) {
+                const optionIndex = parseInt(selectedOption.val());
+                selectedFields[fieldName] = {
+                    value: fieldData.options[optionIndex].value,
+                    source: fieldData.options[optionIndex].source,
+                    confidence: fieldData.options[optionIndex].confidence
+                };
             }
+        } else {
+            selectedFields[fieldName] = fieldData;
         }
     });
 
     // Apply all changes
-    const allFields = currentEnrichmentData.fields;
-    applyEnrichmentChanges(currentBookId, allFields);
+    applyEnrichmentChanges(currentBookId, selectedFields);
 });
 
 function applyEnrichmentChanges(bookId, selectedFields) {

@@ -155,9 +155,50 @@ function handleApplyEnrichment() {
                 }
                 break;
 
-            default:
-                // Standard string fields
+            case 'tags':
+            case 'genres':
+                // Handle tags/genres - these need to be processed separately
                 if (!empty($value)) {
+                    // For now, store as comma-separated string in a field if it exists
+                    // Later we'll implement proper tag relationship handling
+                    if (is_array($value)) {
+                        $tagString = implode(', ', $value);
+                    } else {
+                        $tagString = $value;
+                    }
+
+                    // Check if there's a field for this in the books table
+                    if ($fieldName === 'tags' && columnExists('books', 'tags')) {
+                        $updateFields[] = "tags = ?";
+                        $params[] = $tagString;
+                    } elseif ($fieldName === 'genres' && columnExists('books', 'genres')) {
+                        $updateFields[] = "genres = ?";
+                        $params[] = $tagString;
+                    }
+                    // TODO: Implement proper tag relationship handling later
+                }
+                break;
+
+            case 'maturity_rating':
+                // Map maturity rating to age_range if possible
+                if (!empty($value)) {
+                    $ageRange = mapMaturityToAgeRange($value);
+                    if ($ageRange && columnExists('books', 'age_range')) {
+                        $updateFields[] = "age_range = ?";
+                        $params[] = $ageRange;
+                    }
+
+                    // Also store the raw maturity rating if field exists
+                    if (columnExists('books', 'maturity_rating')) {
+                        $updateFields[] = "maturity_rating = ?";
+                        $params[] = $value;
+                    }
+                }
+                break;
+
+            default:
+                // Standard string fields - only update if the field exists in the books table
+                if (!empty($value) && columnExists('books', $fieldName)) {
                     $updateFields[] = "$fieldName = ?";
                     $params[] = $value;
                 }
@@ -309,4 +350,34 @@ function validateBookAccess($bookId) {
     $stmt->execute([$bookId]);
 
     return $stmt->fetch() !== false;
+}
+
+/**
+ * Check if a column exists in a table
+ */
+function columnExists($table, $column) {
+    global $db;
+
+    try {
+        $stmt = $db->prepare("SHOW COLUMNS FROM `$table` LIKE ?");
+        $stmt->execute([$column]);
+        return $stmt->fetch() !== false;
+    } catch (Exception $e) {
+        error_log("Error checking column existence: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Map Google Books maturity rating to age range
+ */
+function mapMaturityToAgeRange($maturityRating) {
+    switch (strtoupper($maturityRating)) {
+        case 'NOT_MATURE':
+            return 'All Ages';
+        case 'MATURE':
+            return '18+';
+        default:
+            return null;
+    }
 }

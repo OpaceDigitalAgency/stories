@@ -222,16 +222,16 @@ function displayEnrichmentResults(data) {
 
         switch (data.isbn_validated) {
             case 'new':
-                isbnBadge = '<span class="badge badge-info">New ISBN Found</span>';
+                isbnBadge = '<span class="badge badge-info" title="No current ISBN - this would be new data">New ISBN Found</span>';
                 break;
             case 'exact_match':
-                isbnBadge = '<span class="badge badge-success">Exact Match</span>';
+                isbnBadge = '<span class="badge badge-success" title="Found ISBN exactly matches your current ISBN">Exact Match</span>';
                 break;
             case 'converted_match':
-                isbnBadge = '<span class="badge badge-success">ISBN-10/13 Match</span>';
+                isbnBadge = '<span class="badge badge-success" title="Found ISBN is the ISBN-10/13 equivalent of your current ISBN">ISBN-10/13 Match</span>';
                 break;
             case 'different':
-                isbnBadge = '<span class="badge badge-warning">Different ISBN Found</span>';
+                isbnBadge = '<span class="badge badge-warning" title="Found ISBN is for a different edition of the same book">Different Edition Found</span>';
                 break;
             default:
                 isbnBadge = '<span class="badge badge-secondary">Unknown</span>';

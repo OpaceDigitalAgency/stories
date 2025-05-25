@@ -309,6 +309,9 @@ require_once '../includes/header.php';
                                         <button id="test-ajax" class="btn btn-sm btn-info">
                                             <i class="fas fa-wifi"></i> Test AJAX
                                         </button>
+                                        <button id="debug-goodreads" class="btn btn-sm btn-warning">
+                                            <i class="fas fa-bug"></i> Debug Goodreads
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -545,6 +548,27 @@ $(document).ready(function() {
         });
     });
 
+    // Debug Goodreads status
+    $('#debug-goodreads').click(function() {
+        console.log('=== GOODREADS DEBUG ===');
+        console.log('Total .goodreads-status elements found:', $('.goodreads-status').length);
+
+        $('.goodreads-status').each(function(index) {
+            const $element = $(this);
+            console.log(`Element ${index}:`, {
+                html: $element[0].outerHTML,
+                isbn: $element.data('isbn'),
+                bookId: $element.data('book-id'),
+                visible: $element.is(':visible'),
+                parent: $element.parent()[0].tagName
+            });
+        });
+
+        // Force re-check Goodreads status
+        console.log('Re-running Goodreads status check...');
+        checkAllGoodreadsStatus();
+    });
+
     // Function to auto-validate all ISBNs on page load
     function autoValidateAllISBNs() {
         const $progress = $('#validation-progress');
@@ -589,7 +613,19 @@ $(document).ready(function() {
                         // jQuery automatically parses JSON when Content-Type is application/json
                         if (typeof response === 'object' && response.status === 'success') {
                             const validation = response.validation;
-                            $statusCell.html(`<span class="badge badge-${validation.class}" title="${validation.message}"><i class="fas fa-${validation.icon}"></i> ${validation.status.charAt(0).toUpperCase() + validation.status.slice(1)}</span>`);
+
+                            // Preserve existing Goodreads status if it exists
+                            const existingGoodreadsStatus = $statusCell.find('.goodreads-status');
+                            let goodreadsHtml = '';
+                            if (existingGoodreadsStatus.length > 0) {
+                                goodreadsHtml = '<br>' + existingGoodreadsStatus[0].outerHTML;
+                            } else {
+                                // Add new Goodreads status element if it doesn't exist
+                                const isbn = $row.find('td:nth-child(3)').text().trim(); // ISBN column
+                                goodreadsHtml = `<br><span class="goodreads-status badge badge-secondary" data-book-id="${bookId}" data-isbn="${isbn}"><i class="fas fa-spinner fa-spin"></i> Checking...</span>`;
+                            }
+
+                            $statusCell.html(`<span class="badge badge-${validation.class}" title="${validation.message}"><i class="fas fa-${validation.icon}"></i> ${validation.status.charAt(0).toUpperCase() + validation.status.slice(1)}</span>${goodreadsHtml}`);
 
                             // Update Fix button if needed - preserve existing Enrich buttons
                             const $actionsCell = $row.find('td:last-child');

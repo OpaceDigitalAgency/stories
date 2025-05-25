@@ -81,32 +81,34 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null, $options = []
 
         // Make sure we have the required classes for clean metadata extraction
         require_once __DIR__ . '/../../../../services/ReviewFetcher/GoodreadsBookMetadataFetcher.php';
+        require_once __DIR__ . '/../../../../services/ReviewFetcher/GoodreadsReviewFetcher.php';
 
         // Create a GoodreadsBookMetadataFetcher instance for clean metadata (no VPS corruption)
         $metadataFetcher = new \Services\ReviewFetcher\GoodreadsBookMetadataFetcher($db);
 
-        // Check if we got the correct fetcher type
-        if (!$metadataFetcher) {
+        // Create a GoodreadsReviewFetcher instance for ISBN-based searches
+        $goodreadsFetcher = new \Services\ReviewFetcher\GoodreadsReviewFetcher($db, 1); // Source ID 1 for Goodreads
+
+        // Check if we got the correct fetcher types
+        if (!$metadataFetcher || !$goodreadsFetcher) {
             $detailedStatus['steps'][] = [
                 'name' => 'fetcher_initialization',
                 'status' => 'error',
-                'message' => "Failed to initialize Goodreads metadata fetcher"
+                'message' => "Failed to initialize Goodreads fetchers"
             ];
 
             $detailedStatus['status'] = 'error';
-            $detailedStatus['message'] = 'Failed to initialize Goodreads metadata fetcher';
+            $detailedStatus['message'] = 'Failed to initialize Goodreads fetchers';
 
             return [
                 '_status' => $detailedStatus
             ];
         }
 
-        // We're creating a GoodreadsReviewFetcher directly, so no need to check the class type
-
         $detailedStatus['steps'][] = [
             'name' => 'fetcher_initialization',
             'status' => 'success',
-            'message' => "Successfully initialized Goodreads review fetcher"
+            'message' => "Successfully initialized Goodreads fetchers"
         ];
 
         // Try to build a direct book URL if possible
@@ -160,7 +162,7 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null, $options = []
 
         // Merge provided options with defaults
         $options = array_merge($defaultOptions, $options);
-        
+
         // Log force parameter and options for debugging
         error_log("Force parameter value: " . ($options['force'] ? 'true' : 'false'));
         error_log("Goodreads fetch options: " . json_encode($options));

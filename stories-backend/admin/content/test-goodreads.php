@@ -3,8 +3,17 @@
  * Test script to verify Goodreads validation is working
  */
 
+// Add error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 require_once '../../../includes/db-connect.php';
 require_once 'book-import-validate/functions/data-enrichment-functions.php';
+
+// Test if function exists
+if (!function_exists('validateISBNOnGoodreads')) {
+    die('Error: validateISBNOnGoodreads function not found. Check file path.');
+}
 
 // Test ISBNs
 $testISBNs = [
@@ -20,15 +29,15 @@ echo "<p>Testing Goodreads validation function with various ISBNs...</p>";
 foreach ($testISBNs as $isbn) {
     echo "<div style='border: 1px solid #ddd; margin: 10px 0; padding: 10px;'>";
     echo "<h4>Testing ISBN: $isbn</h4>";
-    
+
     $startTime = microtime(true);
     $result = validateISBNOnGoodreads($isbn);
     $endTime = microtime(true);
     $duration = round(($endTime - $startTime) * 1000, 2);
-    
+
     $status = $result ? 'FOUND' : 'NOT FOUND';
     $color = $result ? 'green' : 'red';
-    
+
     echo "<p><strong>Result:</strong> <span style='color: $color;'>$status</span></p>";
     echo "<p><strong>Duration:</strong> {$duration}ms</p>";
     echo "<p><strong>Search URL:</strong> <a href='https://www.goodreads.com/search?q=" . urlencode($isbn) . "' target='_blank'>https://www.goodreads.com/search?q=" . urlencode($isbn) . "</a></p>";

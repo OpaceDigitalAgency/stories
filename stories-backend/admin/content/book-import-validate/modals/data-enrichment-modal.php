@@ -147,9 +147,11 @@
 // Global variables for enrichment modal
 let currentEnrichmentData = null;
 let currentBookId = null;
+let currentBookISBN = null;
 
 function openDataEnrichmentModal(bookId, title, author, currentISBN = '') {
     currentBookId = bookId;
+    currentBookISBN = currentISBN;
 
     // Reset modal state
     $('#enrichment-loading').show();
@@ -215,32 +217,17 @@ function displayEnrichmentResults(data) {
     $('#confidence-details').text(`Based on ${data.sources_checked.join(', ')}`);
     $('#sources-checked').text(`Sources: ${data.sources_checked.join(', ')}`);
 
-    // Show ISBN validation if applicable
-    if (data.isbn_validated !== undefined) {
-        $('#isbn-validation-status').show();
-        let isbnBadge = '';
+    // Always show ISBN validation status for enrichment
+    $('#isbn-validation-status').show();
 
-        switch (data.isbn_validated) {
-            case 'new':
-                isbnBadge = '<span class="badge badge-info" title="No current ISBN - this would be new data">New ISBN Found</span>';
-                break;
-            case 'exact_match':
-                isbnBadge = '<span class="badge badge-success" title="Found ISBN exactly matches your current ISBN">Exact Match</span>';
-                break;
-            case 'converted_match':
-                isbnBadge = '<span class="badge badge-success" title="Found ISBN is the ISBN-10/13 equivalent of your current ISBN">ISBN-10/13 Match</span>';
-                break;
-            case 'different':
-                isbnBadge = '<span class="badge badge-warning" title="Found ISBN is for a different edition of the same book">Different Edition Found</span>';
-                break;
-            default:
-                isbnBadge = '<span class="badge badge-secondary">Unknown</span>';
-        }
-
-        $('#isbn-status-badge').html(isbnBadge);
-
-        // Check Goodreads if we have an ISBN
-        checkGoodreadsStatus(data.fields.isbn13?.value || data.fields.isbn?.value);
+    // For enrichment, we're validating the current ISBN, not suggesting different ones
+    if (currentBookISBN) {
+        $('#isbn-status-badge').html('<span class="badge badge-info">Validating Current ISBN</span>');
+        // Check Goodreads using the current ISBN passed to the modal
+        checkGoodreadsStatus(currentBookISBN);
+    } else {
+        $('#isbn-status-badge').html('<span class="badge badge-warning">No ISBN to Validate</span>');
+        $('#goodreads-status-badge').html('<span class="badge badge-secondary">No ISBN</span>');
     }
 
     // Display enrichment fields

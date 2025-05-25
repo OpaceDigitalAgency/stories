@@ -11,9 +11,10 @@
  * @param string $isbn The ISBN to search for
  * @param string $title The book title
  * @param string $author The book author
+ * @param bool $isForEnrichment Whether this is for data enrichment (exact ISBN only) or validation (allow fallback)
  * @return array|null Book data or null if not found
  */
-function fetchGoogleBooksDataNew($isbn, $title, $author) {
+function fetchGoogleBooksDataNew($isbn, $title, $author, $isForEnrichment = false) {
     try {
         // Start timer for performance tracking
         $startTime = microtime(true);
@@ -86,9 +87,28 @@ function fetchGoogleBooksDataNew($isbn, $title, $author) {
             }
         }
 
-        // If no results from ISBN search, try title and author search
+        // For data enrichment, ONLY use exact ISBN matches - do not fall back to title/author searches
+        // This prevents returning data for different editions when enriching specific ISBNs
+        if (empty($isbnResults['items']) && $isForEnrichment) {
+            // Return null for enrichment if exact ISBN not found
+            $endTime = microtime(true);
+            $totalTime = round($endTime - $startTime, 2);
+
+            $status['status'] = 'error';
+            $status['message'] = "No exact ISBN match found in Google Books for enrichment";
+            $status['processing_time'] = $totalTime;
+            $status['steps'][] = [
+                'name' => 'enrichment_isbn_only',
+                'status' => 'error',
+                'message' => "Enrichment requires exact ISBN match - no title/author fallback"
+            ];
+
+            return null;
+        }
+
+        // For validation (not enrichment), allow title/author fallback
         $titleAuthorResults = null;
-        if (empty($isbnResults['items']) && (!empty($title) || !empty($author))) {
+        if (empty($isbnResults['items']) && !$isForEnrichment && (!empty($title) || !empty($author))) {
             $status['steps'][] = [
                 'name' => 'title_author_search',
                 'status' => 'in_progress',

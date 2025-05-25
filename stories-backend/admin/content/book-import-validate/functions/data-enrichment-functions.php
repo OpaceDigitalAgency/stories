@@ -24,13 +24,35 @@ function getEnrichedBookData($title, $author, $currentISBN = '') {
         'fields' => []
     ];
 
-    // Get data from Google Books
-    $googleResults = searchBooksByTitleAuthor($title, $author, 5);
-    $enrichedData['sources_checked'][] = 'google_books';
+    $googleResults = [];
+    $openLibraryResults = [];
 
-    // Get data from OpenLibrary
-    $openLibraryResults = searchOpenLibraryByTitleAuthor($title, $author, 5);
-    $enrichedData['sources_checked'][] = 'open_library';
+    // If we have an ISBN, use direct ISBN fetch for enrichment (exact matches only)
+    if (!empty($currentISBN)) {
+        // Clean the ISBN
+        $cleanISBN = preg_replace('/[^0-9X]/i', '', $currentISBN);
+
+        // Get data from Google Books using exact ISBN match
+        $googleData = fetchGoogleBooksDataNew($cleanISBN, $title, $author, true); // true = isForEnrichment
+        if ($googleData && (!isset($googleData['_status']['status']) || $googleData['_status']['status'] === 'success')) {
+            $googleResults = [$googleData];
+        }
+        $enrichedData['sources_checked'][] = 'google_books';
+
+        // Get data from OpenLibrary using exact ISBN match
+        $openLibraryData = fetchOpenLibraryDataNew($cleanISBN, $title, $author, true); // true = isForEnrichment
+        if ($openLibraryData && (!isset($openLibraryData['_status']['status']) || $openLibraryData['_status']['status'] === 'success')) {
+            $openLibraryResults = [$openLibraryData];
+        }
+        $enrichedData['sources_checked'][] = 'open_library';
+    } else {
+        // No ISBN provided, fall back to title/author search
+        $googleResults = searchBooksByTitleAuthor($title, $author, 5);
+        $enrichedData['sources_checked'][] = 'google_books';
+
+        $openLibraryResults = searchOpenLibraryByTitleAuthor($title, $author, 5);
+        $enrichedData['sources_checked'][] = 'open_library';
+    }
 
     // Combine and analyze results from both sources
     $combinedData = combineMultiSourceData($googleResults, $openLibraryResults, $title, $author, $currentISBN);

@@ -137,6 +137,18 @@ try {
         // Silently fail
     }
 
+    // Get price ranges from price_ranges table
+    $priceRanges = [];
+    try {
+        $priceRangeStmt = $db->query("SELECT range_name FROM price_ranges ORDER BY display_order ASC");
+        while ($row = $priceRangeStmt->fetch()) {
+            $priceRanges[] = $row['range_name'];
+        }
+    } catch (PDOException $e) {
+        // Silently fail - fallback to hardcoded ranges
+        $priceRanges = ['Under £5', '£5-£10', '£10-£15', '£15-£20', 'Over £20'];
+    }
+
     // Get directory item if editing
     if (isset($_GET['id'])) {
         try {
@@ -1174,9 +1186,15 @@ if (isset($_SESSION['error'])) {
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label class="form-label" for="price_range">Price Range</label>
-                                        <input type="text" id="price_range" name="price_range" class="form-control"
-                                            value="<?php echo htmlspecialchars($item['price_range'] ?? ''); ?>"
-                                            placeholder="Free, $10-50, Contact for pricing">
+                                        <select id="price_range" name="price_range" class="form-control">
+                                            <option value="">Select Price Range</option>
+                                            <?php foreach ($priceRanges as $priceRange): ?>
+                                                <option value="<?php echo htmlspecialchars($priceRange); ?>"
+                                                        <?php echo (isset($item['price_range']) && $item['price_range'] == $priceRange) ? 'selected' : ''; ?>>
+                                                    <?php echo htmlspecialchars($priceRange); ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
                                     </div>
                                 </div>
                             </div>
@@ -1492,6 +1510,23 @@ if (isset($_SESSION['error'])) {
                                                 echo "<option value=\"" . htmlspecialchars($value) . "\" $selected>" . htmlspecialchars($label) . "</option>";
                                             }
                                             ?>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label" for="book_price_range">Price Range</label>
+                                        <select id="book_price_range" name="book_price_range" class="form-control">
+                                            <option value="">Select Price Range</option>
+                                            <?php foreach ($priceRanges as $priceRange): ?>
+                                                <option value="<?php echo htmlspecialchars($priceRange); ?>"
+                                                        <?php echo (isset($bookData['price_range']) && $bookData['price_range'] == $priceRange) ? 'selected' : ''; ?>>
+                                                    <?php echo htmlspecialchars($priceRange); ?>
+                                                </option>
+                                            <?php endforeach; ?>
                                         </select>
                                     </div>
                                 </div>

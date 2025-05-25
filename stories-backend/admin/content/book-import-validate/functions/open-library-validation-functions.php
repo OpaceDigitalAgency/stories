@@ -11,9 +11,10 @@
  * @param string $isbn The ISBN to search for
  * @param string $title The book title
  * @param string $author The book author
+ * @param bool $isForEnrichment Whether this is for data enrichment (exact ISBN only) or validation (allow fallback)
  * @return array|null Book data or null if not found
  */
-function fetchOpenLibraryDataNew($isbn, $title, $author) {
+function fetchOpenLibraryDataNew($isbn, $title, $author, $isForEnrichment = false) {
     try {
         // Start timer for performance tracking
         $startTime = microtime(true);
@@ -117,8 +118,27 @@ function fetchOpenLibraryDataNew($isbn, $title, $author) {
         }
         $key = "ISBN:$isbn";
 
-        // If no results, try title and author search
-        if (empty($data[$key]) && (!empty($title) || !empty($author))) {
+        // For data enrichment, ONLY use exact ISBN matches - do not fall back to title/author searches
+        // This prevents returning data for different editions when enriching specific ISBNs
+        if (empty($data[$key]) && $isForEnrichment) {
+            // Return null for enrichment if exact ISBN not found
+            $endTime = microtime(true);
+            $totalTime = round($endTime - $startTime, 2);
+
+            $status['status'] = 'error';
+            $status['message'] = "No exact ISBN match found in Open Library for enrichment";
+            $status['processing_time'] = $totalTime;
+            $status['steps'][] = [
+                'name' => 'enrichment_isbn_only',
+                'status' => 'error',
+                'message' => "Enrichment requires exact ISBN match - no title/author fallback"
+            ];
+
+            return ['_status' => $status];
+        }
+
+        // For validation (not enrichment), allow title/author fallback
+        if (empty($data[$key]) && !$isForEnrichment && (!empty($title) || !empty($author))) {
             $query = '';
             if (!empty($title)) {
                 $query .= "title=" . urlencode($title);

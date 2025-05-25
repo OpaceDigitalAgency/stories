@@ -20,7 +20,7 @@ function getEnrichedBookData($title, $author, $currentISBN = '') {
     $enrichedData = [
         'sources_checked' => [],
         'confidence_score' => 0,
-        'isbn_validated' => false,
+        'isbn_validated' => 'unknown',
         'fields' => []
     ];
 
@@ -32,27 +32,124 @@ function getEnrichedBookData($title, $author, $currentISBN = '') {
     $openLibraryResults = searchOpenLibraryByTitleAuthor($title, $author, 5);
     $enrichedData['sources_checked'][] = 'open_library';
 
-    // Combine and analyze results
-    $allResults = array_merge($googleResults, $openLibraryResults);
+    // Combine and analyze results from both sources
+    $combinedData = combineMultiSourceData($googleResults, $openLibraryResults, $title, $author, $currentISBN);
 
-    if (empty($allResults)) {
-        return $enrichedData;
-    }
-
-    // Find the best match based on title/author similarity
-    $bestMatch = findBestDataMatch($allResults, $title, $author, $currentISBN);
-
-    if ($bestMatch) {
-        $enrichedData = extractEnrichmentData($bestMatch, $enrichedData);
-        $enrichedData['confidence_score'] = calculateConfidenceScore($bestMatch, $title, $author, $currentISBN);
-
-        // Validate ISBN if we have one
-        if (!empty($bestMatch['isbn13']) || !empty($bestMatch['isbn'])) {
-            $enrichedData['isbn_validated'] = validateISBNMatch($bestMatch, $currentISBN);
-        }
+    if (!empty($combinedData)) {
+        $enrichedData['fields'] = $combinedData['fields'];
+        $enrichedData['confidence_score'] = $combinedData['confidence_score'];
+        $enrichedData['isbn_validated'] = $combinedData['isbn_validated'];
     }
 
     return $enrichedData;
+}
+
+/**
+ * Combine data from multiple sources intelligently
+ */
+function combineMultiSourceData($googleResults, $openLibraryResults, $title, $author, $currentISBN) {
+    // Define all possible fields we want to enrich
+    $allFields = [
+        'isbn' => ['confidence' => 95, 'label' => 'ISBN-10'],
+        'isbn13' => ['confidence' => 95, 'label' => 'ISBN-13'],
+        'author' => ['confidence' => 90, 'label' => 'Author'],
+        'publisher' => ['confidence' => 85, 'label' => 'Publisher'],
+        'publication_date' => ['confidence' => 80, 'label' => 'Publication Date'],
+        'page_count' => ['confidence' => 75, 'label' => 'Page Count'],
+        'language' => ['confidence' => 70, 'label' => 'Language'],
+        'format' => ['confidence' => 70, 'label' => 'Format'],
+        'cover_url' => ['confidence' => 60, 'label' => 'Cover Image'],
+        'preview_link' => ['confidence' => 60, 'label' => 'Preview Link'],
+        'series' => ['confidence' => 50, 'label' => 'Series'],
+        'awards' => ['confidence' => 40, 'label' => 'Awards'],
+        'characters' => ['confidence' => 40, 'label' => 'Characters'],
+        'settings' => ['confidence' => 40, 'label' => 'Settings']
+    ];
+
+    // Find best matches from each source
+    $googleMatch = findBestDataMatch($googleResults, $title, $author, $currentISBN);
+    $openLibraryMatch = findBestDataMatch($openLibraryResults, $title, $author, $currentISBN);
+
+    $combinedFields = [];
+    $maxConfidence = 0;
+    $isbnValidated = 'unknown';
+
+    // Process each field
+    foreach ($allFields as $fieldName => $fieldConfig) {
+        $googleValue = $googleMatch[$fieldName] ?? null;
+        $openLibraryValue = $openLibraryMatch[$fieldName] ?? null;
+
+        // Check if we have data from either source
+        if (!empty($googleValue) || !empty($openLibraryValue)) {
+            if (!empty($googleValue) && !empty($openLibraryValue)) {
+                // Both sources have data - check if they match
+                if (normalizeForComparison($googleValue) === normalizeForComparison($openLibraryValue)) {
+                    // Values match - use combined source
+                    $combinedFields[$fieldName] = [
+                        'value' => preferEnglishVersion($googleValue, $openLibraryValue),
+                        'source' => 'google_books + open_library',
+                        'confidence' => min($fieldConfig['confidence'] + 10, 100), // Boost confidence for matching sources
+                        'label' => $fieldConfig['label']
+                    ];
+                } else {
+                    // Values differ - offer both options
+                    $combinedFields[$fieldName] = [
+                        'options' => [
+                            [
+                                'value' => $googleValue,
+                                'source' => 'google_books',
+                                'confidence' => $fieldConfig['confidence'],
+                                'label' => $fieldConfig['label']
+                            ],
+                            [
+                                'value' => $openLibraryValue,
+                                'source' => 'open_library',
+                                'confidence' => $fieldConfig['confidence'] - 5, // Slightly lower confidence for OpenLibrary
+                                'label' => $fieldConfig['label']
+                            ]
+                        ]
+                    ];
+                }
+            } else {
+                // Only one source has data
+                $value = !empty($googleValue) ? $googleValue : $openLibraryValue;
+                $source = !empty($googleValue) ? 'google_books' : 'open_library';
+                $confidence = !empty($googleValue) ? $fieldConfig['confidence'] : $fieldConfig['confidence'] - 5;
+
+                $combinedFields[$fieldName] = [
+                    'value' => $value,
+                    'source' => $source,
+                    'confidence' => $confidence,
+                    'label' => $fieldConfig['label']
+                ];
+            }
+        } else {
+            // No data from either source - show as unknown
+            $combinedFields[$fieldName] = [
+                'value' => null,
+                'source' => 'unknown',
+                'confidence' => 0,
+                'label' => $fieldConfig['label'],
+                'status' => 'unknown'
+            ];
+        }
+
+        // Track maximum confidence
+        if (isset($combinedFields[$fieldName]['confidence'])) {
+            $maxConfidence = max($maxConfidence, $combinedFields[$fieldName]['confidence']);
+        }
+    }
+
+    // Validate ISBN if we have current ISBN
+    if (!empty($currentISBN)) {
+        $isbnValidated = validateCombinedISBN($combinedFields, $currentISBN);
+    }
+
+    return [
+        'fields' => $combinedFields,
+        'confidence_score' => $maxConfidence,
+        'isbn_validated' => $isbnValidated
+    ];
 }
 
 /**
@@ -356,4 +453,66 @@ function validateISBNOnGoodreads($isbn) {
 
     return $hasResults;
 }
-?>
+
+/**
+ * Normalize values for comparison
+ */
+function normalizeForComparison($value) {
+    if (is_string($value)) {
+        return strtolower(trim(preg_replace('/[^a-zA-Z0-9\s]/', '', $value)));
+    }
+    return $value;
+}
+
+/**
+ * Prefer English version when comparing values
+ */
+function preferEnglishVersion($value1, $value2) {
+    // Simple heuristic: prefer the value that doesn't contain non-English characters
+    $englishPattern = '/^[a-zA-Z0-9\s\-\.\,\:\;\!\?\(\)\'\"]+$/';
+
+    if (preg_match($englishPattern, $value1) && !preg_match($englishPattern, $value2)) {
+        return $value1;
+    } elseif (!preg_match($englishPattern, $value1) && preg_match($englishPattern, $value2)) {
+        return $value2;
+    }
+
+    // If both or neither match English pattern, prefer Google Books (first value)
+    return $value1;
+}
+
+/**
+ * Validate ISBN against combined data
+ */
+function validateCombinedISBN($combinedFields, $currentISBN) {
+    $currentClean = preg_replace('/[^0-9X]/i', '', $currentISBN);
+
+    // Check if we have ISBN data from sources
+    $isbn10 = $combinedFields['isbn']['value'] ?? null;
+    $isbn13 = $combinedFields['isbn13']['value'] ?? null;
+
+    if ($isbn10) {
+        $isbn10Clean = preg_replace('/[^0-9X]/i', '', $isbn10);
+        if ($isbn10Clean === $currentClean) {
+            return 'exact_match';
+        }
+    }
+
+    if ($isbn13) {
+        $isbn13Clean = preg_replace('/[^0-9X]/i', '', $isbn13);
+        if ($isbn13Clean === $currentClean) {
+            return 'exact_match';
+        }
+    }
+
+    // Check if current ISBN can be converted to match
+    if (strlen($currentClean) === 10 && $isbn13) {
+        $convertedISBN13 = convertToISBN13($currentClean);
+        $isbn13Clean = preg_replace('/[^0-9X]/i', '', $isbn13);
+        if ($convertedISBN13 === $isbn13Clean) {
+            return 'convertible_match';
+        }
+    }
+
+    return 'different';
+}

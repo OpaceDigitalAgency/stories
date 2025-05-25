@@ -228,33 +228,39 @@ function handleCheckGoodreadsISBN() {
 }
 
 /**
- * Filter out fields that aren't relevant for enrichment
+ * Process enrichment fields for display - show ALL fields including unknown ones
  */
 function filterRelevantFields($fields, $currentISBN) {
-    $filtered = [];
+    // Don't filter anything - show all fields including unknown ones
+    // This gives users complete visibility into what data is available
 
     foreach ($fields as $fieldName => $fieldData) {
-        $value = $fieldData['value'];
-
-        // Skip empty values
-        if (empty($value)) {
-            continue;
+        // Ensure all fields have required properties
+        if (!isset($fieldData['label'])) {
+            $fields[$fieldName]['label'] = ucfirst(str_replace('_', ' ', $fieldName));
         }
 
-        // IMPORTANT: Skip ISBN fields entirely - we only want to validate our current ISBN, not suggest different ones
-        if ($fieldName === 'isbn' || $fieldName === 'isbn13') {
-            continue;
+        // Mark fields as unknown if they have no value
+        if (empty($fieldData['value']) && !isset($fieldData['status'])) {
+            $fields[$fieldName]['status'] = 'unknown';
+            $fields[$fieldName]['value'] = null;
         }
 
-        // Skip very low confidence fields
-        if ($fieldData['confidence'] < 30) {
-            continue;
+        // Show ISBN fields when they could be useful
+        if (($fieldName === 'isbn' || $fieldName === 'isbn13') && !empty($currentISBN)) {
+            // Only show ISBN fields if we're missing the complementary one
+            $currentLength = strlen(preg_replace('/[^0-9X]/i', '', $currentISBN));
+            if ($fieldName === 'isbn' && $currentLength === 13) {
+                // Show ISBN-10 option when we have ISBN-13
+                $fields[$fieldName]['helpful'] = true;
+            } elseif ($fieldName === 'isbn13' && $currentLength === 10) {
+                // Show ISBN-13 option when we have ISBN-10
+                $fields[$fieldName]['helpful'] = true;
+            }
         }
-
-        $filtered[$fieldName] = $fieldData;
     }
 
-    return $filtered;
+    return $fields;
 }
 
 /**

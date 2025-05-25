@@ -717,11 +717,11 @@ $(document).ready(function() {
                     success: function(response) {
                         console.log('Goodreads response for ISBN ' + isbn + ':', response);
                         if (response.success && response.exists) {
-                            $statusElement.html('<span class="badge badge-success" style="background-color: #28a745; border: none;"><i class="fas fa-book"></i> Found</span>');
+                            $statusElement.html('<span class="badge" style="background-color: #28a745; color: white; border: none;"><i class="fas fa-book"></i> Goodreads</span>');
                         } else if (response.success) {
-                            $statusElement.html('<span class="badge badge-danger" style="background-color: #dc3545; border: none;"><i class="fas fa-times"></i> Not Found</span>');
+                            $statusElement.html('<span class="badge" style="background-color: #dc3545; color: white; border: none;"><i class="fas fa-times"></i> Not on Goodreads</span>');
                         } else {
-                            $statusElement.html('<span class="badge badge-warning" style="background-color: #ffc107; border: none;"><i class="fas fa-exclamation-triangle"></i> Error</span>');
+                            $statusElement.html('<span class="badge" style="background-color: #ffc107; color: white; border: none;"><i class="fas fa-exclamation-triangle"></i> Error</span>');
                             console.error('Goodreads validation error:', response.message);
                         }
                     },

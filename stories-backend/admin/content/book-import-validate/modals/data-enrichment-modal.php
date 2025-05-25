@@ -257,47 +257,22 @@ function displayEnrichmentFields(fields) {
     const container = $('#enrichment-fields');
     container.empty();
 
-    const fieldLabels = {
-        'isbn': 'ISBN-10',
-        'isbn13': 'ISBN-13',
-        'author': 'Author',
-        'publisher': 'Publisher',
-        'publication_date': 'Publication Date',
-        'page_count': 'Page Count',
-        'language': 'Language',
-        'format': 'Format',
-        'cover_url': 'Cover Image',
-        'preview_link': 'Preview Link',
-        'series': 'Series'
-    };
+    // Define all possible fields in order
+    const fieldOrder = ['isbn', 'isbn13', 'author', 'publisher', 'publication_date', 'page_count', 'language', 'format', 'cover_url', 'preview_link', 'series', 'awards', 'characters', 'settings'];
 
-    Object.keys(fields).forEach(fieldName => {
+    fieldOrder.forEach(fieldName => {
         const field = fields[fieldName];
-        const label = fieldLabels[fieldName] || fieldName;
-        const confidence = field.confidence;
-        const confidenceClass = confidence >= 80 ? 'confidence-high' :
-                               confidence >= 60 ? 'confidence-medium' : 'confidence-low';
+        if (!field) return; // Skip if field doesn't exist
 
-        const fieldHtml = `
-            <div class="col-md-6">
-                <div class="enrichment-field" data-field="${fieldName}">
-                    <div class="form-check">
-                        <input class="form-check-input field-checkbox" type="checkbox"
-                               id="field_${fieldName}" name="fields[]" value="${fieldName}">
-                        <label class="form-check-label font-weight-bold" for="field_${fieldName}">
-                            ${label}
-                            <span class="badge badge-secondary source-badge ml-2">${field.source}</span>
-                            <span class="field-confidence ${confidenceClass} ml-1">(${confidence}%)</span>
-                        </label>
-                    </div>
-                    <div class="new-value mt-2">
-                        <strong>New Value:</strong> ${formatFieldValue(fieldName, field.value)}
-                    </div>
-                </div>
-            </div>
-        `;
+        const label = field.label || fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        const isUnknown = field.status === 'unknown';
 
-        container.append(fieldHtml);
+        // Handle fields with multiple source options
+        if (field.options) {
+            container.append(createMultiSourceField(fieldName, field, label));
+        } else {
+            container.append(createSingleSourceField(fieldName, field, label, isUnknown));
+        }
     });
 
     // Add change handlers
@@ -322,6 +297,75 @@ function displayEnrichmentFields(fields) {
     $('#deselect-all-fields').off('click').on('click', function() {
         $('.field-checkbox').prop('checked', false).trigger('change');
     });
+}
+
+function createSingleSourceField(fieldName, field, label, isUnknown) {
+    const confidence = field.confidence || 0;
+    const source = field.source || 'unknown';
+    const displayValue = isUnknown ? '<span class="text-muted">Unknown</span>' : formatFieldValue(fieldName, field.value);
+
+    const confidenceClass = confidence >= 80 ? 'success' : confidence >= 60 ? 'warning' : confidence >= 30 ? 'info' : 'secondary';
+    const sourceClass = source.includes('+') ? 'primary' : source === 'google_books' ? 'success' : source === 'open_library' ? 'info' : 'secondary';
+
+    return `
+        <div class="col-md-6 mb-3">
+            <div class="enrichment-field" data-field="${fieldName}">
+                <div class="form-check">
+                    <input class="form-check-input field-checkbox" type="checkbox"
+                           id="field_${fieldName}" name="fields[]" value="${fieldName}" ${isUnknown ? 'disabled' : ''}>
+                    <label class="form-check-label font-weight-bold" for="field_${fieldName}">
+                        ${label}
+                        <span class="badge badge-${sourceClass} ml-2">${source}</span>
+                        ${!isUnknown ? `<span class="badge badge-${confidenceClass} ml-1">(${confidence}%)</span>` : ''}
+                    </label>
+                </div>
+                <div class="mt-2 p-2 ${isUnknown ? 'bg-light text-muted' : 'bg-light'} rounded">
+                    <strong>New Value:</strong> ${displayValue}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function createMultiSourceField(fieldName, field, label) {
+    let optionsHtml = '';
+    field.options.forEach((option, index) => {
+        const confidence = option.confidence || 0;
+        const source = option.source || 'unknown';
+        const displayValue = formatFieldValue(fieldName, option.value);
+        const confidenceClass = confidence >= 80 ? 'success' : confidence >= 60 ? 'warning' : confidence >= 30 ? 'info' : 'secondary';
+        const sourceClass = source === 'google_books' ? 'success' : 'info';
+
+        optionsHtml += `
+            <div class="form-check mt-2">
+                <input class="form-check-input" type="radio" name="field_${fieldName}_option" id="field_${fieldName}_${index}" value="${index}">
+                <label class="form-check-label" for="field_${fieldName}_${index}">
+                    <span class="badge badge-${sourceClass}">${source}</span>
+                    <span class="badge badge-${confidenceClass} ml-1">(${confidence}%)</span>
+                    <div class="mt-1">${displayValue}</div>
+                </label>
+            </div>
+        `;
+    });
+
+    return `
+        <div class="col-md-12 mb-3">
+            <div class="enrichment-field" data-field="${fieldName}">
+                <div class="form-check">
+                    <input class="form-check-input field-checkbox" type="checkbox"
+                           id="field_${fieldName}" name="fields[]" value="${fieldName}">
+                    <label class="form-check-label font-weight-bold" for="field_${fieldName}">
+                        ${label}
+                        <span class="badge badge-warning ml-2">Multiple Sources</span>
+                    </label>
+                </div>
+                <div class="mt-2 p-2 bg-light rounded">
+                    <strong>Choose Source:</strong>
+                    ${optionsHtml}
+                </div>
+            </div>
+        </div>
+    `;
 }
 
 function formatFieldValue(fieldName, value) {
@@ -354,8 +398,8 @@ function checkGoodreadsStatus(isbn) {
         dataType: 'json',
         success: function(response) {
             const badge = response.success && response.exists ?
-                '<span class="badge badge-success">Found</span>' :
-                '<span class="badge badge-warning">Not Found</span>';
+                '<span class="badge" style="background-color: #28a745; color: white; border: none;"><i class="fas fa-book"></i> Goodreads</span>' :
+                '<span class="badge" style="background-color: #dc3545; color: white; border: none;"><i class="fas fa-times"></i> Not on Goodreads</span>';
             $('#goodreads-status-badge').html(badge);
         },
         error: function() {
@@ -420,8 +464,10 @@ function applyEnrichmentChanges(bookId, selectedFields) {
                 // Show success message
                 showAlert('success', `Successfully updated ${Object.keys(selectedFields).length} field(s)!`);
 
-                // Refresh the page or update the row
-                location.reload();
+                // Force page refresh with cache busting
+                setTimeout(() => {
+                    window.location.href = window.location.href.split('?')[0] + '?_refresh=' + Date.now();
+                }, 500);
             } else {
                 showAlert('danger', 'Error applying changes: ' + (response.message || 'Unknown error'));
                 $('#apply-enrichment-btn').prop('disabled', false).html('<i class="fas fa-save"></i> Apply Selected Changes');

@@ -314,6 +314,27 @@ function displayEnrichmentFields(fields) {
     // Add Select All / Deselect All handlers
     $('#select-all-fields').off('click').on('click', function() {
         $('.field-checkbox').prop('checked', true).trigger('change');
+
+        // Auto-select highest confidence options for multi-source fields
+        Object.keys(currentEnrichmentData.fields).forEach(fieldName => {
+            const fieldData = currentEnrichmentData.fields[fieldName];
+
+            if (fieldData && fieldData.options) {
+                // Find the option with highest confidence
+                let highestConfidence = 0;
+                let bestOptionIndex = 0;
+
+                fieldData.options.forEach((option, index) => {
+                    if (option.confidence > highestConfidence) {
+                        highestConfidence = option.confidence;
+                        bestOptionIndex = index;
+                    }
+                });
+
+                // Select the best option
+                $(`input[name="field_${fieldName}_option"][value="${bestOptionIndex}"]`).prop('checked', true);
+            }
+        });
     });
 
     $('#deselect-all-fields').off('click').on('click', function() {
@@ -545,7 +566,7 @@ $('#fix-all-btn').click(function() {
         }
     });
 
-    // Apply all changes
+    // Apply all changes immediately without user intervention
     applyEnrichmentChanges(currentBookId, selectedFields);
 });
 

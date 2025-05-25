@@ -65,6 +65,8 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
         'series' => ['confidence' => 50, 'label' => 'Series'],
         'categories' => ['confidence' => 45, 'label' => 'Categories/Genres'],
         'subjects' => ['confidence' => 45, 'label' => 'Subjects/Tags'],
+        'tags' => ['confidence' => 45, 'label' => 'Tags'],
+        'genres' => ['confidence' => 45, 'label' => 'Genres'],
         'ratings_average' => ['confidence' => 40, 'label' => 'Average Rating'],
         'ratings_count' => ['confidence' => 40, 'label' => 'Rating Count'],
         // Fields that don't exist in APIs - always show as unknown
@@ -514,6 +516,35 @@ function extractFieldValue($match, $fieldName) {
                 return implode(', ', array_slice($match['subjects'], 0, 10)); // Limit to first 10
             } elseif (isset($match['subject_facet']) && is_array($match['subject_facet'])) {
                 return implode(', ', array_slice($match['subject_facet'], 0, 10));
+            }
+            break;
+
+        case 'tags':
+            // Map from categories or subjects for tags
+            if (isset($match['categories']) && is_array($match['categories'])) {
+                return implode(', ', array_slice($match['categories'], 0, 8));
+            } elseif (isset($match['subjects']) && is_array($match['subjects'])) {
+                return implode(', ', array_slice($match['subjects'], 0, 8));
+            }
+            break;
+
+        case 'genres':
+            // Map from categories for genres (filter for fiction/genre terms)
+            if (isset($match['categories']) && is_array($match['categories'])) {
+                $genreTerms = array_filter($match['categories'], function($cat) {
+                    return stripos($cat, 'fiction') !== false ||
+                           stripos($cat, 'fantasy') !== false ||
+                           stripos($cat, 'mystery') !== false ||
+                           stripos($cat, 'romance') !== false ||
+                           stripos($cat, 'thriller') !== false ||
+                           stripos($cat, 'horror') !== false ||
+                           stripos($cat, 'adventure') !== false ||
+                           stripos($cat, 'drama') !== false ||
+                           stripos($cat, 'comedy') !== false;
+                });
+                if (!empty($genreTerms)) {
+                    return implode(', ', array_slice($genreTerms, 0, 5));
+                }
             }
             break;
 

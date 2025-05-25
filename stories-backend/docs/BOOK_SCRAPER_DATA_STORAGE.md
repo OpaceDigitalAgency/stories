@@ -1,0 +1,137 @@
+# BOOK_SCRAPER_DATA_STORAGE
+
+This document outlines the data storage architecture, enrichment logic, field mappings, and external API integration used in our book scraper and enrichment pipeline. It complements existing documentation like `REVIEW_SYSTEM_README.md` and `VPS_REVIEW_SCRAPER_IMPLEMENTATION.md`.
+
+---
+
+## 📘 Overview
+
+The system enriches book data using:
+- **Google Books API**: `https://www.googleapis.com/books/v1/volumes?q=isbn:{ISBN}`
+- **Open Library API**: `https://openlibrary.org/search.json?q={ISBN}&fields=*,availability&limit=1`
+
+Each book record is imported or enriched by matching ISBNs and retrieving relevant metadata.
+
+---
+
+## 🗂️ Database Table and API Field Mapping
+
+```markdown
++--------------------------+---------------------------+-------------------------------------------+-------------------------------------------+
+| Table                   | Column                    | Google Books API                          | Open Library API                          |
++==========================+===========================+===========================================+===========================================+
+| directory_items          | id                        | (internal ID)                             | (internal ID)                             |
+| directory_items          | title                     | volumeInfo.title                          | title                                     |
+| directory_items          | isbn                      | industryIdentifiers[type=ISBN_10]         | isbn[] (10-digit)                         |
+| directory_items          | isbn13                    | industryIdentifiers[type=ISBN_13]         | isbn[] (13-digit)                         |
+| directory_items          | author                    | volumeInfo.authors[0]                     | author_name[0]                            |
+| directory_items          | publisher                 | volumeInfo.publisher                      | publisher[0]                              |
+| directory_items          | publication_date          | volumeInfo.publishedDate                  | first_publish_year / publish_date[0]      |
+| directory_items          | page_count                | volumeInfo.pageCount                      | number_of_pages_median                    |
+| directory_items          | price_range               | saleInfo.listPrice.amount (if for sale)   | (not available)                           |
+| directory_items          | age_range                 | maturityRating → inferred                 | subject_facet → e.g. "Ages 9-12"          |
+| directory_items          | reading_level             | (not available)                           | lexile[]                                  |
+| directory_items          | language                  | volumeInfo.language                       | language[]                                |
+| directory_items          | format                    | printType                                 | format[]                                  |
+| directory_items          | cover_url                 | imageLinks.thumbnail                      | covers.openlibrary.org via cover_i        |
+| directory_items          | purchase_links            | constructed from ISBN (Amazon, etc)       | constructed from ISBN                     |
+| directory_items          | preview_link              | volumeInfo.previewLink                    | availability.is_previewable + work link   |
+| directory_items          | metadata                  | entire Google response                    | entire Open Library response              |
+| directory_items          | series                    | (not available)                           | (not available)                           |
+| directory_items          | publisher_id              | (internal mapping, not in API)            | (not in API)                              |
+| directory_items          | internet_archive_id       | (not available)                           | lending_identifier_s or ia[0]             |
+| directory_items          | awards                    | (not available)                           | subject_facet → award:*                   |
+| directory_items          | characters                | (not available)                           | person[]                                  |
+| directory_items          | settings                  | (not available)                           | place[]                                   |
+| directory_items          | last_validated            | (timestamp at import)                     | (timestamp at import)                     |
+| directory_items          | validation_status         | derived from match logic                  | derived from match logic                  |
++--------------------------+---------------------------+-------------------------------------------+-------------------------------------------+
+
+| directory_item_tags      | tag_id                    | categories[] (mapped)                     | subject[], subject_key[], subject_facet[] |
++--------------------------+---------------------------+-------------------------------------------+-------------------------------------------+
+
+| item_tags                | tag_id                    | categories[] / keywords                   | subject_key[]                             |
++--------------------------+---------------------------+-------------------------------------------+-------------------------------------------+
+
+| book_authors             | author_id                 | authors[].name (no ID)                    | author_key[] + author_name[]              |
+| book_authors             | directory_item_id         | matched by ISBN/title                     | matched by ISBN/title                     |
++--------------------------+---------------------------+-------------------------------------------+-------------------------------------------+
+
+| authors                  | id                        | (not available)                           | author_key[]                              |
+| authors                  | name                      | authors[0]                                | author_name[0]                            |
+| authors                  | slug                      | (not available)                           | (not available)                           |
++--------------------------+---------------------------+-------------------------------------------+-------------------------------------------+
+
+| age_ranges               | range_name                | maturityRating → inferred                 | subject_facet[] (children, tweens, YA)    |
++--------------------------+---------------------------+-------------------------------------------+-------------------------------------------+
+```
+
+---
+
+## 🧠 Metadata Field Logic
+
+- `metadata`: stores full JSON response from each API under:
+  ```json
+  {
+    "google_books": { ... },
+    "open_library": { ... }
+  }
+  ```
+
+---
+
+## 🛒 Purchase Link Generation
+
+Links are created dynamically based on ISBN-13 using the following logic:
+
+```json
+{
+  "amazon": "https://www.amazon.com/dp/{isbn13}/",
+  "goodreads": "https://www.goodreads.com/book/isbn/{isbn13}",
+  "google_books": "https://books.google.com/books?isbn={isbn13}"
+}
+```
+
+These can be embedded into UI buttons. In the future, prices may be scraped via Google results or pulled from APIs.
+
+---
+
+## 🧾 Example URLs
+
+- Google Books: `https://www.googleapis.com/books/v1/volumes?q=isbn:9780380977789`
+- Open Library: `https://openlibrary.org/search.json?q=9780380977789&fields=*,availability&limit=1`
+- Amazon: `https://www.amazon.com/dp/9780380977789/`
+- Goodreads: `https://www.goodreads.com/book/isbn/9780380977789`
+
+---
+
+## 🚦 Status Flags
+
+- `validation_status`: enum('pending', 'valid', 'invalid', 'partial')
+- `last_validated`: set during enrichment run
+
+---
+
+## 📋 Field Fallback Priorities
+
+| Field              | Priority Order                            |
+|-------------------|--------------------------------------------|
+| Title             | Google → Open Library                      |
+| Author            | Google → Open Library                      |
+| ISBN/ISBN-13      | Google → Open Library                      |
+| Publisher         | Google → Open Library                      |
+| Description       | Google → Open Library                      |
+| Page Count        | Google → Open Library                      |
+| Publication Date  | Google → Open Library                      |
+| Format            | Open Library → Google                      |
+| Cover URL         | Google → Open Library                      |
+| Maturity / Age    | Google → Open Library (tags)               |
+| Tags & Genres     | Open Library + Google categories           |
+
+---
+
+## 🧩 Enhancement Suggestions
+
+- Enable price scraping via Google or Amazon for quick enrichment.
+- Use affiliate tagging for monetised Amazon links.
+- Expand metadata to store enrichment logs (source, confidence, etc.).

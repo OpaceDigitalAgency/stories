@@ -2,6 +2,11 @@
 
 A platform for discovering and sharing children's books and stories.
 
+# Docs and readme file locations
+
+All docs are stored in the sub-folder stories-backend/docs
+
+
 ## VPS Server Configuration
 
 The VPS server (37.27.31.107) is configured to:

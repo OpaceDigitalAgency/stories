@@ -70,7 +70,7 @@ function getEnrichedBookData($title, $author, $currentISBN = '') {
  * Combine data from multiple sources intelligently
  */
 function combineMultiSourceData($googleResults, $openLibraryResults, $title, $author, $currentISBN) {
-    // Define fields that match actual database structure
+    // Define fields that match actual database structure with enhanced mapping
     $allFields = [
         'isbn' => ['confidence' => 95, 'label' => 'ISBN-10'],
         'isbn13' => ['confidence' => 95, 'label' => 'ISBN-13'],
@@ -85,13 +85,16 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
         'series' => ['confidence' => 50, 'label' => 'Series'],
         'tags' => ['confidence' => 45, 'label' => 'Tags'], // Maps from API categories/subjects
         'maturity_rating' => ['confidence' => 55, 'label' => 'Maturity Rating'], // Maps to age_range
-        // Fields that don't exist in APIs - always show as unknown
-        'price_range' => ['confidence' => 0, 'label' => 'Price Range'],
-        'age_range' => ['confidence' => 0, 'label' => 'Age Range'],
-        'reading_level' => ['confidence' => 0, 'label' => 'Reading Level'],
-        'awards' => ['confidence' => 0, 'label' => 'Awards'],
-        'characters' => ['confidence' => 0, 'label' => 'Characters'],
-        'settings' => ['confidence' => 0, 'label' => 'Settings']
+        'age_range' => ['confidence' => 50, 'label' => 'Age Range'], // Derived from maturity_rating and subjects
+        'reading_level' => ['confidence' => 40, 'label' => 'Reading Level'], // From OpenLibrary lexile
+        'average_rating' => ['confidence' => 60, 'label' => 'Average Rating'], // From OpenLibrary ratings
+        'rating_count' => ['confidence' => 60, 'label' => 'Rating Count'], // From OpenLibrary ratings
+        'internet_archive_id' => ['confidence' => 70, 'label' => 'Internet Archive ID'], // From OpenLibrary
+        'awards' => ['confidence' => 45, 'label' => 'Awards'], // From OpenLibrary subject_facet
+        'characters' => ['confidence' => 40, 'label' => 'Characters'], // From OpenLibrary person
+        'settings' => ['confidence' => 40, 'label' => 'Settings'], // From OpenLibrary place
+        // Fields that require external sources
+        'price_range' => ['confidence' => 0, 'label' => 'Price Range']
     ];
 
     // Find best matches from each source
@@ -577,6 +580,104 @@ function extractFieldValue($match, $fieldName) {
             // Ensure numeric values
             if (isset($match[$fieldName]) && is_numeric($match[$fieldName])) {
                 return $match[$fieldName];
+            }
+            break;
+
+        case 'age_range':
+            // Derive age range from maturity rating and subjects
+            $ageRange = null;
+
+            // First try maturity rating
+            if (isset($match['maturity_rating'])) {
+                $ageRange = mapMaturityRatingToAgeRange($match['maturity_rating']);
+            }
+
+            // Then try OpenLibrary subject_facet for age-specific subjects
+            if (!$ageRange && isset($match['subject_facet']) && is_array($match['subject_facet'])) {
+                foreach ($match['subject_facet'] as $subject) {
+                    if (stripos($subject, 'Ages 9-12') !== false) {
+                        $ageRange = '9-12';
+                        break;
+                    } elseif (stripos($subject, 'Tweens') !== false) {
+                        $ageRange = '8-12';
+                        break;
+                    } elseif (stripos($subject, 'Young Adult') !== false) {
+                        $ageRange = '12+';
+                        break;
+                    } elseif (stripos($subject, 'Children\'s Books') !== false) {
+                        $ageRange = '6-12';
+                        break;
+                    }
+                }
+            }
+
+            return $ageRange;
+
+        case 'reading_level':
+            // Get reading level from OpenLibrary lexile data
+            if (isset($match['lexile']) && is_array($match['lexile']) && !empty($match['lexile'])) {
+                return $match['lexile'][0] . 'L';
+            }
+            break;
+
+        case 'average_rating':
+            // Get average rating from OpenLibrary
+            if (isset($match['ratings_average'])) {
+                return round($match['ratings_average'], 2);
+            }
+            break;
+
+        case 'rating_count':
+            // Get rating count from OpenLibrary
+            if (isset($match['ratings_count'])) {
+                return $match['ratings_count'];
+            }
+            break;
+
+        case 'internet_archive_id':
+            // Get Internet Archive ID from OpenLibrary
+            if (isset($match['lending_identifier_s'])) {
+                return $match['lending_identifier_s'];
+            } elseif (isset($match['ia']) && is_array($match['ia']) && !empty($match['ia'])) {
+                return $match['ia'][0];
+            }
+            break;
+
+        case 'awards':
+            // Extract awards from OpenLibrary subject_facet
+            $awards = [];
+            if (isset($match['subject_facet']) && is_array($match['subject_facet'])) {
+                foreach ($match['subject_facet'] as $subject) {
+                    if (stripos($subject, 'award:') === 0) {
+                        // Transform "award:hugo_award=2003" to "Hugo Award (2003)"
+                        $awardParts = explode('=', str_replace('award:', '', $subject));
+                        if (count($awardParts) === 2) {
+                            $awardName = ucwords(str_replace('_', ' ', $awardParts[0]));
+                            $awardYear = $awardParts[1];
+                            $awards[] = "$awardName ($awardYear)";
+                        }
+                    } elseif (stripos($subject, 'Hugo Award') !== false ||
+                             stripos($subject, 'Newbery') !== false ||
+                             stripos($subject, 'Caldecott') !== false) {
+                        $awards[] = $subject;
+                    }
+                }
+            }
+            return !empty($awards) ? implode(', ', array_unique($awards)) : null;
+
+        case 'characters':
+            // Get characters from OpenLibrary person data
+            if (isset($match['person']) && is_array($match['person'])) {
+                return implode(', ', array_slice($match['person'], 0, 5));
+            }
+            break;
+
+        case 'settings':
+            // Get settings from OpenLibrary place data
+            if (isset($match['place']) && is_array($match['place'])) {
+                return implode(', ', array_slice($match['place'], 0, 3));
+            } elseif (isset($match['place_facet']) && is_array($match['place_facet'])) {
+                return implode(', ', array_slice($match['place_facet'], 0, 3));
             }
             break;
 

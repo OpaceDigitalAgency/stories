@@ -1,4 +1,33 @@
 <!-- Data Enrichment Modal -->
+<style>
+/* Pale RAG color backgrounds for enrichment fields */
+.bg-light-success {
+    background-color: #d4edda !important; /* Pale green */
+}
+.bg-light-warning {
+    background-color: #fff3cd !important; /* Pale amber */
+}
+.bg-light-danger {
+    background-color: #f8d7da !important; /* Pale red */
+}
+.border-success {
+    border: 2px solid #28a745 !important;
+}
+.border-warning {
+    border: 2px solid #ffc107 !important;
+}
+.border-danger {
+    border: 2px solid #dc3545 !important;
+}
+.enrichment-field {
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+.enrichment-field:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+</style>
+
 <div class="modal fade" id="dataEnrichmentModal" tabindex="-1" role="dialog" aria-labelledby="dataEnrichmentModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content">
@@ -262,7 +291,8 @@ function displayEnrichmentFields(fields) {
     const fieldOrder = [
         'isbn', 'isbn13', 'author', 'publisher', 'publication_date', 'page_count',
         'language', 'format', 'cover_url', 'preview_link', 'price_range', 'age_range',
-        'reading_level', 'series', 'awards', 'characters', 'settings', 'tags'
+        'reading_level', 'maturity_rating', 'average_rating', 'rating_count',
+        'internet_archive_id', 'series', 'awards', 'characters', 'settings', 'tags'
     ];
 
     // First, display fields in preferred order
@@ -359,19 +389,25 @@ function createSingleSourceField(fieldName, field, label, isUnknown) {
     const confidenceClass = confidence >= 80 ? 'success' : confidence >= 60 ? 'warning' : confidence >= 30 ? 'info' : 'secondary';
     const sourceClass = source.includes('+') ? 'primary' : source === 'google_books' ? 'success' : source === 'open_library' ? 'info' : 'secondary';
 
+    // Determine benefit level for color coding
+    const benefitLevel = determineBenefitLevel(field.current_value, newData.value, isUnknown);
+    const benefitClass = getBenefitColorClass(benefitLevel);
+    const benefitBorder = getBenefitBorderClass(benefitLevel);
+
     return `
         <div class="col-md-6 mb-3">
-            <div class="enrichment-field" data-field="${fieldName}">
+            <div class="enrichment-field ${benefitBorder}" data-field="${fieldName}">
                 <div class="form-check">
                     <input class="form-check-input field-checkbox" type="checkbox"
-                           id="field_${fieldName}" name="fields[]" value="${fieldName}" ${isUnknown ? 'disabled' : ''}>
+                           id="field_${fieldName}" name="fields[]" value="${fieldName}" ${isUnknown || benefitLevel === 'not_beneficial' ? 'disabled' : ''}>
                     <label class="form-check-label font-weight-bold" for="field_${fieldName}">
                         ${label}
                         <span class="badge badge-${sourceClass} ml-2">${source}</span>
                         ${!isUnknown ? `<span class="badge badge-${confidenceClass} ml-1">(${confidence}%)</span>` : ''}
+                        ${getBenefitIndicator(benefitLevel)}
                     </label>
                 </div>
-                <div class="mt-2 p-2 ${isUnknown ? 'bg-light text-muted' : 'bg-light'} rounded">
+                <div class="mt-2 p-2 ${benefitClass} rounded">
                     <div class="mb-2">
                         <strong>Current Value:</strong> ${formatCurrentValue(fieldName, field.current_value)}
                     </div>
@@ -385,6 +421,21 @@ function createSingleSourceField(fieldName, field, label, isUnknown) {
 function createMultiSourceField(fieldName, field, label) {
     let optionsHtml = '';
     const options = field.new_data.options || [];
+
+    // Determine overall benefit level for multi-source field
+    let bestBenefitLevel = 'not_beneficial';
+    options.forEach((option) => {
+        const benefitLevel = determineBenefitLevel(field.current_value, option.value, false);
+        if (benefitLevel === 'beneficial') {
+            bestBenefitLevel = 'beneficial';
+        } else if (benefitLevel === 'questionable' && bestBenefitLevel !== 'beneficial') {
+            bestBenefitLevel = 'questionable';
+        }
+    });
+
+    const benefitClass = getBenefitColorClass(bestBenefitLevel);
+    const benefitBorder = getBenefitBorderClass(bestBenefitLevel);
+
     options.forEach((option, index) => {
         const confidence = option.confidence || 0;
         const source = option.source || 'unknown';
@@ -406,16 +457,17 @@ function createMultiSourceField(fieldName, field, label) {
 
     return `
         <div class="col-md-6 mb-3">
-            <div class="enrichment-field" data-field="${fieldName}">
+            <div class="enrichment-field ${benefitBorder}" data-field="${fieldName}">
                 <div class="form-check">
                     <input class="form-check-input field-checkbox" type="checkbox"
-                           id="field_${fieldName}" name="fields[]" value="${fieldName}">
+                           id="field_${fieldName}" name="fields[]" value="${fieldName}" ${bestBenefitLevel === 'not_beneficial' ? 'disabled' : ''}>
                     <label class="form-check-label font-weight-bold" for="field_${fieldName}">
                         ${label}
                         <span class="badge badge-warning ml-2">Multiple Sources</span>
+                        ${getBenefitIndicator(bestBenefitLevel)}
                     </label>
                 </div>
-                <div class="mt-2 p-2 bg-light rounded">
+                <div class="mt-2 p-2 ${benefitClass} rounded">
                     <div class="mb-2">
                         <strong>Current Value:</strong> ${formatCurrentValue(fieldName, field.current_value)}
                     </div>
@@ -475,6 +527,22 @@ function formatCurrentValue(fieldName, value) {
         return `${value} pages`;
     } else if (fieldName === 'age_range') {
         return `<span class="badge badge-light">${value}</span>`;
+    } else if (fieldName === 'maturity_rating') {
+        const ratingClass = value === 'NOT_MATURE' ? 'success' : 'warning';
+        const displayValue = value === 'NOT_MATURE' ? 'All Ages' : value === 'MATURE' ? '18+' : value;
+        return `<span class="badge badge-${ratingClass}">${displayValue}</span>`;
+    } else if (fieldName === 'average_rating') {
+        return `<span class="text-warning">${'★'.repeat(Math.round(value))}${'☆'.repeat(5-Math.round(value))}</span> ${value}`;
+    } else if (fieldName === 'rating_count') {
+        return `${value} ratings`;
+    } else if (fieldName === 'internet_archive_id') {
+        return `<a href="https://archive.org/details/${value}" target="_blank" class="btn btn-sm btn-outline-secondary">Current Archive</a>`;
+    } else if (fieldName === 'reading_level') {
+        return `<span class="badge badge-secondary">${value}</span>`;
+    } else if (fieldName === 'awards') {
+        return value.split(',').map(award => `<span class="badge badge-light mr-1">${award.trim()}</span>`).join('');
+    } else if (fieldName === 'characters' || fieldName === 'settings') {
+        return value.split(',').map(item => `<span class="badge badge-light mr-1">${item.trim()}</span>`).join('');
     }
 
     return value;
@@ -508,7 +576,20 @@ function formatFieldValue(fieldName, value) {
         return `${value} pages`;
     } else if (fieldName === 'maturity_rating') {
         const ratingClass = value === 'NOT_MATURE' ? 'success' : 'warning';
-        return `<span class="badge badge-${ratingClass}">${value}</span>`;
+        const displayValue = value === 'NOT_MATURE' ? 'All Ages' : value === 'MATURE' ? '18+' : value;
+        return `<span class="badge badge-${ratingClass}">${displayValue}</span>`;
+    } else if (fieldName === 'average_rating') {
+        return `<span class="text-warning">${'★'.repeat(Math.round(value))}${'☆'.repeat(5-Math.round(value))}</span> ${value}`;
+    } else if (fieldName === 'rating_count') {
+        return `${value} ratings`;
+    } else if (fieldName === 'internet_archive_id') {
+        return `<a href="https://archive.org/details/${value}" target="_blank" class="btn btn-sm btn-outline-info">View on Archive.org</a>`;
+    } else if (fieldName === 'reading_level') {
+        return `<span class="badge badge-info">${value}</span>`;
+    } else if (fieldName === 'awards') {
+        return value.split(',').map(award => `<span class="badge badge-warning mr-1">${award.trim()}</span>`).join('');
+    } else if (fieldName === 'characters' || fieldName === 'settings') {
+        return value.split(',').map(item => `<span class="badge badge-light mr-1">${item.trim()}</span>`).join('');
     }
 
     return value;
@@ -672,5 +753,113 @@ function applyEnrichmentChanges(bookId, selectedFields) {
             $('#apply-enrichment-btn').prop('disabled', false).html('<i class="fas fa-save"></i> Apply Selected Changes');
         }
     });
+}
+
+/**
+ * Determine the benefit level of updating a field
+ * @param {*} currentValue - Current value in database
+ * @param {*} newValue - New value from API
+ * @param {boolean} isUnknown - Whether new value is unknown
+ * @returns {string} - 'beneficial', 'questionable', 'not_beneficial'
+ */
+function determineBenefitLevel(currentValue, newValue, isUnknown) {
+    // If new value is unknown or null, it's not beneficial
+    if (isUnknown || !newValue || newValue === 'Unknown' || newValue === 'null' || newValue === '') {
+        return 'not_beneficial';
+    }
+
+    // If current value is empty/null and new value has content, it's beneficial
+    if (isEmpty(currentValue) && !isEmpty(newValue)) {
+        return 'beneficial';
+    }
+
+    // If both have values, it's questionable (user should decide)
+    if (!isEmpty(currentValue) && !isEmpty(newValue)) {
+        // Check if values are significantly different
+        if (normalizeValue(currentValue) === normalizeValue(newValue)) {
+            return 'not_beneficial'; // Same value
+        }
+        return 'questionable';
+    }
+
+    return 'not_beneficial';
+}
+
+/**
+ * Check if a value is considered empty
+ */
+function isEmpty(value) {
+    if (value === null || value === undefined || value === '' || value === 'null') {
+        return true;
+    }
+
+    if (Array.isArray(value) && value.length === 0) {
+        return true;
+    }
+
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        return trimmed === '' || trimmed === 'None' || trimmed === 'Unknown' || trimmed === 'N/A';
+    }
+
+    return false;
+}
+
+/**
+ * Normalize value for comparison
+ */
+function normalizeValue(value) {
+    if (typeof value === 'string') {
+        return value.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+    }
+    return String(value || '').toLowerCase();
+}
+
+/**
+ * Get CSS class for benefit level background
+ */
+function getBenefitColorClass(benefitLevel) {
+    switch (benefitLevel) {
+        case 'beneficial':
+            return 'bg-light-success'; // Pale green
+        case 'questionable':
+            return 'bg-light-warning'; // Pale amber
+        case 'not_beneficial':
+            return 'bg-light-danger'; // Pale red
+        default:
+            return 'bg-light';
+    }
+}
+
+/**
+ * Get CSS class for benefit level border
+ */
+function getBenefitBorderClass(benefitLevel) {
+    switch (benefitLevel) {
+        case 'beneficial':
+            return 'border-success';
+        case 'questionable':
+            return 'border-warning';
+        case 'not_beneficial':
+            return 'border-danger';
+        default:
+            return '';
+    }
+}
+
+/**
+ * Get benefit indicator icon/badge
+ */
+function getBenefitIndicator(benefitLevel) {
+    switch (benefitLevel) {
+        case 'beneficial':
+            return '<span class="badge badge-success ml-1" title="Beneficial update"><i class="fas fa-check"></i></span>';
+        case 'questionable':
+            return '<span class="badge badge-warning ml-1" title="Review recommended"><i class="fas fa-question"></i></span>';
+        case 'not_beneficial':
+            return '<span class="badge badge-danger ml-1" title="Not beneficial"><i class="fas fa-times"></i></span>';
+        default:
+            return '';
+    }
 }
 </script>

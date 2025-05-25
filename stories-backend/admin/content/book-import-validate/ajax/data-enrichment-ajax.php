@@ -190,19 +190,27 @@ function handleApplyEnrichment() {
                 break;
 
             case 'maturity_rating':
-                // Map maturity rating to age_range using actual age_ranges table
-                if (!empty($value)) {
-                    $ageRange = mapMaturityToAgeRangeFromTable($value);
-                    if ($ageRange && columnExists('books', 'age_range')) {
-                        $updateFields[] = "age_range = ?";
-                        $params[] = $ageRange;
-                    }
+                // Store the raw maturity rating if field exists
+                if (!empty($value) && columnExists('books', 'maturity_rating')) {
+                    $updateFields[] = "maturity_rating = ?";
+                    $params[] = $value;
+                }
+                break;
 
-                    // Also store the raw maturity rating if field exists
-                    if (columnExists('books', 'maturity_rating')) {
-                        $updateFields[] = "maturity_rating = ?";
-                        $params[] = $value;
-                    }
+            case 'average_rating':
+            case 'rating_count':
+                // Store rating data if fields exist
+                if (!empty($value) && columnExists('books', $fieldName)) {
+                    $updateFields[] = "$fieldName = ?";
+                    $params[] = is_numeric($value) ? floatval($value) : $value;
+                }
+                break;
+
+            case 'internet_archive_id':
+                // Store Internet Archive ID if field exists
+                if (!empty($value) && columnExists('books', 'internet_archive_id')) {
+                    $updateFields[] = "internet_archive_id = ?";
+                    $params[] = $value;
                 }
                 break;
 
@@ -381,7 +389,11 @@ function filterRelevantFields($fields, $currentBookData) {
         'awards' => 'Awards',
         'characters' => 'Characters',
         'settings' => 'Settings',
-        'tags' => 'Tags' // Special case - uses directory_item_tags junction table
+        'tags' => 'Tags', // Special case - uses directory_item_tags junction table
+        'maturity_rating' => 'Maturity Rating',
+        'average_rating' => 'Average Rating',
+        'rating_count' => 'Rating Count',
+        'internet_archive_id' => 'Internet Archive ID'
     ];
 
     $filteredFields = [];

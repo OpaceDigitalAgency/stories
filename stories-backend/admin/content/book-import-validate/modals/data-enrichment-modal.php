@@ -292,7 +292,8 @@ function displayEnrichmentFields(fields) {
         'isbn', 'isbn13', 'author', 'publisher', 'publication_date', 'page_count',
         'language', 'format', 'cover_url', 'preview_link', 'price_range', 'age_range',
         'reading_level', 'maturity_rating', 'average_rating', 'rating_count',
-        'internet_archive_id', 'series', 'awards', 'characters', 'settings', 'tags'
+        'internet_archive_id', 'series', 'awards', 'characters', 'settings',
+        'tags', 'genres', 'subjects'
     ];
 
     // First, display fields in preferred order
@@ -508,14 +509,17 @@ function formatCurrentValue(fieldName, value) {
         return `<img src="${value}" alt="Current Cover" style="max-height: 40px; max-width: 60px;" class="img-thumbnail">`;
     } else if (fieldName === 'preview_link') {
         return `<a href="${value}" target="_blank" class="btn btn-sm btn-outline-secondary">Current Preview</a>`;
-    } else if (fieldName === 'tags') {
-        // Handle array values for tags
+    } else if (fieldName === 'tags' || fieldName === 'genres' || fieldName === 'subjects') {
+        // Handle array values for tags/genres/subjects
         if (Array.isArray(value)) {
-            return value.map(tag => `<span class="badge badge-light mr-1">${tag}</span>`).join('');
+            const badgeClass = fieldName === 'genres' ? 'badge-primary' : fieldName === 'subjects' ? 'badge-info' : 'badge-light';
+            return value.map(item => `<span class="badge ${badgeClass} mr-1">${item}</span>`).join('');
         } else if (typeof value === 'string' && value.includes(',')) {
-            return value.split(',').map(tag => `<span class="badge badge-light mr-1">${tag.trim()}</span>`).join('');
+            const badgeClass = fieldName === 'genres' ? 'badge-primary' : fieldName === 'subjects' ? 'badge-info' : 'badge-light';
+            return value.split(',').map(item => `<span class="badge ${badgeClass} mr-1">${item.trim()}</span>`).join('');
         }
-        return `<span class="badge badge-light">${value}</span>`;
+        const badgeClass = fieldName === 'genres' ? 'badge-primary' : fieldName === 'subjects' ? 'badge-info' : 'badge-light';
+        return `<span class="badge ${badgeClass}">${value}</span>`;
     } else if (fieldName === 'publication_date') {
         // Format dates nicely
         const date = new Date(value);
@@ -557,14 +561,17 @@ function formatFieldValue(fieldName, value) {
         return `<img src="${value}" alt="Cover" style="max-height: 60px; max-width: 100px;" class="img-thumbnail">`;
     } else if (fieldName === 'preview_link') {
         return `<a href="${value}" target="_blank" class="btn btn-sm btn-outline-primary">View Preview</a>`;
-    } else if (fieldName === 'tags') {
-        // Handle array values for tags
+    } else if (fieldName === 'tags' || fieldName === 'genres' || fieldName === 'subjects') {
+        // Handle array values for tags/genres/subjects
         if (Array.isArray(value)) {
-            return value.map(tag => `<span class="badge badge-secondary mr-1">${tag}</span>`).join('');
+            const badgeClass = fieldName === 'genres' ? 'badge-success' : fieldName === 'subjects' ? 'badge-info' : 'badge-secondary';
+            return value.map(item => `<span class="badge ${badgeClass} mr-1">${item}</span>`).join('');
         } else if (typeof value === 'string' && value.includes(',')) {
-            return value.split(',').map(tag => `<span class="badge badge-secondary mr-1">${tag.trim()}</span>`).join('');
+            const badgeClass = fieldName === 'genres' ? 'badge-success' : fieldName === 'subjects' ? 'badge-info' : 'badge-secondary';
+            return value.split(',').map(item => `<span class="badge ${badgeClass} mr-1">${item.trim()}</span>`).join('');
         }
-        return `<span class="badge badge-secondary">${value}</span>`;
+        const badgeClass = fieldName === 'genres' ? 'badge-success' : fieldName === 'subjects' ? 'badge-info' : 'badge-secondary';
+        return `<span class="badge ${badgeClass}">${value}</span>`;
     } else if (fieldName === 'publication_date') {
         // Format dates nicely
         const date = new Date(value);

@@ -83,7 +83,9 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
         'cover_url' => ['confidence' => 60, 'label' => 'Cover Image'],
         'preview_link' => ['confidence' => 60, 'label' => 'Preview Link'],
         'series' => ['confidence' => 50, 'label' => 'Series'],
-        'tags' => ['confidence' => 45, 'label' => 'Tags'], // Maps from API categories/subjects
+        'tags' => ['confidence' => 45, 'label' => 'Tags'], // Maps from OpenLibrary subject[], subject_key[]
+        'genres' => ['confidence' => 50, 'label' => 'Genres'], // Maps from Google categories[], OpenLibrary subject_facet[]
+        'subjects' => ['confidence' => 45, 'label' => 'Subjects'], // Maps from OpenLibrary subject_facet[]
         'maturity_rating' => ['confidence' => 55, 'label' => 'Maturity Rating'], // Maps to age_range
         'age_range' => ['confidence' => 50, 'label' => 'Age Range'], // Derived from maturity_rating and subjects
         'reading_level' => ['confidence' => 40, 'label' => 'Reading Level'], // From OpenLibrary lexile
@@ -523,19 +525,20 @@ function extractFieldValue($match, $fieldName) {
     // Handle special field mappings and transformations
     switch ($fieldName) {
         case 'tags':
-            // Combine categories and subjects from both APIs to create comprehensive tag list
+            // Merge: Open Library subject[], subject_key[]. Use full list.
             $allTags = [];
 
-            // Get Google Books categories
-            if (isset($match['categories']) && is_array($match['categories'])) {
-                $allTags = array_merge($allTags, $match['categories']);
+            // Get OpenLibrary subjects (full list)
+            if (isset($match['subject']) && is_array($match['subject'])) {
+                $allTags = array_merge($allTags, $match['subject']);
             }
 
-            // Get OpenLibrary subjects
-            if (isset($match['subjects']) && is_array($match['subjects'])) {
-                $allTags = array_merge($allTags, array_slice($match['subjects'], 0, 10));
-            } elseif (isset($match['subject_facet']) && is_array($match['subject_facet'])) {
-                $allTags = array_merge($allTags, array_slice($match['subject_facet'], 0, 10));
+            // Get OpenLibrary subject_key
+            if (isset($match['subject_key']) && is_array($match['subject_key'])) {
+                $subjectKeys = array_map(function($key) {
+                    return ucwords(str_replace('_', ' ', $key));
+                }, $match['subject_key']);
+                $allTags = array_merge($allTags, $subjectKeys);
             }
 
             // Clean and filter tags
@@ -543,14 +546,56 @@ function extractFieldValue($match, $fieldName) {
                 $cleanTags = [];
                 foreach ($allTags as $tag) {
                     $cleanTag = trim($tag);
-                    if (!empty($cleanTag) && strlen($cleanTag) > 2 && strlen($cleanTag) < 50) {
-                        $cleanTags[] = $cleanTag;
+                    if (!empty($cleanTag) && strlen($cleanTag) > 2 && strlen($cleanTag) < 100) {
+                        // Capitalize first letter of each word
+                        $cleanTags[] = ucwords(strtolower($cleanTag));
+                    }
+                }
+
+                // Remove duplicates and return full list
+                $uniqueTags = array_unique($cleanTags);
+                return implode(', ', $uniqueTags);
+            }
+            break;
+
+        case 'genres':
+            // Merge: Google categories[], Open Library subject_facet[]. Dedup, capitalise.
+            $allGenres = [];
+
+            // Get Google Books categories
+            if (isset($match['categories']) && is_array($match['categories'])) {
+                $allGenres = array_merge($allGenres, $match['categories']);
+            }
+
+            // Get OpenLibrary subject_facet
+            if (isset($match['subject_facet']) && is_array($match['subject_facet'])) {
+                $allGenres = array_merge($allGenres, $match['subject_facet']);
+            }
+
+            // Clean and filter genres
+            if (!empty($allGenres)) {
+                $cleanGenres = [];
+                foreach ($allGenres as $genre) {
+                    $cleanGenre = trim($genre);
+                    if (!empty($cleanGenre) && strlen($cleanGenre) > 2 && strlen($cleanGenre) < 50) {
+                        // Capitalize first letter of each word
+                        $cleanGenres[] = ucwords(strtolower($cleanGenre));
                     }
                 }
 
                 // Remove duplicates and limit to reasonable number
-                $uniqueTags = array_unique($cleanTags);
-                return implode(', ', array_slice($uniqueTags, 0, 12));
+                $uniqueGenres = array_unique($cleanGenres);
+                return implode(', ', array_slice($uniqueGenres, 0, 15));
+            }
+            break;
+
+        case 'subjects':
+            // Use Open Library subject_facet[]
+            if (isset($match['subject_facet']) && is_array($match['subject_facet'])) {
+                $subjects = array_map(function($subject) {
+                    return ucwords(strtolower(trim($subject)));
+                }, $match['subject_facet']);
+                return implode(', ', array_slice($subjects, 0, 20));
             }
             break;
 
@@ -584,37 +629,38 @@ function extractFieldValue($match, $fieldName) {
             break;
 
         case 'age_range':
-            // Derive age range from maturity rating and subjects
+            // Open Library subject_facet[] contains specific patterns
             $ageRange = null;
 
-            // First try maturity rating
-            if (isset($match['maturity_rating'])) {
-                $ageRange = mapMaturityRatingToAgeRange($match['maturity_rating']);
-            }
-
-            // Then try OpenLibrary subject_facet for age-specific subjects
-            if (!$ageRange && isset($match['subject_facet']) && is_array($match['subject_facet'])) {
+            if (isset($match['subject_facet']) && is_array($match['subject_facet'])) {
                 foreach ($match['subject_facet'] as $subject) {
-                    if (stripos($subject, 'Ages 9-12') !== false) {
-                        $ageRange = '9-12';
+                    if (stripos($subject, "Children's Books/Ages 9-12 Fiction") !== false) {
+                        $ageRange = '9–12';
                         break;
                     } elseif (stripos($subject, 'Tweens') !== false) {
-                        $ageRange = '8-12';
+                        $ageRange = '8–12';
                         break;
-                    } elseif (stripos($subject, 'Young Adult') !== false) {
+                    } elseif (stripos($subject, 'Young Adult Fiction') !== false) {
                         $ageRange = '12+';
                         break;
-                    } elseif (stripos($subject, 'Children\'s Books') !== false) {
-                        $ageRange = '6-12';
-                        break;
                     }
+                }
+            }
+
+            // Else fallback from maturity_rating
+            if (!$ageRange && isset($match['maturity_rating'])) {
+                $maturityRating = $match['maturity_rating'];
+                if ($maturityRating === 'NOT_MATURE') {
+                    $ageRange = 'All Ages';
+                } elseif ($maturityRating === 'MATURE') {
+                    $ageRange = '18+';
                 }
             }
 
             return $ageRange;
 
         case 'reading_level':
-            // Get reading level from OpenLibrary lexile data
+            // Open Library: use lexile[]
             if (isset($match['lexile']) && is_array($match['lexile']) && !empty($match['lexile'])) {
                 return $match['lexile'][0] . 'L';
             }
@@ -673,11 +719,20 @@ function extractFieldValue($match, $fieldName) {
             break;
 
         case 'settings':
-            // Get settings from OpenLibrary place data
+            // Use Open Library place[]
             if (isset($match['place']) && is_array($match['place'])) {
-                return implode(', ', array_slice($match['place'], 0, 3));
-            } elseif (isset($match['place_facet']) && is_array($match['place_facet'])) {
-                return implode(', ', array_slice($match['place_facet'], 0, 3));
+                $places = array_map(function($place) {
+                    return ucwords(strtolower(trim($place)));
+                }, $match['place']);
+                return implode(', ', array_slice($places, 0, 3));
+            }
+            break;
+
+        case 'price_range':
+            // Scrape price from Amazon UK using ISBN
+            if (isset($match['isbn13']) || isset($match['isbn'])) {
+                $isbn = $match['isbn13'] ?? $match['isbn'];
+                return scrapePriceFromAmazon($isbn);
             }
             break;
 
@@ -771,4 +826,78 @@ function validateCombinedISBN($combinedFields, $currentISBN) {
     }
 
     return 'different';
+}
+
+/**
+ * Scrape price from Amazon UK using Google Search
+ * Query: amazon.co.uk [ISBN] (without site: prefix)
+ */
+function scrapePriceFromAmazon($isbn) {
+    if (empty($isbn)) {
+        return null;
+    }
+
+    try {
+        // Clean ISBN
+        $cleanISBN = preg_replace('/[^0-9X]/i', '', $isbn);
+
+        // Search Google for Amazon UK results
+        $query = "amazon.co.uk " . $cleanISBN;
+        $searchUrl = "https://www.google.com/search?q=" . urlencode($query);
+
+        $ch = curl_init($searchUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+        curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language: en-GB,en;q=0.5',
+            'Accept-Encoding: gzip, deflate',
+            'Connection: keep-alive'
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode !== 200 || empty($response)) {
+            error_log("Amazon price scraping failed for ISBN $isbn: HTTP $httpCode");
+            return null;
+        }
+
+        // Look for price patterns in Google search results
+        // Pattern: £[digits].[digits] + "In stock" or similar
+        $pricePattern = '/£(\d+)\.(\d{2})/';
+        $stockPattern = '/(in stock|available|buy now)/i';
+
+        if (preg_match($pricePattern, $response, $priceMatches) &&
+            preg_match($stockPattern, $response)) {
+
+            $price = floatval($priceMatches[1] . '.' . $priceMatches[2]);
+
+            // Map price to range
+            if ($price <= 5) {
+                return '£1-£5';
+            } elseif ($price <= 10) {
+                return '£5-£10';
+            } elseif ($price <= 15) {
+                return '£10-£15';
+            } elseif ($price <= 20) {
+                return '£15-£20';
+            } elseif ($price <= 30) {
+                return '£20-£30';
+            } else {
+                return '£30+';
+            }
+        }
+
+        error_log("No valid price found for ISBN $isbn in Amazon search results");
+        return null;
+
+    } catch (Exception $e) {
+        error_log("Error scraping Amazon price for ISBN $isbn: " . $e->getMessage());
+        return null;
+    }
 }

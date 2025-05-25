@@ -58,12 +58,22 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
         'page_count' => ['confidence' => 75, 'label' => 'Page Count'],
         'language' => ['confidence' => 70, 'label' => 'Language'],
         'format' => ['confidence' => 70, 'label' => 'Format'],
+        'summary' => ['confidence' => 65, 'label' => 'Summary/Description'],
         'cover_url' => ['confidence' => 60, 'label' => 'Cover Image'],
         'preview_link' => ['confidence' => 60, 'label' => 'Preview Link'],
+        'maturity_rating' => ['confidence' => 55, 'label' => 'Maturity Rating'],
         'series' => ['confidence' => 50, 'label' => 'Series'],
-        'awards' => ['confidence' => 40, 'label' => 'Awards'],
-        'characters' => ['confidence' => 40, 'label' => 'Characters'],
-        'settings' => ['confidence' => 40, 'label' => 'Settings']
+        'categories' => ['confidence' => 45, 'label' => 'Categories/Genres'],
+        'subjects' => ['confidence' => 45, 'label' => 'Subjects/Tags'],
+        'ratings_average' => ['confidence' => 40, 'label' => 'Average Rating'],
+        'ratings_count' => ['confidence' => 40, 'label' => 'Rating Count'],
+        // Fields that don't exist in APIs - always show as unknown
+        'price_range' => ['confidence' => 0, 'label' => 'Price Range'],
+        'age_range' => ['confidence' => 0, 'label' => 'Age Range'],
+        'reading_level' => ['confidence' => 0, 'label' => 'Reading Level'],
+        'awards' => ['confidence' => 0, 'label' => 'Awards'],
+        'characters' => ['confidence' => 0, 'label' => 'Characters'],
+        'settings' => ['confidence' => 0, 'label' => 'Settings']
     ];
 
     // Find best matches from each source
@@ -76,8 +86,8 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
 
     // Process each field
     foreach ($allFields as $fieldName => $fieldConfig) {
-        $googleValue = $googleMatch[$fieldName] ?? null;
-        $openLibraryValue = $openLibraryMatch[$fieldName] ?? null;
+        $googleValue = extractFieldValue($googleMatch, $fieldName);
+        $openLibraryValue = extractFieldValue($openLibraryMatch, $fieldName);
 
         // Check if we have data from either source
         if (!empty($googleValue) || !empty($openLibraryValue)) {
@@ -128,7 +138,7 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
             $combinedFields[$fieldName] = [
                 'value' => null,
                 'source' => 'unknown',
-                'confidence' => 0,
+                'confidence' => $fieldConfig['confidence'], // Use base confidence even for unknown
                 'label' => $fieldConfig['label'],
                 'status' => 'unknown'
             ];
@@ -479,6 +489,117 @@ function preferEnglishVersion($value1, $value2) {
 
     // If both or neither match English pattern, prefer Google Books (first value)
     return $value1;
+}
+
+/**
+ * Extract field value with special handling for complex fields
+ */
+function extractFieldValue($match, $fieldName) {
+    if (!$match || !is_array($match)) {
+        return null;
+    }
+
+    // Handle special field mappings and transformations
+    switch ($fieldName) {
+        case 'categories':
+            // Google Books: categories array, OpenLibrary: subjects array
+            if (isset($match['categories']) && is_array($match['categories'])) {
+                return implode(', ', $match['categories']);
+            }
+            break;
+
+        case 'subjects':
+            // OpenLibrary: subjects, subject_facet arrays
+            if (isset($match['subjects']) && is_array($match['subjects'])) {
+                return implode(', ', array_slice($match['subjects'], 0, 10)); // Limit to first 10
+            } elseif (isset($match['subject_facet']) && is_array($match['subject_facet'])) {
+                return implode(', ', array_slice($match['subject_facet'], 0, 10));
+            }
+            break;
+
+        case 'maturity_rating':
+            // Google Books: maturityRating, try to map to age ranges
+            if (isset($match['maturity_rating'])) {
+                return mapMaturityRatingToAgeRange($match['maturity_rating']);
+            }
+            break;
+
+        case 'language':
+            // Normalize language codes
+            if (isset($match['language'])) {
+                return normalizeLanguage($match['language']);
+            }
+            break;
+
+        case 'summary':
+            // Handle both description and first_sentence
+            if (isset($match['summary']) && !empty($match['summary'])) {
+                return truncateText($match['summary'], 500);
+            }
+            break;
+
+        case 'ratings_average':
+        case 'ratings_count':
+            // Ensure numeric values
+            if (isset($match[$fieldName]) && is_numeric($match[$fieldName])) {
+                return $match[$fieldName];
+            }
+            break;
+
+        default:
+            // Standard field extraction
+            return $match[$fieldName] ?? null;
+    }
+
+    return null;
+}
+
+/**
+ * Map Google Books maturity rating to age range
+ */
+function mapMaturityRatingToAgeRange($maturityRating) {
+    switch (strtoupper($maturityRating)) {
+        case 'NOT_MATURE':
+            return 'All Ages';
+        case 'MATURE':
+            return '18+';
+        default:
+            return $maturityRating;
+    }
+}
+
+/**
+ * Normalize language codes to readable names
+ */
+function normalizeLanguage($language) {
+    $languageMap = [
+        'en' => 'English',
+        'eng' => 'English',
+        'es' => 'Spanish',
+        'spa' => 'Spanish',
+        'fr' => 'French',
+        'fre' => 'French',
+        'de' => 'German',
+        'ger' => 'German',
+        'it' => 'Italian',
+        'ita' => 'Italian',
+        'pt' => 'Portuguese',
+        'por' => 'Portuguese'
+    ];
+
+    $lang = strtolower(trim($language));
+    return $languageMap[$lang] ?? $language;
+}
+
+/**
+ * Truncate text to specified length
+ */
+function truncateText($text, $maxLength = 500) {
+    if (strlen($text) <= $maxLength) {
+        return $text;
+    }
+
+    return substr($text, 0, $maxLength) . '...';
 }
 
 /**

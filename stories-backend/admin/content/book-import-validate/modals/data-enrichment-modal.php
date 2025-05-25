@@ -349,7 +349,7 @@ function createMultiSourceField(fieldName, field, label) {
     });
 
     return `
-        <div class="col-md-12 mb-3">
+        <div class="col-md-6 mb-3">
             <div class="enrichment-field" data-field="${fieldName}">
                 <div class="form-check">
                     <input class="form-check-input field-checkbox" type="checkbox"
@@ -437,8 +437,32 @@ $('#fix-all-btn').click(function() {
         return;
     }
 
-    // Select all checkboxes
-    $('.field-checkbox').prop('checked', true).trigger('change');
+    // Select all checkboxes (except unknown fields)
+    $('.field-checkbox:not(:disabled)').prop('checked', true).trigger('change');
+
+    // For fields with multiple options, auto-select the highest confidence option
+    $('input[type="radio"][name*="_option"]').each(function() {
+        const fieldName = $(this).attr('name').replace('_option', '').replace('field_', '');
+        const fieldData = currentEnrichmentData.fields[fieldName];
+
+        if (fieldData && fieldData.options) {
+            // Find the option with highest confidence
+            let highestConfidence = 0;
+            let bestOptionIndex = 0;
+
+            fieldData.options.forEach((option, index) => {
+                if (option.confidence > highestConfidence) {
+                    highestConfidence = option.confidence;
+                    bestOptionIndex = index;
+                }
+            });
+
+            // Select the best option
+            if ($(this).val() == bestOptionIndex) {
+                $(this).prop('checked', true);
+            }
+        }
+    });
 
     // Apply all changes
     const allFields = currentEnrichmentData.fields;

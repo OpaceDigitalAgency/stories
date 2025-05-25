@@ -424,9 +424,19 @@ function searchBooksByTitleAuthor($title, $author = '', $limit = 10) {
                         'publication_date' => $volumeInfo['publishedDate'] ?? '',
                         'isbn' => $isbn10,
                         'isbn13' => $isbn13,
+                        'page_count' => $volumeInfo['pageCount'] ?? null,
+                        'language' => $volumeInfo['language'] ?? '',
                         'format' => $volumeInfo['printType'] ?? '',
                         'cover_url' => isset($volumeInfo['imageLinks']['thumbnail']) ? str_replace('http://', 'https://', $volumeInfo['imageLinks']['thumbnail']) : '',
                         'preview_link' => $volumeInfo['previewLink'] ?? '',
+                        'summary' => $volumeInfo['description'] ?? '',
+                        'categories' => $volumeInfo['categories'] ?? [],
+                        'maturity_rating' => $volumeInfo['maturityRating'] ?? '',
+                        'reading_modes' => $volumeInfo['readingModes'] ?? [],
+                        'content_version' => $volumeInfo['contentVersion'] ?? '',
+                        'info_link' => $volumeInfo['infoLink'] ?? '',
+                        'canonical_volume_link' => $volumeInfo['canonicalVolumeLink'] ?? '',
+                        'web_reader_link' => $item['accessInfo']['webReaderLink'] ?? '',
                         'source' => 'google_books'
                     ];
                 }

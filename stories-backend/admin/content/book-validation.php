@@ -418,8 +418,10 @@ $(document).ready(function() {
         autoValidateAllISBNs();
     }
 
-    // Check Goodreads status for all books
-    checkAllGoodreadsStatus();
+    // Check Goodreads status for all books after a delay to ensure elements exist
+    setTimeout(function() {
+        checkAllGoodreadsStatus();
+    }, 2000); // 2 second delay to allow auto-validation to create the elements
 
     // ISBN Validation Tab Handlers
     $('.select-all-checkbox').on('change', function() {
@@ -660,6 +662,10 @@ $(document).ready(function() {
                             setTimeout(() => {
                                 $progress.hide();
                                 $progressText.text('Auto-validation complete!');
+                                // Now check Goodreads status for all books
+                                setTimeout(() => {
+                                    checkAllGoodreadsStatus();
+                                }, 500); // Small delay to ensure DOM is updated
                             }, 1000);
                         }
                     },
@@ -675,6 +681,10 @@ $(document).ready(function() {
                         if (completedBooks === totalBooks) {
                             setTimeout(() => {
                                 $progress.hide();
+                                // Check Goodreads status even if some validations failed
+                                setTimeout(() => {
+                                    checkAllGoodreadsStatus();
+                                }, 500);
                             }, 1000);
                         }
                     }

@@ -1642,143 +1642,38 @@ function validateCombinedISBN($combinedFields, $currentISBN) {
  * Scrape Amazon buying options (Hardcover, Paperback, Kindle, Audio CD) with prices
  * Returns array of format => price pairs
  */
-function scrapeAmazonBuyingOptions($isbn) {
-    if (empty($isbn)) {
+function scrapeAmazonBuyingOptions($isbn10) {
+    $url = "https://www.amazon.co.uk/dp/" . $isbn10;
+
+    $opts = [
+        "http" => [
+            "method" => "GET",
+            "header" => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+        ]
+    ];
+
+    $context = stream_context_create($opts);
+    $html = @file_get_contents($url, false, $context);
+
+    if (!$html) {
         return [];
     }
 
-    try {
-        // Clean ISBN
-        $cleanISBN = preg_replace('/[^0-9X]/i', '', $isbn);
-        $amazonUrl = "https://www.amazon.co.uk/gp/product/" . $cleanISBN;
+    $buyingOptions = [];
 
-        error_log("Scraping Amazon buying options from: $amazonUrl");
-
-        $ch = curl_init($amazonUrl);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-        curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language: en-GB,en;q=0.5',
-            'Accept-Encoding: gzip, deflate',
-            'Connection: keep-alive',
-            'Cache-Control: no-cache',
-            'Pragma: no-cache'
-        ]);
-
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($httpCode !== 200 || empty($response)) {
-            error_log("Amazon buying options scraping failed for ISBN $isbn: HTTP $httpCode");
-            return [];
-        }
-
-        // Handle gzip compressed response
-        if (substr($response, 0, 3) === "\x1f\x8b\x08") {
-            $response = gzdecode($response);
-            if ($response === false) {
-                error_log("Failed to decompress gzip response for ISBN $isbn");
-                return [];
-            }
-        }
-
-        $buyingOptions = [];
-
-        // Enhanced debugging - save response for analysis
-        $debugFile = '/tmp/amazon_response_' . $cleanISBN . '.html';
-        file_put_contents($debugFile, $response);
-        error_log("Amazon response saved to: $debugFile");
-
-        // Check if we got a valid Amazon page
-        if (strpos($response, 'tmm-grid-swatch') === false && strpos($response, 'tmmSwatchesList') === false) {
-            error_log("Amazon page doesn't contain expected format selectors for ISBN $isbn");
-
-            // Check for common Amazon error patterns
-            if (strpos($response, 'Page Not Found') !== false) {
-                error_log("Amazon returned 'Page Not Found' for ISBN $isbn");
-            } elseif (strpos($response, 'captcha') !== false) {
-                error_log("Amazon returned captcha challenge for ISBN $isbn");
-            } elseif (strpos($response, 'robot') !== false) {
-                error_log("Amazon detected bot behavior for ISBN $isbn");
-            }
-
-            return [];
-        }
-
-        // Enhanced regex patterns based on the actual HTML structure you provided
-        // Extract both price and ASIN/URL for each format
-
-        // Kindle Edition - extract price and ASIN
-        if (preg_match('/tmm-grid-swatch-KINDLE.*?href="([^"]*)".*?aria-label="£(\d+\.\d{2})"/s', $response, $matches)) {
-            $buyingOptions['Kindle'] = [
-                'price' => '£' . $matches[2],
-                'url' => 'https://www.amazon.co.uk' . $matches[1],
-                'asin' => extractASINFromURL($matches[1])
+    // Try to match common formats and their prices
+    if (preg_match_all('/>(Hardcover|Paperback|Kindle|Audio CD)<\/a>.*?£(\d+\.\d{2})/is', $html, $matches, PREG_SET_ORDER)) {
+        foreach ($matches as $match) {
+            $format = strtolower(trim($match[1]));
+            $price = '£' . $match[2];
+            $buyingOptions[$format] = [
+                'price' => $price,
+                'url' => $url // Default to main URL; we could attempt format-specific URLs if needed
             ];
-            error_log("Found Kindle: Price £{$matches[2]}, URL: {$matches[1]}");
         }
-
-        // Hardcover - extract price and ASIN
-        if (preg_match('/tmm-grid-swatch-HARDCOVER.*?href="([^"]*)".*?aria-label="£(\d+\.\d{2})"/s', $response, $matches)) {
-            $buyingOptions['Hardcover'] = [
-                'price' => '£' . $matches[2],
-                'url' => 'https://www.amazon.co.uk' . $matches[1],
-                'asin' => extractASINFromURL($matches[1])
-            ];
-            error_log("Found Hardcover: Price £{$matches[2]}, URL: {$matches[1]}");
-        }
-
-        // Paperback - extract price and ASIN
-        if (preg_match('/tmm-grid-swatch-PAPERBACK.*?href="([^"]*)".*?aria-label="£(\d+\.\d{2})"/s', $response, $matches)) {
-            $buyingOptions['Paperback'] = [
-                'price' => '£' . $matches[2],
-                'url' => 'https://www.amazon.co.uk' . $matches[1],
-                'asin' => extractASINFromURL($matches[1])
-            ];
-            error_log("Found Paperback: Price £{$matches[2]}, URL: {$matches[1]}");
-        }
-
-        // Audio CD/Audiobook - extract price and ASIN
-        if (preg_match('/tmm-grid-swatch-AUDIOBOOK.*?href="([^"]*)".*?aria-label="£(\d+\.\d{2})"/s', $response, $matches)) {
-            $buyingOptions['Audio CD'] = [
-                'price' => '£' . $matches[2],
-                'url' => 'https://www.amazon.co.uk' . $matches[1],
-                'asin' => extractASINFromURL($matches[1])
-            ];
-            error_log("Found Audio CD: Price £{$matches[2]}, URL: {$matches[1]}");
-        }
-
-        // Fallback patterns with simpler matching
-        if (empty($buyingOptions)) {
-            error_log("Primary patterns failed, trying fallback patterns for ISBN $isbn");
-
-            // Try to find any price patterns
-            if (preg_match_all('/aria-label="£(\d+\.\d{2})"/s', $response, $priceMatches)) {
-                error_log("Found " . count($priceMatches[1]) . " price matches: " . implode(', ', $priceMatches[1]));
-            }
-
-            // Try to find format mentions
-            $formats = ['Kindle', 'Hardcover', 'Paperback', 'Audio CD', 'Audiobook'];
-            foreach ($formats as $format) {
-                if (preg_match("/$format.*?£(\d+\.\d{2})/s", $response, $matches)) {
-                    $buyingOptions[$format] = ['price' => '£' . $matches[1], 'url' => '', 'asin' => ''];
-                    error_log("Fallback found $format: £{$matches[1]}");
-                }
-            }
-        }
-
-        error_log("Amazon buying options found for ISBN $isbn: " . json_encode($buyingOptions));
-        return $buyingOptions;
-
-    } catch (Exception $e) {
-        error_log("Error scraping Amazon buying options for ISBN $isbn: " . $e->getMessage());
-        return [];
     }
+
+    return $buyingOptions;
 }
 
 /**

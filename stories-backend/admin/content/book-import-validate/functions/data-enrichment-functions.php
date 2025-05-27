@@ -1583,7 +1583,7 @@ function validateCombinedISBN($combinedFields, $currentISBN) {
 function scrapeAmazonBuyingOptions($isbn) {
     // Define AMAZON_DEBUG if not already defined
     if (!defined('AMAZON_DEBUG')) {
-        define('AMAZON_DEBUG', true);
+        define('AMAZON_DEBUG', false);
     }
 
     if (empty($isbn)) {

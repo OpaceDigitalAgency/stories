@@ -432,18 +432,25 @@ function filterRelevantFields($fields, $currentBookData) {
 
             // Handle multi-source fields
             if ($newFieldData && isset($newFieldData['options'])) {
-                $filteredFields[$fieldName]['options'] = $newFieldData['options'];
-            } elseif ($newFieldData) {
-                $filteredFields[$fieldName]['value'] = $newFieldData['value'] ?? null;
-                $filteredFields[$fieldName]['source'] = $newFieldData['source'] ?? 'unknown';
-                $filteredFields[$fieldName]['confidence'] = $newFieldData['confidence'] ?? 0;
-                $filteredFields[$fieldName]['status'] = $newFieldData['status'] ?? 'available';
+                $filteredFields[$fieldName]['new_data'] = [
+                    'options' => $newFieldData['options']
+                ];
+            } elseif ($newFieldData && isset($newFieldData['value'])) {
+                // Single source field with actual data
+                $filteredFields[$fieldName]['new_data'] = [
+                    'value' => $newFieldData['value'],
+                    'source' => $newFieldData['source'] ?? 'unknown',
+                    'confidence' => $newFieldData['confidence'] ?? 0,
+                    'status' => $newFieldData['status'] ?? 'available'
+                ];
             } else {
                 // No new data available
-                $filteredFields[$fieldName]['status'] = 'unknown';
-                $filteredFields[$fieldName]['value'] = null;
-                $filteredFields[$fieldName]['source'] = 'unknown';
-                $filteredFields[$fieldName]['confidence'] = 0;
+                $filteredFields[$fieldName]['new_data'] = [
+                    'status' => 'unknown',
+                    'value' => null,
+                    'source' => 'unknown',
+                    'confidence' => 0
+                ];
             }
         }
     }

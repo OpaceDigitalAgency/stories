@@ -105,6 +105,12 @@
                         </div>
                     </div>
 
+                    <!-- Amazon Buying Options -->
+                    <div class="mt-4">
+                        <h5>Amazon Buying Options</h5>
+                        <div class="amazon-data-container text-muted">Click “Enrich” to load Amazon info.</div>
+                    </div>
+
                     <!-- No Data Found -->
                     <div id="no-enrichment-data" style="display: none;" class="alert alert-warning">
                         <i class="fas fa-exclamation-triangle"></i>
@@ -299,6 +305,27 @@ function displayEnrichmentResults(data, debug) {
 
     // Display enrichment fields
     displayEnrichmentFields(data.fields);
+
+    // Fetch Amazon data asynchronously
+    var $amazonContainer = $('.amazon-data-container');
+    $amazonContainer.html('<p>Loading Amazon data…</p>');
+    $.post('ajax/data-enrichment-ajax.php', {
+        action: 'get_amazon_data',
+        isbn: currentBookISBN
+    }, function(res) {
+        if (res.success && res.data && Object.keys(res.data).length) {
+            var html = '<ul>';
+            $.each(res.data, function(format, info) {
+                html += '<li>' + format + ': <a href="' + info.url + '" target="_blank">' + info.price + '</a></li>';
+            });
+            html += '</ul>';
+            $amazonContainer.html(html);
+        } else {
+            $amazonContainer.html('<p>No Amazon data available.</p>');
+        }
+    }, 'json').fail(function() {
+        $amazonContainer.html('<p>Error loading Amazon data.</p>');
+    });
 
     $('#enrichment-results').show();
 }

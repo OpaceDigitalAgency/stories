@@ -310,18 +310,28 @@ function fetchOpenLibraryDataNew($isbn, $title, $author, $isForEnrichment = fals
                     'isbn' => $isbn10,
                     'isbn13' => $isbn13,
                     'language' => !empty($bookInfo['language']) ? implode(', ', $bookInfo['language']) : '',
-                    'format' => '',
+                    'format' => !empty($bookInfo['format']) ? implode(', ', $bookInfo['format']) : '',
                     'series' => '',
                     'awards' => '',
                     'characters' => '',
                     'settings' => '',
                     'preview_link' => $iaId ? "https://archive.org/details/$iaId" : '',
                     'cover_url' => $coverUrl,
-                    'rating' => '',
-                    'rating_count' => '',
+                    'rating' => $bookInfo['ratings_average'] ?? '',
+                    'rating_count' => $bookInfo['ratings_count'] ?? '',
                     'review_count' => '',
                     'maturity_rating' => '',
-                    'internet_archive_id' => $iaId
+                    'internet_archive_id' => $iaId,
+                    // ADD THE MISSING OPENLIBRARY FIELDS!
+                    'subject' => $bookInfo['subject'] ?? [],
+                    'subject_facet' => $bookInfo['subject_facet'] ?? [],
+                    'subject_key' => $bookInfo['subject_key'] ?? [],
+                    'place' => $bookInfo['place'] ?? [],
+                    'place_facet' => $bookInfo['place_facet'] ?? [],
+                    'person' => $bookInfo['person'] ?? [],
+                    'person_facet' => $bookInfo['person_facet'] ?? [],
+                    'lexile' => $bookInfo['lexile'] ?? [],
+                    'source' => 'open_library'
                 ];
 
                 // Add status information
@@ -401,7 +411,17 @@ function fetchOpenLibraryDataNew($isbn, $title, $author, $isForEnrichment = fals
                 'rating_count' => '',
                 'review_count' => '',
                 'maturity_rating' => '',
-                'internet_archive_id' => $iaId
+                'internet_archive_id' => $iaId,
+                // ADD THE MISSING OPENLIBRARY FIELDS FOR MAIN API RESPONSE TOO!
+                'subject' => $bookInfo['subjects'] ?? [],
+                'subject_facet' => [],
+                'subject_key' => [],
+                'place' => [],
+                'place_facet' => [],
+                'person' => [],
+                'person_facet' => [],
+                'lexile' => [],
+                'source' => 'open_library'
             ];
 
             // Add status information

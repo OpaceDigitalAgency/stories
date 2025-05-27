@@ -89,17 +89,6 @@ function handleGetEnrichmentData() {
 
         // Get enriched data from APIs
         $enrichedData = getEnrichedBookData($title, $author, $currentISBN);
-        error_log("Raw enriched data: " . json_encode($enrichedData));
-
-        // TEMP DEBUG: Check specific field before filtering
-        error_log("Tags field before filtering: " . json_encode($enrichedData['fields']['tags'] ?? 'NOT_FOUND'));
-
-        // Capture error log output for debugging
-        ob_start();
-        error_log("CAPTURE_START");
-        $enrichedDataDebug = getEnrichedBookData($title, $author, $currentISBN);
-        error_log("CAPTURE_END");
-        $debugOutput = ob_get_clean();
 
         // Filter and combine with current data
         $enrichedData['fields'] = filterRelevantFields($enrichedData['fields'], $currentBookData);

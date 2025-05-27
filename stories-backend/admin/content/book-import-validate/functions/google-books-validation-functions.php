@@ -267,7 +267,7 @@ function fetchGoogleBooksDataNew($isbn, $title, $author, $isForEnrichment = fals
                 'isbn' => $isbn10,
                 'isbn13' => $isbn13,
                 'language' => $volumeInfo['language'] ?? '',
-                'format' => '',
+                'format' => $volumeInfo['printType'] ?? '',
                 'series' => '',
                 'awards' => '',
                 'characters' => '',
@@ -277,7 +277,9 @@ function fetchGoogleBooksDataNew($isbn, $title, $author, $isForEnrichment = fals
                 'rating' => $volumeInfo['averageRating'] ?? '',
                 'rating_count' => $volumeInfo['ratingsCount'] ?? '',
                 'review_count' => '',
-                'maturity_rating' => $volumeInfo['maturityRating'] ?? ''
+                'maturity_rating' => $volumeInfo['maturityRating'] ?? '',
+                'categories' => $categories, // ADD THE MISSING CATEGORIES!
+                'source' => 'google_books'
             ];
 
             // Calculate processing time

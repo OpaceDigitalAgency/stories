@@ -251,37 +251,9 @@ function displayEnrichmentResults(data, debug) {
         return;
     }
 
-    // Debug logging and display
+    // Debug logging only
     if (debug) {
         console.log('Debug information:', debug);
-
-        // Show debug panel with raw vs filtered data comparison
-        const debugHtml = `
-            <div class="alert alert-warning mt-3" id="debug-panel">
-                <h6><i class="fas fa-bug"></i> Debug Information</h6>
-                <div class="row">
-                    <div class="col-md-6">
-                        <strong>Raw Tags (Before Filter):</strong><br>
-                        <pre style="font-size: 11px; max-height: 200px; overflow-y: auto;">${JSON.stringify(debug.raw_tags_before_filter, null, 2)}</pre>
-                        <strong>Google Books Categories:</strong><br>
-                        <pre style="font-size: 11px; max-height: 150px; overflow-y: auto;">${JSON.stringify(debug.google_books_raw?.categories || 'NOT_FOUND', null, 2)}</pre>
-                    </div>
-                    <div class="col-md-6">
-                        <strong>Filtered Tags (After Filter):</strong><br>
-                        <pre style="font-size: 11px; max-height: 200px; overflow-y: auto;">${JSON.stringify(debug.filtered_tags_after_filter, null, 2)}</pre>
-                        <strong>OpenLibrary Subjects:</strong><br>
-                        <pre style="font-size: 11px; max-height: 150px; overflow-y: auto;">${JSON.stringify(debug.openlibrary_raw?.subject || 'NOT_FOUND', null, 2)}</pre>
-                    </div>
-                </div>
-                <small>
-                    <strong>Sources:</strong> ${debug.sources_checked.join(', ')}<br>
-                    <strong>Fields Found:</strong> ${debug.fields_found.join(', ')}
-                </small>
-            </div>
-        `;
-
-        // Insert debug panel after confidence score
-        $('#confidence-details').after(debugHtml);
     }
 
     // Show confidence score

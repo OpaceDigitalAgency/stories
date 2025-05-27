@@ -308,12 +308,15 @@ function displayEnrichmentFields(fields) {
     container.empty();
 
     // Define preferred field order (only actual database fields)
+    // Group related Amazon-derived fields together
     const fieldOrder = [
         'isbn', 'isbn13', 'author', 'publisher', 'publication_date', 'page_count',
-        'language', 'format', 'cover_url', 'preview_link', 'price_range', 'age_range',
+        'language', 'cover_url', 'preview_link', 'age_range',
         'reading_level', 'maturity_rating', 'average_rating', 'rating_count',
         'internet_archive_id', 'series', 'awards', 'characters', 'settings', 'tags',
-        'alternative_isbns', 'purchase_links'
+        'alternative_isbns',
+        // Amazon-derived fields grouped together
+        'purchase_links', 'format', 'price_range'
     ];
 
     // First, display fields in preferred order
@@ -624,47 +627,16 @@ function formatFieldValue(fieldName, value) {
         const moreCount = isbns.length > 10 ? ` <span class="text-muted">+${isbns.length - 10} more</span>` : '';
         return `<div style="max-height: 100px; overflow-y: auto;">${isbnBadges}${moreCount}</div>`;
     } else if (fieldName === 'purchase_links') {
-        // Parse and display purchase links for different formats
+        // Display purchase links as formatted JSON code
         try {
             const linksData = typeof value === 'string' ? JSON.parse(value) : value;
             if (!linksData || typeof linksData !== 'object') {
                 return '<span class="text-muted">No links available</span>';
             }
 
-            let linksHtml = '';
-
-            // Amazon UK link
-            if (linksData.amazon_uk) {
-                linksHtml += `<a href="${linksData.amazon_uk}" target="_blank" class="btn btn-sm btn-warning mr-1 mb-1">
-                    <i class="fab fa-amazon"></i> Amazon UK
-                </a>`;
-            }
-
-            // Goodreads link
-            if (linksData.goodreads) {
-                linksHtml += `<a href="${linksData.goodreads}" target="_blank" class="btn btn-sm btn-success mr-1 mb-1">
-                    <i class="fas fa-book"></i> Goodreads
-                </a>`;
-            }
-
-            // Google Books link
-            if (linksData.google_books) {
-                linksHtml += `<a href="${linksData.google_books}" target="_blank" class="btn btn-sm btn-primary mr-1 mb-1">
-                    <i class="fab fa-google"></i> Google Books
-                </a>`;
-            }
-
-            // Edition info if available
-            if (linksData._edition_info) {
-                const edition = linksData._edition_info;
-                linksHtml += `<div class="mt-1 small text-muted">
-                    Edition: ${edition.publisher || 'Unknown'}
-                    ${edition.isbn13 ? `(ISBN-13: ${edition.isbn13})` : ''}
-                    ${edition.isbn ? `(ISBN-10: ${edition.isbn})` : ''}
-                </div>`;
-            }
-
-            return linksHtml || '<span class="text-muted">No valid links</span>';
+            // Format as JSON with proper indentation
+            const formattedJson = JSON.stringify(linksData, null, 2);
+            return `<pre class="bg-light p-2 rounded" style="font-size: 12px; max-height: 150px; overflow-y: auto;"><code>${formattedJson}</code></pre>`;
         } catch (e) {
             console.error('Error parsing purchase links:', e);
             return '<span class="text-danger">Error parsing links</span>';

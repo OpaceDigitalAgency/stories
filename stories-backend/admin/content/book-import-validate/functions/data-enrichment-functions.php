@@ -1169,7 +1169,7 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
             return null;
 
         case 'purchase_links':
-            // Generate Amazon buying options with actual format-specific links and prices
+            // Generate simple Amazon URLs for each format
             $isbn13 = $match['isbn13'] ?? null;
             $isbn = $match['isbn'] ?? null;
 
@@ -1186,35 +1186,82 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
                 $buyingOptions = scrapeAmazonBuyingOptions($mainIsbn);
 
                 if (!empty($buyingOptions)) {
-                    // Create format-specific Amazon links with affiliate tag
+                    // Create simple Amazon URLs for each format
                     foreach ($buyingOptions as $format => $price) {
-                        $purchaseLinks['amazon_' . strtolower(str_replace(' ', '_', $format))] = [
-                            'url' => "https://www.amazon.co.uk/dp/" . $mainIsbn . "?tag=storiesfro0f0-20",
-                            'format' => $format,
-                            'price' => $price
-                        ];
+                        $formatKey = strtolower(str_replace([' ', '-'], '_', $format));
+                        $purchaseLinks[$formatKey] = "https://www.amazon.co.uk/dp/" . $mainIsbn . "?tag=storiesfro0f0-20";
                     }
                 } else {
                     // Fallback to basic Amazon link if scraping fails
-                    $purchaseLinks['amazon_uk'] = [
-                        'url' => "https://www.amazon.co.uk/dp/" . $mainIsbn . "?tag=storiesfro0f0-20",
-                        'format' => 'Unknown',
-                        'price' => 'Unknown'
-                    ];
-                }
-
-                // Add edition information if available
-                if (isset($match['publisher']) && !empty($match['publisher'])) {
-                    $publisher = is_array($match['publisher']) ? $match['publisher'][0] : $match['publisher'];
-                    $purchaseLinks['_edition_info'] = [
-                        'publisher' => $publisher,
-                        'isbn13' => $isbn13,
-                        'isbn' => $isbn
-                    ];
+                    $purchaseLinks['hardcover'] = "https://www.amazon.co.uk/dp/" . $mainIsbn . "?tag=storiesfro0f0-20";
                 }
             }
 
             return !empty($purchaseLinks) ? json_encode($purchaseLinks) : null;
+
+        case 'format':
+            // Extract format from Amazon buying options (use the first/primary format)
+            $isbn13 = $match['isbn13'] ?? null;
+            $isbn = $match['isbn'] ?? null;
+
+            if (is_array($isbn) && !empty($isbn)) {
+                $isbn = $isbn[0];
+            }
+
+            if ($isbn13 || $isbn) {
+                $mainIsbn = $isbn13 ?: $isbn;
+                $buyingOptions = scrapeAmazonBuyingOptions($mainIsbn);
+
+                if (!empty($buyingOptions)) {
+                    // Return the first format found (usually the primary/default one)
+                    $formats = array_keys($buyingOptions);
+                    return normalizeFormat($formats[0]);
+                }
+            }
+
+            // Fallback to standard field extraction
+            return normalizeFormat($match['format'] ?? null);
+
+        case 'price_range':
+            // Extract price range from Amazon buying options
+            $isbn13 = $match['isbn13'] ?? null;
+            $isbn = $match['isbn'] ?? null;
+
+            if (is_array($isbn) && !empty($isbn)) {
+                $isbn = $isbn[0];
+            }
+
+            if ($isbn13 || $isbn) {
+                $mainIsbn = $isbn13 ?: $isbn;
+                $buyingOptions = scrapeAmazonBuyingOptions($mainIsbn);
+
+                if (!empty($buyingOptions)) {
+                    // Get the first price and convert to range
+                    $prices = array_values($buyingOptions);
+                    $firstPrice = $prices[0];
+
+                    // Extract numeric value from price string like "£13.70"
+                    if (preg_match('/£(\d+\.\d{2})/', $firstPrice, $matches)) {
+                        $price = floatval($matches[1]);
+
+                        // Map price to range
+                        if ($price < 5) {
+                            return 'Under £5';
+                        } elseif ($price <= 10) {
+                            return '£5-£10';
+                        } elseif ($price <= 15) {
+                            return '£10-£15';
+                        } elseif ($price <= 20) {
+                            return '£15-£20';
+                        } else {
+                            return 'Over £20';
+                        }
+                    }
+                }
+            }
+
+            // Fallback to standard field extraction
+            return $match['price_range'] ?? null;
 
         default:
             // Standard field extraction

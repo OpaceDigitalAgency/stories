@@ -306,18 +306,27 @@ function displayEnrichmentResults(data, debug) {
 
     // Fetch Amazon data asynchronously
     var $amazonContainer = $('.amazon-data-container');
+    if (!$amazonContainer.length) {
+        console.error('📦 Amazon container not found in DOM');
+        return;
+    }
+
     console.log('📦 Starting AJAX fetch for Amazon data. ISBN:', currentBookISBN);
     $amazonContainer.html('<p>Loading Amazon data…</p>');
-    $.post('/admin/content/book-import-validate/ajax/data-enrichment-ajax.php', {
+
+    // Use relative URL for AJAX call
+    $.post('book-import-validate/ajax/data-enrichment-ajax.php', {
         action: 'get_amazon_data',
         isbn: currentBookISBN
     }, function(res) {
         console.log('📦 Amazon AJAX response received:', res);
-        if (res.success && res.data && res.data.buying_options) {
+        if (res.success && res.data && res.data.buying_options && Object.keys(res.data.buying_options).length > 0) {
             var html = '';
             // Display selected format and its price
-            html += '<p><strong>Format:</strong> ' + res.data.selected_format + '</p>';
-            html += '<p><strong>Price:</strong> ' + res.data.selected_price + '</p>';
+            if (res.data.selected_format && res.data.selected_price) {
+                html += '<p><strong>Format:</strong> ' + res.data.selected_format + '</p>';
+                html += '<p><strong>Price:</strong> ' + res.data.selected_price + '</p>';
+            }
             html += '<h6>Purchase Links</h6>';
             html += '<ul>';
             $.each(res.data.buying_options, function(format, info) {
@@ -326,10 +335,12 @@ function displayEnrichmentResults(data, debug) {
             html += '</ul>';
             $amazonContainer.html(html);
         } else {
+            console.log('📦 No Amazon buying options found or empty response');
             $amazonContainer.html('<p>No Amazon data available.</p>');
         }
-    }, 'json').fail(function() {
-        console.error('📦 Amazon AJAX error', arguments);
+    }, 'json').fail(function(xhr, status, error) {
+        console.error('📦 Amazon AJAX error:', { xhr, status, error });
+        console.error('📦 Response text:', xhr.responseText);
         $amazonContainer.html('<p>Error loading Amazon data.</p>');
     });
 

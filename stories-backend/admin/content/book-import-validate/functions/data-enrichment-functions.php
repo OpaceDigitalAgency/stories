@@ -87,8 +87,6 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
         'maturity_rating' => ['confidence' => 55, 'label' => 'Maturity Rating'], // Maps to age_range
         'age_range' => ['confidence' => 50, 'label' => 'Age Range'], // Derived from maturity_rating and subjects
         'reading_level' => ['confidence' => 40, 'label' => 'Reading Level'], // From OpenLibrary lexile
-        'average_rating' => ['confidence' => 60, 'label' => 'Average Rating'], // From OpenLibrary ratings
-        'rating_count' => ['confidence' => 60, 'label' => 'Rating Count'], // From OpenLibrary ratings
         'internet_archive_id' => ['confidence' => 70, 'label' => 'Internet Archive ID'], // From OpenLibrary
         'awards' => ['confidence' => 45, 'label' => 'Awards'], // From OpenLibrary subject_facet
         'characters' => ['confidence' => 40, 'label' => 'Characters'], // From OpenLibrary person
@@ -528,46 +526,93 @@ function extractFieldValue($match, $fieldName) {
             // Extract all ISBNs from OpenLibrary data except the main one
             if (isset($match['isbn']) && is_array($match['isbn'])) {
                 $allIsbns = $match['isbn'];
-                // Remove the main ISBN if it exists
+                // Get the main ISBN (prefer ISBN13, fallback to first ISBN)
                 $mainIsbn = $match['isbn13'] ?? $match['isbn'][0] ?? '';
-                $alternativeIsbns = array_filter($allIsbns, function($isbn) use ($mainIsbn) {
-                    return $isbn !== $mainIsbn && strlen($isbn) >= 10;
-                });
-                return !empty($alternativeIsbns) ? implode(',', array_slice($alternativeIsbns, 0, 10)) : null;
+                
+                $alternativeIsbns = [];
+                foreach ($allIsbns as $isbn) {
+                    if (is_string($isbn) && strlen($isbn) >= 10 && $isbn !== $mainIsbn) {
+                        $alternativeIsbns[] = $isbn;
+                    }
+                }
+                
+                // Return formatted for scrollable display
+                if (!empty($alternativeIsbns)) {
+                    $limitedIsbns = array_slice($alternativeIsbns, 0, 20);
+                    return implode(',', $limitedIsbns);
+                }
             }
-            break;
+            return null;
+
+        case 'isbn':
+            // Return only the main ISBN, not the long list
+            if (isset($match['isbn13']) && !empty($match['isbn13'])) {
+                return $match['isbn13'];
+            } elseif (isset($match['isbn']) && is_array($match['isbn']) && !empty($match['isbn'])) {
+                return $match['isbn'][0];
+            } elseif (isset($match['isbn']) && is_string($match['isbn'])) {
+                return $match['isbn'];
+            }
+            return null;
+
+        case 'isbn13':
+            // Return only the main ISBN13
+            if (isset($match['isbn13']) && !empty($match['isbn13'])) {
+                return $match['isbn13'];
+            } elseif (isset($match['isbn']) && is_array($match['isbn'])) {
+                // Find the first 13-digit ISBN
+                foreach ($match['isbn'] as $isbn) {
+                    if (is_string($isbn) && strlen($isbn) === 13) {
+                        return $isbn;
+                    }
+                }
+                // Fallback to first ISBN if no 13-digit found
+                return !empty($match['isbn']) ? $match['isbn'][0] : null;
+            }
+            return null;
 
         case 'tags':
-            // Google Books categories[] + OpenLibrary subject[] + subject_key[] + OpenLibrary subject_facet[]
-            // Processing: Deduplicates and capitalizes entries
+            // Merge tags from all sources and deduplicate
             $allTags = [];
-
-
 
             // Get Google Books categories
             if (isset($match['categories']) && is_array($match['categories'])) {
-                $allTags = array_merge($allTags, $match['categories']);
+                foreach ($match['categories'] as $category) {
+                    if (is_string($category)) {
+                        $allTags[] = trim($category);
+                    }
+                }
             }
 
-            // Get OpenLibrary subjects (full list)
+            // Get OpenLibrary subjects
             if (isset($match['subject']) && is_array($match['subject'])) {
-                $allTags = array_merge($allTags, $match['subject']);
+                foreach ($match['subject'] as $subject) {
+                    if (is_string($subject)) {
+                        $allTags[] = trim($subject);
+                    }
+                }
             }
 
             // Get OpenLibrary subject_key
             if (isset($match['subject_key']) && is_array($match['subject_key'])) {
-                $subjectKeys = array_map(function($key) {
-                    return ucwords(str_replace('_', ' ', $key));
-                }, $match['subject_key']);
-                $allTags = array_merge($allTags, $subjectKeys);
+                foreach ($match['subject_key'] as $key) {
+                    if (is_string($key)) {
+                        $formatted = ucwords(str_replace('_', ' ', trim($key)));
+                        $allTags[] = $formatted;
+                    }
+                }
             }
 
             // Get OpenLibrary subject_facet
             if (isset($match['subject_facet']) && is_array($match['subject_facet'])) {
-                $allTags = array_merge($allTags, $match['subject_facet']);
+                foreach ($match['subject_facet'] as $facet) {
+                    if (is_string($facet)) {
+                        $allTags[] = trim($facet);
+                    }
+                }
             }
 
-            // Clean and filter tags - exclude age-related terms that should go to age_range
+            // Clean, normalize and deduplicate tags
             if (!empty($allTags)) {
                 $cleanTags = [];
                 $ageTermsToExclude = [
@@ -582,18 +627,11 @@ function extractFieldValue($match, $fieldName) {
                 ];
 
                 foreach ($allTags as $tag) {
-                    // Handle both string and array values
-                    if (is_array($tag)) {
-                        // If it's an array, skip it or flatten it
+                    $cleanTag = trim($tag);
+                    if (empty($cleanTag) || strlen($cleanTag) <= 2 || strlen($cleanTag) > 100) {
                         continue;
                     }
 
-                    if (!is_string($tag)) {
-                        // Convert to string if it's not already
-                        $tag = (string) $tag;
-                    }
-
-                    $cleanTag = trim($tag);
                     $lowerTag = strtolower($cleanTag);
 
                     // Skip age-related terms
@@ -605,15 +643,27 @@ function extractFieldValue($match, $fieldName) {
                         }
                     }
 
-                    if (!$isAgeRelated && !empty($cleanTag) && strlen($cleanTag) > 2 && strlen($cleanTag) < 100) {
-                        // Capitalize first letter of each word
-                        $cleanTags[] = ucwords(strtolower($cleanTag));
+                    if (!$isAgeRelated) {
+                        // Normalize capitalization
+                        $normalizedTag = ucwords(strtolower($cleanTag));
+                        
+                        // Check for duplicates (case-insensitive)
+                        $isDuplicate = false;
+                        foreach ($cleanTags as $existingTag) {
+                            if (strtolower($existingTag) === strtolower($normalizedTag)) {
+                                $isDuplicate = true;
+                                break;
+                            }
+                        }
+                        
+                        if (!$isDuplicate) {
+                            $cleanTags[] = $normalizedTag;
+                        }
                     }
                 }
 
-                // Remove duplicates and return full list
-                $uniqueTags = array_unique($cleanTags);
-                return implode(', ', $uniqueTags);
+                // Limit to reasonable number and return
+                return !empty($cleanTags) ? implode(', ', array_slice($cleanTags, 0, 15)) : null;
             }
             break;
 
@@ -628,6 +678,27 @@ function extractFieldValue($match, $fieldName) {
             // Normalize language codes
             if (isset($match['language'])) {
                 return normalizeLanguage($match['language']);
+            }
+            break;
+
+        case 'format':
+            // Normalize and deduplicate format data
+            $formats = [];
+            if (isset($match['format']) && is_array($match['format'])) {
+                $formats = $match['format'];
+            } elseif (isset($match['format']) && is_string($match['format'])) {
+                $formats = explode(',', $match['format']);
+            }
+            
+            if (!empty($formats)) {
+                $normalizedFormats = [];
+                foreach ($formats as $format) {
+                    $normalized = normalizeFormat(trim($format));
+                    if ($normalized && !in_array($normalized, $normalizedFormats)) {
+                        $normalizedFormats[] = $normalized;
+                    }
+                }
+                return !empty($normalizedFormats) ? implode(', ', array_slice($normalizedFormats, 0, 3)) : null;
             }
             break;
 
@@ -743,7 +814,7 @@ function extractFieldValue($match, $fieldName) {
             break;
 
         case 'settings':
-            // Use Open Library place_facet[] with deduplication
+            // Use Open Library place_facet[] - simple processing
             $places = [];
             if (isset($match['place_facet']) && is_array($match['place_facet'])) {
                 $places = $match['place_facet'];
@@ -758,11 +829,9 @@ function extractFieldValue($match, $fieldName) {
                         $place = (string) $place;
                     }
                     $place = trim($place);
-                    if (empty($place)) continue;
-                    
-                    // Deduplicate similar places (e.g., "London, London (England)" -> "London (England)")
-                    $place = deduplicateLocation($place);
-                    $cleanPlaces[] = ucwords(strtolower($place));
+                    if (!empty($place)) {
+                        $cleanPlaces[] = ucwords(strtolower($place));
+                    }
                 }
                 
                 $uniquePlaces = array_unique($cleanPlaces);
@@ -878,10 +947,22 @@ function normalizeLanguage($language) {
         'por' => 'Portuguese'
     ];
 
-    // Ensure language is a string before trimming
+    // Handle array of languages - prioritize English
     if (is_array($language)) {
-        // If it's an array, take the first element or return 'Multiple'
-        $language = !empty($language) ? $language[0] : 'Unknown';
+        if (empty($language)) {
+            return 'Unknown';
+        }
+        
+        // Look for English variants first
+        foreach ($language as $lang) {
+            $langCode = strtolower(trim($lang));
+            if (in_array($langCode, ['en', 'eng', 'english'])) {
+                return 'English';
+            }
+        }
+        
+        // If no English found, take the first language
+        $language = $language[0];
     } elseif (!is_string($language)) {
         $language = (string) $language;
     }
@@ -899,6 +980,38 @@ function truncateText($text, $maxLength = 500) {
     }
 
     return substr($text, 0, $maxLength) . '...';
+}
+
+/**
+ * Normalize format strings
+ */
+function normalizeFormat($format) {
+    if (empty($format)) {
+        return null;
+    }
+    
+    $format = trim($format);
+    $formatMap = [
+        'hardcover' => 'Hardcover',
+        'hardback' => 'Hardcover',
+        'gebundene ausgabe' => 'Hardcover',
+        'paperback' => 'Paperback',
+        'softcover' => 'Paperback',
+        'brossura' => 'Paperback',
+        'kindle' => 'Kindle',
+        'ebook' => 'eBook',
+        'e-book' => 'eBook',
+        'electronic resource' => 'eBook',
+        'audio cd' => 'Audio CD',
+        'audiobook' => 'Audiobook',
+        'audio cassette' => 'Audio Cassette',
+        'library binding' => 'Library Binding',
+        'school & library binding' => 'Library Binding',
+        'mass market paperback' => 'Mass Market Paperback'
+    ];
+    
+    $lowerFormat = strtolower($format);
+    return $formatMap[$lowerFormat] ?? ucwords($format);
 }
 
 /**

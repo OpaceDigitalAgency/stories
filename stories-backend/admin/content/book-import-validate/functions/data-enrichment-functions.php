@@ -1,4 +1,8 @@
 <?php
+// Toggle Amazon debug output (disable for JSON API use)
+if (!defined('AMAZON_DEBUG')) {
+    define('AMAZON_DEBUG', false);
+}
 /**
  * Data Enrichment Functions
  *
@@ -1643,7 +1647,9 @@ function validateCombinedISBN($combinedFields, $currentISBN) {
  */
 function scrapeAmazonBuyingOptions($isbn) {
     if (empty($isbn)) {
-        echo "<p><strong>❌ Error:</strong> ISBN is empty.</p>\n";
+        if (AMAZON_DEBUG) {
+            echo "<p><strong>❌ Error:</strong> ISBN is empty.</p>\n";
+        }
         return [];
     }
 
@@ -1659,7 +1665,9 @@ function scrapeAmazonBuyingOptions($isbn) {
 
     $response = '';
     foreach ($endpoints as $type => $url) {
-        echo "<p><strong>🔍 [{$type}] Scraping URL:</strong> <a href=\"{$url}\" target=\"_blank\">{$url}</a></p>\n";
+        if (AMAZON_DEBUG) {
+            echo "<p><strong>🔍 [{$type}] Scraping URL:</strong> <a href=\"{$url}\" target=\"_blank\">{$url}</a></p>\n";
+        }
 
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -1673,24 +1681,32 @@ function scrapeAmazonBuyingOptions($isbn) {
         $error = curl_error($ch);
         curl_close($ch);
 
-        echo "<p><strong>📡 HTTP Status Code ({$type}):</strong> {$httpCode}</p>\n";
+        if (AMAZON_DEBUG) {
+            echo "<p><strong>📡 HTTP Status Code ({$type}):</strong> {$httpCode}</p>\n";
+        }
         if ($body && $httpCode === 200) {
             $response = $body;
             break;
         } else {
-            echo "<p><strong>⚠️ {$type} fetch failed:</strong> {$error}</p>\n";
+            if (AMAZON_DEBUG) {
+                echo "<p><strong>⚠️ {$type} fetch failed:</strong> {$error}</p>\n";
+            }
         }
     }
 
     if (empty($response)) {
-        echo "<p><strong>❌ All fetch attempts failed. No response.</strong></p>\n";
+        if (AMAZON_DEBUG) {
+            echo "<p><strong>❌ All fetch attempts failed. No response.</strong></p>\n";
+        }
         return [];
     }
 
     // Save raw response for offline inspection
     $debugFile = "/tmp/amazon_response_{$cleanISBN}.html";
     file_put_contents($debugFile, $response);
-    echo "<p><strong>📁 Response saved to:</strong> {$debugFile}</p>\n";
+    if (AMAZON_DEBUG) {
+        echo "<p><strong>📁 Response saved to:</strong> {$debugFile}</p>\n";
+    }
 
     // Prepare to match formats
     $patterns = [
@@ -1714,14 +1730,20 @@ function scrapeAmazonBuyingOptions($isbn) {
                 'price' => '£' . $m[1],
                 'url'   => $fullUrl
             ];
-            echo "<p><strong>✅ Found {$label}:</strong> Price £{$m[1]}, URL: {$fullUrl}</p>\n";
+            if (AMAZON_DEBUG) {
+                echo "<p><strong>✅ Found {$label}:</strong> Price £{$m[1]}, URL: {$fullUrl}</p>\n";
+            }
         } else {
-            echo "<p><strong>❌ No {$label} found via pattern.</strong></p>\n";
+            if (AMAZON_DEBUG) {
+                echo "<p><strong>❌ No {$label} found via pattern.</strong></p>\n";
+            }
         }
     }
 
     if (empty($buyingOptions)) {
-        echo "<p><strong>❌ No buying options detected after parsing.</strong></p>\n";
+        if (AMAZON_DEBUG) {
+            echo "<p><strong>❌ No buying options detected after parsing.</strong></p>\n";
+        }
     }
 
     return $buyingOptions;
@@ -1848,4 +1870,11 @@ function scrapePriceFromAmazon($isbn) {
         error_log("Error scraping Amazon price for ISBN $isbn: " . $e->getMessage());
         return null;
     }
+}
+// Handle AJAX request for Amazon data
+if (php_sapi_name() !== 'cli' && isset($_GET['ajax']) && $_GET['ajax'] === 'amazon_data' && !empty($_GET['isbn'])) {
+    header('Content-Type: application/json');
+    $data = scrapeAmazonBuyingOptions($_GET['isbn']);
+    echo json_encode($data);
+    exit;
 }

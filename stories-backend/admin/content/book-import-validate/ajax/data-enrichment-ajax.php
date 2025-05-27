@@ -53,6 +53,18 @@ try {
             handleCheckGoodreadsISBN();
             break;
 
+        case 'get_amazon_data':
+            // Proxy request to scrapeAmazonBuyingOptions for AJAX
+            $isbn = $_POST['isbn'] ?? '';
+            if (empty($isbn)) {
+                echo json_encode(['success' => false, 'message' => 'ISBN is required']);
+            } else {
+                // Fetch Amazon buying options from enrichment functions
+                $amazonData = scrapeAmazonBuyingOptions($isbn);
+                echo json_encode(['success' => true, 'data' => $amazonData]);
+            }
+            break;
+
         default:
             echo json_encode(['success' => false, 'message' => 'Invalid action: ' . $action]);
             break;

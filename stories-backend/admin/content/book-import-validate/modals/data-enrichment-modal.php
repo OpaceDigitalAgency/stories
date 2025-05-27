@@ -306,11 +306,13 @@ function displayEnrichmentResults(data, debug) {
 
     // Fetch Amazon data asynchronously
     var $amazonContainer = $('.amazon-data-container');
+    console.log('📦 Starting AJAX fetch for Amazon data. ISBN:', currentBookISBN);
     $amazonContainer.html('<p>Loading Amazon data…</p>');
-    $.post('book-import-validate/ajax/data-enrichment-ajax.php', {
+    $.post('/admin/content/book-import-validate/ajax/data-enrichment-ajax.php', {
         action: 'get_amazon_data',
         isbn: currentBookISBN
     }, function(res) {
+        console.log('📦 Amazon AJAX response received:', res);
         if (res.success && res.data && res.data.buying_options) {
             var html = '';
             // Display selected format and its price
@@ -327,6 +329,7 @@ function displayEnrichmentResults(data, debug) {
             $amazonContainer.html('<p>No Amazon data available.</p>');
         }
     }, 'json').fail(function() {
+        console.error('📦 Amazon AJAX error', arguments);
         $amazonContainer.html('<p>Error loading Amazon data.</p>');
     });
 

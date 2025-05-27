@@ -217,8 +217,8 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
                         ]
                     ];
                 }
-            } else {
-                // Only one source has data
+            } elseif (!in_array($fieldName, ['purchase_links', 'format', 'price_range'])) {
+                // Only one source has data (but don't override Amazon fields)
                 $value = !empty($googleValue) ? $googleValue : $openLibraryValue;
                 $source = !empty($googleValue) ? 'google_books' : 'open_library';
                 $confidence = !empty($googleValue) ? $fieldConfig['confidence'] : $fieldConfig['confidence'] - 5;

@@ -32,7 +32,8 @@ function fetchOpenLibraryDataNew($isbn, $title, $author, $isForEnrichment = fals
         error_log("Starting Open Library data fetch for ISBN: $isbn");
 
         // Try ISBN search first using the search API that returns rich metadata
-        $url = "https://openlibrary.org/search.json?q=" . urlencode($isbn) . "&fields=*,availability&limit=1";
+        // Use isbn: prefix for exact ISBN matching
+        $url = "https://openlibrary.org/search.json?q=isbn:" . urlencode($isbn) . "&fields=*,availability&limit=1";
 
         // Add step for URL generation
         $status['steps'][] = [

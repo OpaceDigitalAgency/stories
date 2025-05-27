@@ -7,6 +7,7 @@
 
 require_once __DIR__ . '/google-books-validation-functions.php';
 require_once __DIR__ . '/open-library-validation-functions.php';
+require_once __DIR__ . '/data-enrichment-fixes.php';
 
 /**
  * Fix duplicate location strings like "London, London (England)" -> "London (England)"
@@ -122,6 +123,12 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
     // Find best matches from each source
     $googleMatch = findBestDataMatch($googleResults, $title, $author, $currentISBN);
     $openLibraryMatch = findBestDataMatch($openLibraryResults, $title, $author, $currentISBN);
+    
+    // Validate OpenLibrary match if we have an ISBN
+    if (!empty($currentISBN) && $openLibraryMatch && !validateOpenLibraryISBNMatch($openLibraryMatch, $currentISBN)) {
+        error_log("OpenLibrary match rejected - ISBN mismatch. Expected: $currentISBN");
+        $openLibraryMatch = null;
+    }
 
     $combinedFields = [];
     $maxConfidence = 0;
@@ -134,7 +141,29 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
 
         // Check if we have data from either source
         if (!empty($googleValue) || !empty($openLibraryValue)) {
-            if (!empty($googleValue) && !empty($openLibraryValue)) {
+            // Special handling for tags - always merge them
+            if ($fieldName === 'tags') {
+                $mergedTags = mergeTagsFromSources($googleValue, $openLibraryValue);
+                if (!empty($mergedTags)) {
+                    $combinedFields[$fieldName] = [
+                        'value' => $mergedTags,
+                        'source' => 'google_books + open_library',
+                        'confidence' => $fieldConfig['confidence'],
+                        'label' => $fieldConfig['label']
+                    ];
+                }
+            } elseif ($fieldName === 'alternative_isbns' && $openLibraryMatch) {
+                // Special handling for alternative ISBNs - only from OpenLibrary
+                $altISBNs = extractAlternativeISBNs($openLibraryMatch, $currentISBN);
+                if (!empty($altISBNs)) {
+                    $combinedFields[$fieldName] = [
+                        'value' => $altISBNs,
+                        'source' => 'open_library',
+                        'confidence' => $fieldConfig['confidence'],
+                        'label' => $fieldConfig['label']
+                    ];
+                }
+            } elseif (!empty($googleValue) && !empty($openLibraryValue)) {
                 // Both sources have data - check if they match
                 if (normalizeForComparison($googleValue) === normalizeForComparison($openLibraryValue)) {
                     // Values match - use combined source
@@ -916,7 +945,8 @@ function extractFieldValue($match, $fieldName) {
                 return null;
             }
             
-            $priceRange = scrapePriceFromAmazon($isbn);
+            // Use enhanced price scraping with fallbacks
+            $priceRange = scrapePriceFromAmazonEnhanced($isbn);
             error_log("Price range result for ISBN " . (is_array($isbn) ? json_encode($isbn) : $isbn) . ": " . ($priceRange ?? 'null'));
             return $priceRange;
 

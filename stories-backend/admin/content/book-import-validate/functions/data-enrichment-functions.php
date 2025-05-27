@@ -1663,12 +1663,12 @@ function scrapeAmazonBuyingOptions($isbn) {
         'mobile'  => 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1'
     ];
 
-    $response = '';
+    // Fetch both desktop and mobile versions
+    $responses = [];
     foreach ($endpoints as $type => $url) {
         if (AMAZON_DEBUG) {
             echo "<p><strong>🔍 [{$type}] Scraping URL:</strong> <a href=\"{$url}\" target=\"_blank\">{$url}</a></p>\n";
         }
-
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, 15);
@@ -1678,32 +1678,25 @@ function scrapeAmazonBuyingOptions($isbn) {
         curl_setopt($ch, CURLOPT_ENCODING, '');
         $body = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $error = curl_error($ch);
         curl_close($ch);
-
-        if (AMAZON_DEBUG) {
-            echo "<p><strong>📡 HTTP Status Code ({$type}):</strong> {$httpCode}</p>\n";
-        }
-        if ($body && $httpCode === 200) {
-            $response = $body;
-            break;
-        } else {
+        if ($httpCode === 200 && $body) {
+            $responses[$type] = $body;
             if (AMAZON_DEBUG) {
-                echo "<p><strong>⚠️ {$type} fetch failed:</strong> {$error}</p>\n";
+                echo "<p><strong>📡 HTTP Status Code ({$type}):</strong> {$httpCode}</p>\n";
             }
+        } elseif (AMAZON_DEBUG) {
+            echo "<p><strong>⚠️ {$type} fetch failed or empty response (HTTP {$httpCode})</strong></p>\n";
         }
     }
-
-    if (empty($response)) {
+    if (empty($responses)) {
         if (AMAZON_DEBUG) {
             echo "<p><strong>❌ All fetch attempts failed. No response.</strong></p>\n";
         }
         return [];
     }
-
-    // Save raw response for offline inspection
+    // Save first successful response for inspection
     $debugFile = "/tmp/amazon_response_{$cleanISBN}.html";
-    file_put_contents($debugFile, $response);
+    file_put_contents($debugFile, reset($responses));
     if (AMAZON_DEBUG) {
         echo "<p><strong>📁 Response saved to:</strong> {$debugFile}</p>\n";
     }
@@ -1718,25 +1711,28 @@ function scrapeAmazonBuyingOptions($isbn) {
 
     $buyingOptions = [];
     foreach ($patterns as $label => $pat) {
-        if (preg_match($pat, $response, $m)) {
-            $relativeUrl = $m[2];
-            // Determine full URL: use base ISBN URL if Amazon uses javascript:void(0) or URL is not a relative path
-            if (stripos($relativeUrl, 'javascript:') === 0 || !preg_match('#^/#', $relativeUrl)) {
-                $fullUrl = $endpoints['desktop'];
-            } else {
-                $fullUrl = 'https://www.amazon.co.uk' . $relativeUrl;
+        foreach ($responses as $resp) {
+            if (preg_match($pat, $resp, $m)) {
+                $relativeUrl = $m[2];
+                // Determine full URL
+                if (stripos($relativeUrl, 'javascript:') === 0 || !preg_match('#^/#', $relativeUrl)) {
+                    // Fallback to the main product page (default format)
+                    $fullUrl = $endpoints['desktop'];
+                } else {
+                    $fullUrl = 'https://www.amazon.co.uk' . $relativeUrl;
+                }
+                $buyingOptions[$label] = [
+                    'price' => '£' . $m[1],
+                    'url'   => $fullUrl
+                ];
+                if (AMAZON_DEBUG) {
+                    echo "<p><strong>✅ Found {$label}:</strong> Price £{$m[1]}, URL: {$fullUrl}</p>\n";
+                }
+                break 2; // exit both loops once found
             }
-            $buyingOptions[$label] = [
-                'price' => '£' . $m[1],
-                'url'   => $fullUrl
-            ];
-            if (AMAZON_DEBUG) {
-                echo "<p><strong>✅ Found {$label}:</strong> Price £{$m[1]}, URL: {$fullUrl}</p>\n";
-            }
-        } else {
-            if (AMAZON_DEBUG) {
-                echo "<p><strong>❌ No {$label} found via pattern.</strong></p>\n";
-            }
+        }
+        if (AMAZON_DEBUG) {
+            echo "<p><strong>❌ No {$label} found via any version.</strong></p>\n";
         }
     }
 
@@ -1870,11 +1866,4 @@ function scrapePriceFromAmazon($isbn) {
         error_log("Error scraping Amazon price for ISBN $isbn: " . $e->getMessage());
         return null;
     }
-}
-// Handle AJAX request for Amazon data
-if (php_sapi_name() !== 'cli' && isset($_GET['ajax']) && $_GET['ajax'] === 'amazon_data' && !empty($_GET['isbn'])) {
-    header('Content-Type: application/json');
-    $data = scrapeAmazonBuyingOptions($_GET['isbn']);
-    echo json_encode($data);
-    exit;
 }

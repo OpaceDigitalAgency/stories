@@ -104,7 +104,6 @@
                             </form>
                         </div>
                     </div>
-
                     <!-- Amazon Buying Options -->
                     <div class="mt-4">
                         <h5>Amazon Buying Options</h5>
@@ -234,7 +233,6 @@ function fetchEnrichmentData(title, author, currentISBN) {
         success: function(response) {
             console.log('Enrichment response:', response);
             $('#enrichment-loading').hide();
-
             if (response.success) {
                 currentEnrichmentData = response.data;
                 displayEnrichmentResults(response.data, response.debug);
@@ -309,7 +307,7 @@ function displayEnrichmentResults(data, debug) {
     // Fetch Amazon data asynchronously
     var $amazonContainer = $('.amazon-data-container');
     $amazonContainer.html('<p>Loading Amazon data…</p>');
-    $.post('ajax/data-enrichment-ajax.php', {
+    $.post('book-import-validate/ajax/data-enrichment-ajax.php', {
         action: 'get_amazon_data',
         isbn: currentBookISBN
     }, function(res) {

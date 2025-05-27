@@ -240,7 +240,22 @@ function fetchEnrichmentData(title, author, currentISBN) {
             console.error('AJAX Error:', { xhr, status, error });
             console.error('Response text:', xhr.responseText);
             $('#enrichment-loading').hide();
-            showEnrichmentError('Network error: ' + error + ' (Check console for details)');
+
+            // Try to extract meaningful error from response
+            let errorMessage = error;
+            if (xhr.responseText) {
+                // If response contains HTML error, extract the error message
+                if (xhr.responseText.includes('<b>')) {
+                    const match = xhr.responseText.match(/<b>(.*?)<\/b>/);
+                    if (match) {
+                        errorMessage = match[1];
+                    }
+                }
+                // Show first 500 characters of response for debugging
+                console.error('Full response:', xhr.responseText.substring(0, 500));
+            }
+
+            showEnrichmentError(`Network error: ${errorMessage}. Response: ${xhr.responseText.substring(0, 200)}...`);
         }
     });
 }

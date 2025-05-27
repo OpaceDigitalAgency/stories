@@ -91,6 +91,9 @@ function handleGetEnrichmentData() {
         $enrichedData = getEnrichedBookData($title, $author, $currentISBN);
         error_log("Raw enriched data: " . json_encode($enrichedData));
 
+        // TEMP DEBUG: Check specific field before filtering
+        error_log("Tags field before filtering: " . json_encode($enrichedData['fields']['tags'] ?? 'NOT_FOUND'));
+
         // Filter and combine with current data
         $enrichedData['fields'] = filterRelevantFields($enrichedData['fields'], $currentBookData);
         $enrichedData['current_data'] = $currentBookData;

@@ -1191,15 +1191,71 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
             return null;
 
         case 'purchase_links':
-            // Loaded asynchronously via AJAX
+            // Extract purchase links from Amazon UK using ISBN
+            if (isset($match['isbn13'])) {
+                $isbn = $match['isbn13'];
+            } elseif (isset($match['isbn']) && is_string($match['isbn'])) {
+                $isbn = $match['isbn'];
+            } elseif (isset($match['isbn']) && is_array($match['isbn']) && !empty($match['isbn'])) {
+                // Handle OpenLibrary array format
+                $isbn = is_array($match['isbn'][0]) ? $match['isbn'][0] : $match['isbn'][0];
+            } else {
+                return null;
+            }
+
+            // Use Amazon scraping function to get purchase links
+            $amazonData = getAmazonEnrichmentData($isbn);
+            if (!empty($amazonData['buying_options'])) {
+                return json_encode($amazonData['buying_options']);
+            }
             return null;
 
         case 'format':
-            // Loaded asynchronously via AJAX
-            return null;
+            // Extract format from Amazon UK using ISBN
+            if (isset($match['isbn13'])) {
+                $isbn = $match['isbn13'];
+            } elseif (isset($match['isbn']) && is_string($match['isbn'])) {
+                $isbn = $match['isbn'];
+            } elseif (isset($match['isbn']) && is_array($match['isbn']) && !empty($match['isbn'])) {
+                // Handle OpenLibrary array format
+                $isbn = is_array($match['isbn'][0]) ? $match['isbn'][0] : $match['isbn'][0];
+            } else {
+                return null;
+            }
+
+            // Use Amazon scraping function to get format
+            $amazonData = getAmazonEnrichmentData($isbn);
+            return $amazonData['selected_format'] ?? null;
 
         case 'price_range':
-            // Loaded asynchronously via AJAX
+            // Extract price range from Amazon UK using ISBN
+            if (isset($match['isbn13'])) {
+                $isbn = $match['isbn13'];
+            } elseif (isset($match['isbn']) && is_string($match['isbn'])) {
+                $isbn = $match['isbn'];
+            } elseif (isset($match['isbn']) && is_array($match['isbn']) && !empty($match['isbn'])) {
+                // Handle OpenLibrary array format
+                $isbn = is_array($match['isbn'][0]) ? $match['isbn'][0] : $match['isbn'][0];
+            } else {
+                return null;
+            }
+
+            // Use Amazon scraping function to get price range
+            $amazonData = getAmazonEnrichmentData($isbn);
+            if (!empty($amazonData['selected_price'])) {
+                $price = floatval(str_replace('£', '', $amazonData['selected_price']));
+                if ($price < 5) {
+                    return 'Under £5';
+                } elseif ($price <= 10) {
+                    return '£5-£10';
+                } elseif ($price <= 15) {
+                    return '£10-£15';
+                } elseif ($price <= 20) {
+                    return '£15-£20';
+                } else {
+                    return 'Over £20';
+                }
+            }
             return null;
 
         default:
@@ -1525,6 +1581,11 @@ function validateCombinedISBN($combinedFields, $currentISBN) {
  * Scrape Amazon buying options (Hardcover, Paperback, Kindle, Audio CD) with debugging output
  */
 function scrapeAmazonBuyingOptions($isbn) {
+    // Define AMAZON_DEBUG if not already defined
+    if (!defined('AMAZON_DEBUG')) {
+        define('AMAZON_DEBUG', true);
+    }
+
     if (empty($isbn)) {
         if (AMAZON_DEBUG) {
             echo "<p><strong>❌ Error:</strong> ISBN is empty.</p>\n";
@@ -1581,15 +1642,41 @@ function scrapeAmazonBuyingOptions($isbn) {
     }
 
     // Updated patterns based on actual Amazon HTML structure
-    // Each format is in a div with id="tmm-grid-swatch-{FORMAT}" containing href and aria-label with price
+    // Look for the format divs and extract both href and price from aria-label
     $patterns = [
-        'Hardcover' => '/id="tmm-grid-swatch-HARDCOVER".*?href="([^"]+)".*?aria-label="£(\d+\.\d{2})"/is',
-        'Paperback' => '/id="tmm-grid-swatch-PAPERBACK".*?href="([^"]+)".*?aria-label="£(\d+\.\d{2})"/is',
-        'Kindle' => '/id="tmm-grid-swatch-KINDLE".*?href="([^"]+)".*?aria-label="£(\d+\.\d{2})"/is',
-        'Audio CD' => '/id="tmm-grid-swatch-AUDIOBOOK".*?href="([^"]+)".*?aria-label="£(\d+\.\d{2})"/is',
+        'Hardcover' => '/id="tmm-grid-swatch-HARDCOVER".*?<a href="([^"]*)".*?<span aria-label="£(\d+\.\d{2})"/is',
+        'Paperback' => '/id="tmm-grid-swatch-PAPERBACK".*?<a href="([^"]*)".*?<span aria-label="£(\d+\.\d{2})"/is',
+        'Kindle' => '/id="tmm-grid-swatch-KINDLE".*?<a href="([^"]*)".*?<span aria-label="£(\d+\.\d{2})"/is',
+        'Audio CD' => '/id="tmm-grid-swatch-AUDIOBOOK".*?<a href="([^"]*)".*?<span aria-label="£(\d+\.\d{2})"/is',
     ];
 
     $buyingOptions = [];
+    $selectedFormat = null;
+
+    // First, detect which format is selected (has "selected" class and javascript:void(0))
+    foreach ($responses as $responseType => $resp) {
+        if (preg_match('/id="tmm-grid-swatch-(\w+)"[^>]*selected[^>]*>.*?<span aria-label="£(\d+\.\d{2})"/is', $resp, $selectedMatch)) {
+            $formatKey = $selectedMatch[1];
+            $selectedPrice = $selectedMatch[2];
+
+            // Map format keys to display names
+            $formatNames = [
+                'HARDCOVER' => 'Hardcover',
+                'PAPERBACK' => 'Paperback',
+                'KINDLE' => 'Kindle',
+                'AUDIOBOOK' => 'Audio CD'
+            ];
+
+            if (isset($formatNames[$formatKey])) {
+                $selectedFormat = $formatNames[$formatKey];
+                if (AMAZON_DEBUG) {
+                    echo "<p><strong>🎯 Selected format detected:</strong> {$selectedFormat} at £{$selectedPrice}</p>\n";
+                }
+            }
+            break;
+        }
+    }
+
     foreach ($patterns as $label => $pattern) {
         $found = false;
 
@@ -1604,8 +1691,8 @@ function scrapeAmazonBuyingOptions($isbn) {
                 }
 
                 // Determine full URL
-                if (stripos($relativeUrl, 'javascript:') === 0 || !preg_match('#^/#', $relativeUrl)) {
-                    // Construct ref-based URL for the default selected format
+                if (stripos($relativeUrl, 'javascript:') === 0 || empty($relativeUrl)) {
+                    // This is the selected format - construct ref-based URL
                     $formatMap = [
                         'Hardcover' => 'hardcover',
                         'Paperback' => 'pap',
@@ -1620,11 +1707,13 @@ function scrapeAmazonBuyingOptions($isbn) {
 
                 $buyingOptions[$label] = [
                     'price' => '£' . $price,
-                    'url'   => $fullUrl
+                    'url'   => $fullUrl,
+                    'is_selected' => ($label === $selectedFormat)
                 ];
 
                 if (AMAZON_DEBUG) {
-                    echo "<p><strong>✅ Found {$label}:</strong> Price £{$price}, URL: {$fullUrl}</p>\n";
+                    echo "<p><strong>✅ Found {$label}:</strong> Price £{$price}, URL: {$fullUrl}" .
+                         ($label === $selectedFormat ? " (SELECTED)" : "") . "</p>\n";
                 }
 
                 $found = true;
@@ -1798,10 +1887,21 @@ function getAmazonEnrichmentData($isbn) {
     $selectedFormat = null;
     $selectedPrice = null;
     if (!empty($options)) {
-        // Preserve insertion order from scrape; first key is default format
-        $formats = array_keys($options);
-        $selectedFormat = $formats[0];
-        $selectedPrice = $options[$selectedFormat]['price'] ?? null;
+        // Find the selected format (marked with is_selected = true)
+        foreach ($options as $format => $data) {
+            if (isset($data['is_selected']) && $data['is_selected']) {
+                $selectedFormat = $format;
+                $selectedPrice = $data['price'];
+                break;
+            }
+        }
+
+        // Fallback to first format if no selected format found
+        if (!$selectedFormat) {
+            $formats = array_keys($options);
+            $selectedFormat = $formats[0];
+            $selectedPrice = $options[$selectedFormat]['price'] ?? null;
+        }
     }
 
     $payload = [

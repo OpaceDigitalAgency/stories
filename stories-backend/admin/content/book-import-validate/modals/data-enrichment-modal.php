@@ -304,10 +304,121 @@ function displayEnrichmentResults(data, debug) {
     // Display enrichment fields
     displayEnrichmentFields(data.fields);
 
-    // Amazon data is now integrated into the main enrichment fields above
-    // No separate AJAX call needed
+    // Fetch Amazon data asynchronously to populate Amazon-derived fields
+    fetchAmazonDataForFields(data.fields);
 
     $('#enrichment-results').show();
+}
+
+function fetchAmazonDataForFields(fields) {
+    // Check if we have Amazon-derived fields that need data
+    const amazonFields = ['purchase_links', 'format', 'price_range'];
+    const hasAmazonFields = amazonFields.some(fieldName =>
+        fields[fieldName] && fields[fieldName].source === 'amazon_derived'
+    );
+
+    if (!hasAmazonFields || !currentBookISBN) {
+        console.log('📦 No Amazon fields to populate or no ISBN available');
+        return;
+    }
+
+    console.log('📦 Starting AJAX fetch for Amazon data. ISBN:', currentBookISBN);
+
+    // Show loading indicators for Amazon fields
+    amazonFields.forEach(fieldName => {
+        if (fields[fieldName] && fields[fieldName].source === 'amazon_derived') {
+            const $fieldDiv = $(`.enrichment-field[data-field="${fieldName}"]`);
+            const $badge = $fieldDiv.find('.badge:contains("Amazon")');
+            $badge.removeClass('badge-warning').addClass('badge-info').text('Amazon (Loading...)');
+        }
+    });
+
+    // Fetch Amazon data
+    $.post('book-import-validate/ajax/data-enrichment-ajax.php', {
+        action: 'get_amazon_data',
+        isbn: currentBookISBN
+    }, function(res) {
+        console.log('📦 Amazon AJAX response received:', res);
+
+        if (res.success && res.data && res.data.buying_options && Object.keys(res.data.buying_options).length > 0) {
+            // Update the Amazon fields with real data
+            updateAmazonFields(res.data);
+        } else {
+            console.log('📦 No Amazon buying options found or empty response');
+            console.log('📦 Debug info:', res.debug);
+
+            // Update badges to show no data found
+            amazonFields.forEach(fieldName => {
+                if (fields[fieldName] && fields[fieldName].source === 'amazon_derived') {
+                    const $fieldDiv = $(`.enrichment-field[data-field="${fieldName}"]`);
+                    const $badge = $fieldDiv.find('.badge:contains("Amazon")');
+                    $badge.removeClass('badge-info').addClass('badge-secondary').text('Amazon (No data)');
+                }
+            });
+        }
+    }, 'json').fail(function(xhr, status, error) {
+        console.error('📦 Amazon AJAX error:', { xhr, status, error });
+        console.error('📦 Response text:', xhr.responseText);
+
+        // Update badges to show error
+        amazonFields.forEach(fieldName => {
+            if (fields[fieldName] && fields[fieldName].source === 'amazon_derived') {
+                const $fieldDiv = $(`.enrichment-field[data-field="${fieldName}"]`);
+                const $badge = $fieldDiv.find('.badge:contains("Amazon")');
+                $badge.removeClass('badge-info').addClass('badge-danger').text('Amazon (Error)');
+            }
+        });
+    });
+}
+
+function updateAmazonFields(amazonData) {
+    // Update purchase_links field
+    const purchaseLinksField = $(`.enrichment-field[data-field="purchase_links"]`);
+    if (purchaseLinksField.length && amazonData.buying_options) {
+        const jsonValue = JSON.stringify(amazonData.buying_options);
+        purchaseLinksField.find('.new-value').html(formatFieldValue('purchase_links', jsonValue));
+        purchaseLinksField.find('.badge:contains("Amazon")').removeClass('badge-info').addClass('badge-warning').text('Amazon');
+        purchaseLinksField.find('.field-checkbox').prop('disabled', false);
+
+        // Update the field data for form submission
+        purchaseLinksField.find('.field-checkbox').data('amazon-value', jsonValue);
+    }
+
+    // Update format field
+    const formatField = $(`.enrichment-field[data-field="format"]`);
+    if (formatField.length && amazonData.selected_format) {
+        formatField.find('.new-value').text(amazonData.selected_format);
+        formatField.find('.badge:contains("Amazon")').removeClass('badge-info').addClass('badge-warning').text('Amazon');
+        formatField.find('.field-checkbox').prop('disabled', false);
+
+        // Update the field data for form submission
+        formatField.find('.field-checkbox').data('amazon-value', amazonData.selected_format);
+    }
+
+    // Update price_range field
+    const priceRangeField = $(`.enrichment-field[data-field="price_range"]`);
+    if (priceRangeField.length && amazonData.selected_price) {
+        const price = parseFloat(amazonData.selected_price.replace('£', ''));
+        let priceRange;
+        if (price < 5) {
+            priceRange = 'Under £5';
+        } else if (price <= 10) {
+            priceRange = '£5-£10';
+        } else if (price <= 15) {
+            priceRange = '£10-£15';
+        } else if (price <= 20) {
+            priceRange = '£15-£20';
+        } else {
+            priceRange = 'Over £20';
+        }
+
+        priceRangeField.find('.new-value').text(priceRange);
+        priceRangeField.find('.badge:contains("Amazon")').removeClass('badge-info').addClass('badge-warning').text('Amazon');
+        priceRangeField.find('.field-checkbox').prop('disabled', false);
+
+        // Update the field data for form submission
+        priceRangeField.find('.field-checkbox').data('amazon-value', priceRange);
+    }
 }
 
 function displayEnrichmentFields(fields) {
@@ -339,7 +450,8 @@ function displayEnrichmentFields(fields) {
         } else if (field.new_data) {
             // Single source field with new data
             const isUnknown = field.new_data.status === 'unknown';
-            container.append(createSingleSourceField(fieldName, field, label, isUnknown));
+            const isPendingAmazon = field.new_data.status === 'pending_amazon_data';
+            container.append(createSingleSourceField(fieldName, field, label, isUnknown, isPendingAmazon));
         } else {
             // Field with no new data - show current value only (disabled)
             container.append(createCurrentOnlyField(fieldName, field, label));
@@ -359,7 +471,8 @@ function displayEnrichmentFields(fields) {
         } else if (field.new_data) {
             // Single source field with new data
             const isUnknown = field.new_data.status === 'unknown';
-            container.append(createSingleSourceField(fieldName, field, label, isUnknown));
+            const isPendingAmazon = field.new_data.status === 'pending_amazon_data';
+            container.append(createSingleSourceField(fieldName, field, label, isUnknown, isPendingAmazon));
         } else {
             // Field with no new data - show current value only (disabled)
             container.append(createCurrentOnlyField(fieldName, field, label));
@@ -411,11 +524,19 @@ function displayEnrichmentFields(fields) {
     });
 }
 
-function createSingleSourceField(fieldName, field, label, isUnknown) {
+function createSingleSourceField(fieldName, field, label, isUnknown, isPendingAmazon) {
     const newData = field.new_data || {};
     const confidence = newData.confidence || 0;
     const source = newData.source || 'unknown';
-    const displayValue = isUnknown ? '<span class="text-muted">Unknown</span>' : formatFieldValue(fieldName, newData.value);
+
+    let displayValue;
+    if (isPendingAmazon) {
+        displayValue = '<span class="text-info">Loading Amazon data...</span>';
+    } else if (isUnknown) {
+        displayValue = '<span class="text-muted">Unknown</span>';
+    } else {
+        displayValue = formatFieldValue(fieldName, newData.value);
+    }
 
     const confidenceClass = confidence >= 80 ? 'success' : confidence >= 60 ? 'warning' : confidence >= 30 ? 'info' : 'secondary';
     const sourceClass = source.includes('+') ? 'primary' : source === 'google_books' ? 'success' : source === 'open_library' ? 'info' : source === 'amazon_derived' ? 'warning' : 'secondary';
@@ -427,7 +548,7 @@ function createSingleSourceField(fieldName, field, label, isUnknown) {
                          source.replace('_', ' ');
 
     // Determine benefit level for color coding
-    const benefitLevel = determineBenefitLevel(field.current_value, newData.value, isUnknown);
+    const benefitLevel = isPendingAmazon ? 'questionable' : determineBenefitLevel(field.current_value, newData.value, isUnknown);
     const benefitClass = getBenefitColorClass(benefitLevel);
     const benefitBorder = getBenefitBorderClass(benefitLevel);
 
@@ -436,11 +557,11 @@ function createSingleSourceField(fieldName, field, label, isUnknown) {
             <div class="enrichment-field ${benefitBorder}" data-field="${fieldName}">
                 <div class="form-check">
                     <input class="form-check-input field-checkbox" type="checkbox"
-                           id="field_${fieldName}" name="fields[]" value="${fieldName}" ${isUnknown || benefitLevel === 'not_beneficial' ? 'disabled' : ''}>
+                           id="field_${fieldName}" name="fields[]" value="${fieldName}" ${isUnknown || isPendingAmazon || benefitLevel === 'not_beneficial' ? 'disabled' : ''}>
                     <label class="form-check-label font-weight-bold" for="field_${fieldName}">
                         ${label}
-                        <span class="badge badge-${sourceClass} ml-2">${displaySource}</span>
-                        ${!isUnknown ? `<span class="badge badge-${confidenceClass} ml-1">(${confidence}%)</span>` : ''}
+                        <span class="badge badge-${sourceClass} ml-2">${displaySource}${isPendingAmazon ? ' (Loading...)' : ''}</span>
+                        ${!isUnknown && !isPendingAmazon ? `<span class="badge badge-${confidenceClass} ml-1">(${confidence}%)</span>` : ''}
                         ${getBenefitIndicator(benefitLevel)}
                     </label>
                 </div>

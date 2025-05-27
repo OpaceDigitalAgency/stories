@@ -176,54 +176,15 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
                     ];
                 }
             } elseif (in_array($fieldName, ['purchase_links', 'format', 'price_range'])) {
-                // Special handling for Amazon-derived fields - use Amazon data directly
-                $amazonValue = null;
-
-                // For Amazon-derived fields, we need to extract from Amazon using the current ISBN
-                if ($currentISBN) {
-                    error_log("Fetching Amazon data for field '$fieldName' with ISBN: $currentISBN");
-                    $amazonData = getAmazonEnrichmentData($currentISBN);
-                    error_log("Amazon data for field '$fieldName': " . json_encode($amazonData));
-
-                    switch ($fieldName) {
-                        case 'purchase_links':
-                            if (!empty($amazonData['buying_options'])) {
-                                $amazonValue = json_encode($amazonData['buying_options']);
-                                error_log("Purchase links value: $amazonValue");
-                            }
-                            break;
-                        case 'format':
-                            $amazonValue = $amazonData['selected_format'] ?? null;
-                            error_log("Format value: $amazonValue");
-                            break;
-                        case 'price_range':
-                            if (!empty($amazonData['selected_price'])) {
-                                $price = floatval(str_replace('£', '', $amazonData['selected_price']));
-                                if ($price < 5) {
-                                    $amazonValue = 'Under £5';
-                                } elseif ($price <= 10) {
-                                    $amazonValue = '£5-£10';
-                                } elseif ($price <= 15) {
-                                    $amazonValue = '£10-£15';
-                                } elseif ($price <= 20) {
-                                    $amazonValue = '£15-£20';
-                                } else {
-                                    $amazonValue = 'Over £20';
-                                }
-                                error_log("Price range value: $amazonValue (from price: £$price)");
-                            }
-                            break;
-                    }
-                }
-
-                if (!empty($amazonValue)) {
-                    $combinedFields[$fieldName] = [
-                        'value' => $amazonValue,
-                        'source' => 'amazon_derived',
-                        'confidence' => $fieldConfig['confidence'],
-                        'label' => $fieldConfig['label']
-                    ];
-                }
+                // Special handling for Amazon-derived fields - these will be populated via AJAX
+                // to avoid blocking the main enrichment request
+                $combinedFields[$fieldName] = [
+                    'value' => null,
+                    'source' => 'amazon_derived',
+                    'confidence' => $fieldConfig['confidence'],
+                    'label' => $fieldConfig['label'],
+                    'status' => 'pending_amazon_data'
+                ];
             } elseif (!empty($googleValue) && !empty($openLibraryValue)) {
                 // Both sources have data - check if they match
                 if (normalizeForComparison($googleValue) === normalizeForComparison($openLibraryValue)) {

@@ -9,6 +9,7 @@ This document outlines the data storage architecture, enrichment logic, field ma
 The system enriches book data using:
 - **Google Books API**: `https://www.googleapis.com/books/v1/volumes?q=isbn:{ISBN}`
 - **Open Library API**: `https://openlibrary.org/search.json?q={ISBN}&fields=*,availability&limit=1`
+- **Amazon UK Scraping**: Real-time price and format data from `https://www.amazon.co.uk/dp/{ISBN}`
 
 Each book record is imported or enriched by matching ISBNs and retrieving relevant metadata.
 
@@ -80,19 +81,50 @@ Each book record is imported or enriched by matching ISBNs and retrieving releva
 
 ---
 
-## 🛒 Purchase Link Generation
+## 🛒 Amazon Scraping & Purchase Links
 
-Links are created dynamically based on ISBN-13 using the following logic:
+### Real-time Amazon Data Extraction
 
-```json
-{
-  "amazon": "https://www.amazon.com/dp/{isbn13}/",
-  "goodreads": "https://www.goodreads.com/book/isbn/{isbn13}",
-  "google_books": "https://books.google.com/books?isbn={isbn13}"
-}
+The system scrapes live Amazon UK data for:
+- **Format availability**: Hardcover, Paperback, Kindle, Audio CD
+- **Current pricing**: Real-time prices in GBP
+- **Purchase URLs**: Direct links with proper /ref= parameters
+
+### Amazon HTML Structure Targeting
+
+The scraper targets the following HTML elements:
+```html
+<div id="tmm-grid-swatch-HARDCOVER">
+  <a href="/path/to/book/ref=tmm_hardcover_swatch_0">
+    <span aria-label="£13.70">£13.70</span>
+  </a>
+</div>
 ```
 
-These can be embedded into UI buttons. In the future, prices may be scraped via Google results or pulled from APIs.
+### Regex Patterns Used
+
+```php
+$patterns = [
+    'Hardcover' => '/id="tmm-grid-swatch-HARDCOVER".*?href="([^"]+)".*?aria-label="£(\d+\.\d{2})"/is',
+    'Paperback' => '/id="tmm-grid-swatch-PAPERBACK".*?href="([^"]+)".*?aria-label="£(\d+\.\d{2})"/is',
+    'Kindle' => '/id="tmm-grid-swatch-KINDLE".*?href="([^"]+)".*?aria-label="£(\d+\.\d{2})"/is',
+    'Audio CD' => '/id="tmm-grid-swatch-AUDIOBOOK".*?href="([^"]+)".*?aria-label="£(\d+\.\d{2})"/is',
+];
+```
+
+### Purchase Link Generation
+
+Dynamic links are created using:
+- **Amazon UK**: `https://www.amazon.co.uk/gp/product/{isbn}/ref=tmm_{format}_swatch_0`
+- **Goodreads**: `https://www.goodreads.com/book/isbn/{isbn13}`
+- **Google Books**: `https://books.google.com/books?isbn={isbn13}`
+
+### No Caching Policy
+
+Amazon data is fetched fresh on each request since:
+- Prices change frequently throughout the day
+- Format availability can vary
+- Real-time accuracy is prioritized over performance
 
 ---
 
@@ -130,11 +162,57 @@ These can be embedded into UI buttons. In the future, prices may be scraped via 
 
 ---
 
+## 🔄 AJAX Implementation
+
+### Data Enrichment Modal Flow
+
+1. **Initial Load**: Modal opens with "Checking..." indicators
+2. **Parallel Requests**:
+   - Main enrichment data (Google Books + OpenLibrary)
+   - Amazon data (separate AJAX call)
+3. **Real-time Updates**: Status badges update as data loads
+4. **User Selection**: Interactive checkboxes for field updates
+
+### Amazon AJAX Endpoint
+
+**URL**: `book-import-validate/ajax/data-enrichment-ajax.php`
+**Action**: `get_amazon_data`
+**Parameters**: `isbn` (ISBN-10 or ISBN-13)
+
+**Response Format**:
+```json
+{
+  "success": true,
+  "data": {
+    "buying_options": {
+      "Hardcover": {"price": "£13.70", "url": "https://amazon.co.uk/..."},
+      "Paperback": {"price": "£7.89", "url": "https://amazon.co.uk/..."},
+      "Kindle": {"price": "£4.53", "url": "https://amazon.co.uk/..."},
+      "Audio CD": {"price": "£18.91", "url": "https://amazon.co.uk/..."}
+    },
+    "selected_format": "Hardcover",
+    "selected_price": "£13.70"
+  },
+  "debug": {
+    "isbn_used": "9780380977789",
+    "options_count": 4,
+    "selected_format": "Hardcover"
+  }
+}
+```
+
+### Error Handling
+
+- **Network failures**: Graceful degradation with error messages
+- **Empty responses**: Clear "No data available" indicators
+- **Debug logging**: Comprehensive error_log() statements for troubleshooting
+
 ## 🧩 Enhancement Suggestions
 
-- Enable price scraping via Google or Amazon for quick enrichment.
-- Use affiliate tagging for monetised Amazon links.
-- Expand metadata to store enrichment logs (source, confidence, etc.).
+- ✅ **Real-time Amazon scraping**: Implemented with live price data
+- ✅ **AJAX-based enrichment**: Non-blocking modal updates
+- Use affiliate tagging for monetised Amazon links
+- Expand metadata to store enrichment logs (source, confidence, etc.)
 
 
 ### 1. **Fallbacks and Defaults**

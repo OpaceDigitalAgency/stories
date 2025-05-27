@@ -124,9 +124,9 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
     $googleMatch = findBestDataMatch($googleResults, $title, $author, $currentISBN);
     $openLibraryMatch = findBestDataMatch($openLibraryResults, $title, $author, $currentISBN);
 
-    // Validate OpenLibrary match if we have an ISBN
+    // Validate OpenLibrary match if we have an ISBN - STRICT validation
     if (!empty($currentISBN) && $openLibraryMatch && !validateOpenLibraryISBNMatch($openLibraryMatch, $currentISBN)) {
-        error_log("OpenLibrary match rejected - ISBN mismatch. Expected: $currentISBN");
+        error_log("OpenLibrary match rejected - ISBN mismatch. Expected: $currentISBN, Got ISBNs: " . json_encode($openLibraryMatch['isbn'] ?? 'none'));
         $openLibraryMatch = null;
     }
 
@@ -252,9 +252,10 @@ function findBestDataMatch($results, $title, $author, $currentISBN) {
         $authorSimilarity = calculateStringSimilarity($author, $result['author'] ?? '');
         $score += $authorSimilarity * 50;
 
-        // ISBN matching (if we have current ISBN) - STRICT validation
+        // ISBN matching (if we have current ISBN) - STRICT validation with highest priority
         if (!empty($currentISBN)) {
             $resultISBNs = [];
+            $cleanCurrentISBN = preg_replace('/[^0-9X]/i', '', $currentISBN);
 
             // Collect all ISBNs from the result
             if (isset($result['isbn13'])) {
@@ -268,21 +269,37 @@ function findBestDataMatch($results, $title, $author, $currentISBN) {
                 }
             }
 
-            // Check for exact match
+            // Check for exact match first
             $exactMatch = false;
+            $equivalentMatch = false;
+
             foreach ($resultISBNs as $isbn) {
-                if (is_string($isbn) && ($isbn === $currentISBN ||
-                    str_replace('-', '', $isbn) === str_replace('-', '', $currentISBN))) {
-                    $exactMatch = true;
-                    break;
+                if (is_string($isbn)) {
+                    $cleanResultISBN = preg_replace('/[^0-9X]/i', '', $isbn);
+
+                    // Exact match (highest priority)
+                    if ($cleanResultISBN === $cleanCurrentISBN) {
+                        $exactMatch = true;
+                        break;
+                    }
+
+                    // Equivalent match (ISBN-10 vs ISBN-13)
+                    if (areISBNsEquivalent($cleanCurrentISBN, $cleanResultISBN)) {
+                        $equivalentMatch = true;
+                    }
                 }
             }
 
             if ($exactMatch) {
-                $score += 500; // Very high bonus for exact ISBN match
+                $score += 1000; // VERY high bonus for exact ISBN match - this should dominate
+                error_log("Exact ISBN match found for $currentISBN in result: " . ($result['title'] ?? 'unknown'));
+            } elseif ($equivalentMatch) {
+                $score += 800; // High bonus for equivalent ISBN match
+                error_log("Equivalent ISBN match found for $currentISBN in result: " . ($result['title'] ?? 'unknown'));
             } else {
-                // If no ISBN match, heavily penalize this result
-                $score -= 300;
+                // If no ISBN match, heavily penalize this result - it's probably wrong edition
+                $score -= 500;
+                error_log("No ISBN match for $currentISBN in result: " . ($result['title'] ?? 'unknown') . " with ISBNs: " . implode(', ', $resultISBNs));
             }
         }
 
@@ -597,6 +614,50 @@ function validateISBNOnGoodreads($isbn) {
 }
 
 /**
+ * Validate that OpenLibrary match contains our exact ISBN
+ */
+function validateOpenLibraryISBNMatch($openLibraryMatch, $currentISBN) {
+    if (empty($currentISBN) || empty($openLibraryMatch)) {
+        return false;
+    }
+
+    $cleanCurrentISBN = preg_replace('/[^0-9X]/i', '', $currentISBN);
+
+    // Check all ISBNs in the OpenLibrary result
+    $resultISBNs = [];
+
+    // Get ISBN-13 if available
+    if (isset($openLibraryMatch['isbn13'])) {
+        $resultISBNs[] = $openLibraryMatch['isbn13'];
+    }
+
+    // Get all ISBNs from the isbn array
+    if (isset($openLibraryMatch['isbn']) && is_array($openLibraryMatch['isbn'])) {
+        $resultISBNs = array_merge($resultISBNs, $openLibraryMatch['isbn']);
+    } elseif (isset($openLibraryMatch['isbn']) && is_string($openLibraryMatch['isbn'])) {
+        $resultISBNs[] = $openLibraryMatch['isbn'];
+    }
+
+    // Check for exact match
+    foreach ($resultISBNs as $isbn) {
+        if (is_string($isbn)) {
+            $cleanResultISBN = preg_replace('/[^0-9X]/i', '', $isbn);
+            if ($cleanResultISBN === $cleanCurrentISBN) {
+                return true; // Exact match found
+            }
+
+            // Also check if they're equivalent (ISBN-10 vs ISBN-13)
+            if (areISBNsEquivalent($cleanCurrentISBN, $cleanResultISBN)) {
+                return true; // Equivalent match found
+            }
+        }
+    }
+
+    error_log("OpenLibrary ISBN validation failed. Current: $cleanCurrentISBN, Result ISBNs: " . implode(', ', $resultISBNs));
+    return false; // No match found
+}
+
+/**
  * Normalize values for comparison
  */
 function normalizeForComparison($value) {
@@ -830,25 +891,22 @@ function extractFieldValue($match, $fieldName) {
             break;
 
         case 'format':
-            // Normalize and deduplicate format data
-            $formats = [];
-            if (isset($match['format']) && is_array($match['format'])) {
-                $formats = $match['format'];
-            } elseif (isset($match['format']) && is_string($match['format'])) {
-                $formats = explode(',', $match['format']);
-            }
-
-            if (!empty($formats)) {
-                $normalizedFormats = [];
-                foreach ($formats as $format) {
-                    $normalized = normalizeFormat(trim($format));
-                    if ($normalized && !in_array($normalized, $normalizedFormats)) {
-                        $normalizedFormats[] = $normalized;
-                    }
+            // For exact ISBN matches, return the specific format, not multiple formats
+            // Each ISBN should correspond to one specific format
+            if (isset($match['format'])) {
+                if (is_string($match['format'])) {
+                    // Single format - normalize and return
+                    return normalizeFormat(trim($match['format']));
+                } elseif (is_array($match['format']) && !empty($match['format'])) {
+                    // Multiple formats - this suggests the match might be for multiple editions
+                    // For exact ISBN matches, we should only get one format
+                    // Take the first format and normalize it
+                    $firstFormat = $match['format'][0];
+                    error_log("Warning: Multiple formats found for exact ISBN match: " . implode(', ', $match['format']) . ". Using first: $firstFormat");
+                    return normalizeFormat(trim($firstFormat));
                 }
-                return !empty($normalizedFormats) ? implode(', ', array_slice($normalizedFormats, 0, 3)) : null;
             }
-            break;
+            return null;
 
         case 'summary':
             // Handle both description and first_sentence
@@ -1195,6 +1253,15 @@ function convertLexileToReadingLevel($lexileValue) {
  * Deduplicate location strings (e.g., "London, London (England)" -> "London (England)")
  */
 function deduplicateLocation($location) {
+    if (empty($location)) {
+        return $location;
+    }
+
+    // Handle concatenated duplicates like "LondonLondon (england)" -> "London"
+    if (preg_match('/^([a-zA-Z]+)\1\s*\([^)]*\)$/i', $location, $matches)) {
+        return trim($matches[1]);
+    }
+
     // Handle patterns like "London, London (England)"
     if (preg_match('/^([^,]+),\s*\1\s*\(([^)]+)\)$/', $location, $matches)) {
         return $matches[1] . ' (' . $matches[2] . ')';
@@ -1206,6 +1273,90 @@ function deduplicateLocation($location) {
     }
 
     return $location;
+}
+
+/**
+ * Merge tags from multiple sources
+ */
+function mergeTagsFromSources($googleTags, $openLibraryTags) {
+    $allTags = [];
+
+    // Add Google Books tags
+    if (!empty($googleTags)) {
+        if (is_string($googleTags)) {
+            $allTags = array_merge($allTags, explode(', ', $googleTags));
+        } elseif (is_array($googleTags)) {
+            $allTags = array_merge($allTags, $googleTags);
+        }
+    }
+
+    // Add OpenLibrary tags
+    if (!empty($openLibraryTags)) {
+        if (is_string($openLibraryTags)) {
+            $allTags = array_merge($allTags, explode(', ', $openLibraryTags));
+        } elseif (is_array($openLibraryTags)) {
+            $allTags = array_merge($allTags, $openLibraryTags);
+        }
+    }
+
+    // Deduplicate and clean
+    $uniqueTags = [];
+    foreach ($allTags as $tag) {
+        $cleanTag = trim($tag);
+        if (!empty($cleanTag) && !in_array(strtolower($cleanTag), array_map('strtolower', $uniqueTags))) {
+            $uniqueTags[] = $cleanTag;
+        }
+    }
+
+    return !empty($uniqueTags) ? implode(', ', array_slice($uniqueTags, 0, 15)) : null;
+}
+
+/**
+ * Extract alternative ISBNs from OpenLibrary data
+ */
+function extractAlternativeISBNs($openLibraryMatch, $currentISBN) {
+    if (!isset($openLibraryMatch['isbn']) || !is_array($openLibraryMatch['isbn'])) {
+        return null;
+    }
+
+    $cleanCurrentISBN = preg_replace('/[^0-9X]/i', '', $currentISBN);
+    $alternativeISBNs = [];
+
+    foreach ($openLibraryMatch['isbn'] as $isbn) {
+        if (is_string($isbn)) {
+            $cleanISBN = preg_replace('/[^0-9X]/i', '', $isbn);
+            // Only include ISBNs that are different from current
+            if ($cleanISBN !== $cleanCurrentISBN && strlen($cleanISBN) >= 10) {
+                $alternativeISBNs[] = $isbn;
+            }
+        }
+    }
+
+    return !empty($alternativeISBNs) ? implode(',', array_slice($alternativeISBNs, 0, 20)) : null;
+}
+
+/**
+ * Check if two ISBNs are equivalent (ISBN-10 vs ISBN-13 conversion)
+ */
+function areISBNsEquivalent($isbn1, $isbn2) {
+    $clean1 = preg_replace('/[^0-9X]/i', '', $isbn1);
+    $clean2 = preg_replace('/[^0-9X]/i', '', $isbn2);
+
+    // If they're the same, they're equivalent
+    if ($clean1 === $clean2) {
+        return true;
+    }
+
+    // Check if one is ISBN-10 and other is ISBN-13 equivalent
+    if (strlen($clean1) === 10 && strlen($clean2) === 13) {
+        $converted = convertToISBN13($clean1);
+        return $converted === $clean2;
+    } elseif (strlen($clean1) === 13 && strlen($clean2) === 10) {
+        $converted = convertISBN13ToISBN10($clean1);
+        return $converted === $clean2;
+    }
+
+    return false;
 }
 
 /**

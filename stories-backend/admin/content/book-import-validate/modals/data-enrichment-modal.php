@@ -321,6 +321,18 @@ function fetchAmazonDataForFields(fields) {
         console.log('📦 No Amazon fields to populate or no ISBN available');
         console.log('📦 Debug - fields:', fields);
         console.log('📦 Debug - currentBookISBN:', currentBookISBN);
+        console.log('📦 Debug - hasAmazonFields:', hasAmazonFields);
+
+        // Check each Amazon field individually
+        amazonFields.forEach(fieldName => {
+            console.log(`📦 Debug - ${fieldName}:`, fields[fieldName]);
+            if (fields[fieldName]) {
+                console.log(`📦 Debug - ${fieldName}.new_data:`, fields[fieldName].new_data);
+                if (fields[fieldName].new_data) {
+                    console.log(`📦 Debug - ${fieldName}.new_data.source:`, fields[fieldName].new_data.source);
+                }
+            }
+        });
         return;
     }
 

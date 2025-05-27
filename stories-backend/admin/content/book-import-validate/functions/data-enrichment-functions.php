@@ -1187,7 +1187,7 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
             return null;
 
         case 'purchase_links':
-            // Generate simple Amazon URLs for each format
+            // Generate simple Amazon URLs for each format using ISBN-10
             $isbn13 = $match['isbn13'] ?? null;
             $isbn = $match['isbn'] ?? null;
 
@@ -1198,20 +1198,31 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
             $purchaseLinks = [];
 
             if ($isbn13 || $isbn) {
-                $mainIsbn = $isbn13 ?: $isbn;
+                // Prefer ISBN-10 for Amazon URLs, convert if needed
+                $isbn10 = null;
+                if ($isbn && strlen(preg_replace('/[^0-9X]/i', '', $isbn)) === 10) {
+                    $isbn10 = preg_replace('/[^0-9X]/i', '', $isbn);
+                } elseif ($isbn13 && strlen(preg_replace('/[^0-9X]/i', '', $isbn13)) === 13) {
+                    $isbn10 = convertISBN13ToISBN10(preg_replace('/[^0-9X]/i', '', $isbn13));
+                }
+
+                $mainIsbn = $isbn10 ?: ($isbn ?: $isbn13);
 
                 // Get Amazon buying options with prices
                 $buyingOptions = scrapeAmazonBuyingOptions($mainIsbn);
 
                 if (!empty($buyingOptions)) {
-                    // Create simple Amazon URLs for each format
+                    // Create simple Amazon URLs for each format using /gp/product/
                     foreach ($buyingOptions as $format => $price) {
                         $formatKey = strtolower(str_replace([' ', '-'], '_', $format));
-                        $purchaseLinks[$formatKey] = "https://www.amazon.co.uk/dp/" . $mainIsbn . "?tag=storiesfro0f0-20";
+                        $purchaseLinks[$formatKey] = "https://www.amazon.co.uk/gp/product/" . $mainIsbn;
                     }
                 } else {
-                    // Fallback to basic Amazon link if scraping fails
-                    $purchaseLinks['hardcover'] = "https://www.amazon.co.uk/dp/" . $mainIsbn . "?tag=storiesfro0f0-20";
+                    // Fallback - create links for common formats
+                    $purchaseLinks['hardcover'] = "https://www.amazon.co.uk/gp/product/" . $mainIsbn;
+                    $purchaseLinks['paperback'] = "https://www.amazon.co.uk/gp/product/" . $mainIsbn;
+                    $purchaseLinks['kindle'] = "https://www.amazon.co.uk/gp/product/" . $mainIsbn;
+                    $purchaseLinks['audio_cd'] = "https://www.amazon.co.uk/gp/product/" . $mainIsbn;
                 }
             }
 
@@ -1227,7 +1238,15 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
             }
 
             if ($isbn13 || $isbn) {
-                $mainIsbn = $isbn13 ?: $isbn;
+                // Prefer ISBN-10 for Amazon URLs, convert if needed
+                $isbn10 = null;
+                if ($isbn && strlen(preg_replace('/[^0-9X]/i', '', $isbn)) === 10) {
+                    $isbn10 = preg_replace('/[^0-9X]/i', '', $isbn);
+                } elseif ($isbn13 && strlen(preg_replace('/[^0-9X]/i', '', $isbn13)) === 13) {
+                    $isbn10 = convertISBN13ToISBN10(preg_replace('/[^0-9X]/i', '', $isbn13));
+                }
+
+                $mainIsbn = $isbn10 ?: ($isbn ?: $isbn13);
                 $buyingOptions = scrapeAmazonBuyingOptions($mainIsbn);
 
                 if (!empty($buyingOptions)) {
@@ -1250,7 +1269,15 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
             }
 
             if ($isbn13 || $isbn) {
-                $mainIsbn = $isbn13 ?: $isbn;
+                // Prefer ISBN-10 for Amazon URLs, convert if needed
+                $isbn10 = null;
+                if ($isbn && strlen(preg_replace('/[^0-9X]/i', '', $isbn)) === 10) {
+                    $isbn10 = preg_replace('/[^0-9X]/i', '', $isbn);
+                } elseif ($isbn13 && strlen(preg_replace('/[^0-9X]/i', '', $isbn13)) === 13) {
+                    $isbn10 = convertISBN13ToISBN10(preg_replace('/[^0-9X]/i', '', $isbn13));
+                }
+
+                $mainIsbn = $isbn10 ?: ($isbn ?: $isbn13);
                 $buyingOptions = scrapeAmazonBuyingOptions($mainIsbn);
 
                 if (!empty($buyingOptions)) {
@@ -1612,7 +1639,7 @@ function scrapeAmazonBuyingOptions($isbn) {
     try {
         // Clean ISBN
         $cleanISBN = preg_replace('/[^0-9X]/i', '', $isbn);
-        $amazonUrl = "https://www.amazon.co.uk/dp/" . $cleanISBN;
+        $amazonUrl = "https://www.amazon.co.uk/gp/product/" . $cleanISBN;
 
         error_log("Scraping Amazon buying options from: $amazonUrl");
 
@@ -1651,25 +1678,44 @@ function scrapeAmazonBuyingOptions($isbn) {
 
         $buyingOptions = [];
 
-        // Look for format and price patterns
-        // Kindle Edition £4.53
-        if (preg_match('/Kindle Edition[^£]*£(\d+\.\d{2})/i', $response, $matches)) {
+        // Updated regex patterns to match the new Amazon HTML structure
+        // Look for tmm-grid-swatch sections with format and price
+
+        // Kindle Edition
+        if (preg_match('/tmm-grid-swatch-KINDLE.*?aria-label="Kindle Edition Format:".*?aria-label="£(\d+\.\d{2})"/s', $response, $matches)) {
             $buyingOptions['Kindle'] = '£' . $matches[1];
         }
 
-        // Hardcover £13.70
-        if (preg_match('/Hardcover[^£]*£(\d+\.\d{2})/i', $response, $matches)) {
+        // Hardcover
+        if (preg_match('/tmm-grid-swatch-HARDCOVER.*?aria-label="Hardcover Format:".*?aria-label="£(\d+\.\d{2})"/s', $response, $matches)) {
             $buyingOptions['Hardcover'] = '£' . $matches[1];
         }
 
-        // Paperback £7.89
-        if (preg_match('/Paperback[^£]*£(\d+\.\d{2})/i', $response, $matches)) {
+        // Paperback
+        if (preg_match('/tmm-grid-swatch-PAPERBACK.*?aria-label="Paperback Format:".*?aria-label="£(\d+\.\d{2})"/s', $response, $matches)) {
             $buyingOptions['Paperback'] = '£' . $matches[1];
         }
 
-        // Audio CD £18.91
-        if (preg_match('/Audio CD[^£]*£(\d+\.\d{2})/i', $response, $matches)) {
+        // Audio CD (AUDIOBOOK in the HTML)
+        if (preg_match('/tmm-grid-swatch-AUDIOBOOK.*?aria-label="Audio CD Format:".*?aria-label="£(\d+\.\d{2})"/s', $response, $matches)) {
             $buyingOptions['Audio CD'] = '£' . $matches[1];
+        }
+
+        // Fallback patterns for simpler format detection
+        if (empty($buyingOptions)) {
+            // Try simpler patterns as fallback
+            if (preg_match('/Kindle Edition.*?£(\d+\.\d{2})/s', $response, $matches)) {
+                $buyingOptions['Kindle'] = '£' . $matches[1];
+            }
+            if (preg_match('/Hardcover.*?£(\d+\.\d{2})/s', $response, $matches)) {
+                $buyingOptions['Hardcover'] = '£' . $matches[1];
+            }
+            if (preg_match('/Paperback.*?£(\d+\.\d{2})/s', $response, $matches)) {
+                $buyingOptions['Paperback'] = '£' . $matches[1];
+            }
+            if (preg_match('/Audio CD.*?£(\d+\.\d{2})/s', $response, $matches)) {
+                $buyingOptions['Audio CD'] = '£' . $matches[1];
+            }
         }
 
         error_log("Amazon buying options found for ISBN $isbn: " . json_encode($buyingOptions));

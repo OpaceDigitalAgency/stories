@@ -1580,12 +1580,12 @@ function scrapeAmazonBuyingOptions($isbn) {
         echo "<p><strong>📁 Response saved to:</strong> {$debugFile}</p>\n";
     }
 
-    // Prepare to match formats
+    // Prepare to match formats using swatch IDs and aria-label price attributes
     $patterns = [
-        'Hardcover' => '/Hardcover.*?£(\d+\.\d{2}).*?href="([^"]*)"/is',
-        'Paperback' => '/Paperback.*?£(\d+\.\d{2}).*?href="([^"]*)"/is',
-        'Kindle'    => '/Kindle Edition.*?£(\d+\.\d{2}).*?href="([^"]*)"/is',
-        'Audio CD'  => '/Audio CD.*?£(\d+\.\d{2}).*?href="([^"]*)"/is'
+        'Hardcover' => '/id="tmm-grid-swatch-HARDCOVER".*?href="([^"]+)".*?aria-label="£(\d+\.\d{2})"/is',
+        'Paperback' => '/id="tmm-grid-swatch-PAPERBACK".*?href="([^"]+)".*?aria-label="£(\d+\.\d{2})"/is',
+        'Kindle'    => '/id="tmm-grid-swatch-KINDLE".*?href="([^"]+)".*?aria-label="£(\d+\.\d{2})"/is',
+        'Audio CD'  => '/aria-label="Audio CD Format:".*?href="([^"]+)".*?aria-label="£(\d+\.\d{2})"/is',
     ];
 
     $buyingOptions = [];

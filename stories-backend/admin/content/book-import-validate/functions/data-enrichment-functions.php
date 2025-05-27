@@ -810,7 +810,10 @@ function normalizeLanguage($language) {
     ];
 
     // Ensure language is a string before trimming
-    if (!is_string($language)) {
+    if (is_array($language)) {
+        // If it's an array, take the first element or return 'Multiple'
+        $language = !empty($language) ? $language[0] : 'Unknown';
+    } elseif (!is_string($language)) {
         $language = (string) $language;
     }
 

@@ -1703,11 +1703,18 @@ function scrapeAmazonBuyingOptions($isbn) {
     $buyingOptions = [];
     foreach ($patterns as $label => $pat) {
         if (preg_match($pat, $response, $m)) {
+            $relativeUrl = $m[2];
+            // Determine full URL: use base ISBN URL if Amazon uses javascript:void(0) or URL is not a relative path
+            if (stripos($relativeUrl, 'javascript:') === 0 || !preg_match('#^/#', $relativeUrl)) {
+                $fullUrl = $endpoints['desktop'];
+            } else {
+                $fullUrl = 'https://www.amazon.co.uk' . $relativeUrl;
+            }
             $buyingOptions[$label] = [
                 'price' => '£' . $m[1],
-                'url'   => 'https://www.amazon.co.uk' . $m[2]
+                'url'   => $fullUrl
             ];
-            echo "<p><strong>✅ Found {$label}:</strong> Price £{$m[1]}, URL: {$m[2]}</p>\n";
+            echo "<p><strong>✅ Found {$label}:</strong> Price £{$m[1]}, URL: {$fullUrl}</p>\n";
         } else {
             echo "<p><strong>❌ No {$label} found via pattern.</strong></p>\n";
         }

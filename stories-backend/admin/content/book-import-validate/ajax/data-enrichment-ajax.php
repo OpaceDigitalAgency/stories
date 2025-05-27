@@ -409,7 +409,9 @@ function filterRelevantFields($fields, $currentBookData) {
         'maturity_rating' => 'Maturity Rating',
         'average_rating' => 'Average Rating',
         'rating_count' => 'Rating Count',
-        'internet_archive_id' => 'Internet Archive ID'
+        'internet_archive_id' => 'Internet Archive ID',
+        'alternative_isbns' => 'Alternative ISBNs',
+        'purchase_links' => 'Purchase Links'
     ];
 
     $filteredFields = [];

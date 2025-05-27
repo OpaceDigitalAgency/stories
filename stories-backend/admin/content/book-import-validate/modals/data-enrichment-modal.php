@@ -251,14 +251,34 @@ function displayEnrichmentResults(data, debug) {
         return;
     }
 
-    // Debug logging only
+    // Debug logging and display
     if (debug) {
         console.log('Debug information:', debug);
-    }
 
-    // TEMPORARY: Log the actual data structure to see what's wrong
-    console.log('Full enrichment data structure:', data);
-    console.log('Sample field (tags):', data.fields.tags);
+        // Show debug panel with raw vs filtered data comparison
+        const debugHtml = `
+            <div class="alert alert-warning mt-3" id="debug-panel">
+                <h6><i class="fas fa-bug"></i> Debug Information</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Raw Tags (Before Filter):</strong><br>
+                        <pre style="font-size: 11px; max-height: 200px; overflow-y: auto;">${JSON.stringify(debug.raw_tags_before_filter, null, 2)}</pre>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Filtered Tags (After Filter):</strong><br>
+                        <pre style="font-size: 11px; max-height: 200px; overflow-y: auto;">${JSON.stringify(debug.filtered_tags_after_filter, null, 2)}</pre>
+                    </div>
+                </div>
+                <small>
+                    <strong>Sources:</strong> ${debug.sources_checked.join(', ')}<br>
+                    <strong>Fields Found:</strong> ${debug.fields_found.join(', ')}
+                </small>
+            </div>
+        `;
+
+        // Insert debug panel after confidence score
+        $('#confidence-details').after(debugHtml);
+    }
 
     // Show confidence score
     const confidence = Math.round(data.confidence_score);

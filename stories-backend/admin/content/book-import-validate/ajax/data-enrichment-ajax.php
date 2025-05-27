@@ -99,6 +99,9 @@ function handleGetEnrichmentData() {
         $enrichedData['current_data'] = $currentBookData;
         error_log("Filtered enriched data: " . json_encode($enrichedData));
 
+        // Get raw data before filtering for debugging
+        $rawEnrichedData = getEnrichedBookData($title, $author, $currentISBN);
+
         echo json_encode([
             'success' => true,
             'data' => $enrichedData,
@@ -113,7 +116,9 @@ function handleGetEnrichmentData() {
                     'author' => $author,
                     'isbn' => $currentISBN,
                     'book_id' => $bookId
-                ]
+                ],
+                'raw_tags_before_filter' => $rawEnrichedData['fields']['tags'] ?? 'NOT_FOUND',
+                'filtered_tags_after_filter' => $enrichedData['fields']['tags'] ?? 'NOT_FOUND'
             ]
         ]);
     } catch (Exception $e) {

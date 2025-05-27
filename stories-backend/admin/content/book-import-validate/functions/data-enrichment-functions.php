@@ -536,8 +536,13 @@ function extractFieldValue($match, $fieldName) {
             // Processing: Deduplicates and capitalizes entries
             $allTags = [];
 
+            // Debug: Log the match structure for tags
+            error_log("Tags extraction - match structure: " . json_encode(array_keys($match)));
+            error_log("Tags extraction - categories data: " . json_encode($match['categories'] ?? 'NOT_SET'));
+
             // Get Google Books categories
             if (isset($match['categories']) && is_array($match['categories'])) {
+                error_log("Tags extraction - Found Google Books categories: " . json_encode($match['categories']));
                 $allTags = array_merge($allTags, $match['categories']);
             }
 

@@ -144,8 +144,8 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
 
     // Process each field
     foreach ($allFields as $fieldName => $fieldConfig) {
-        $googleValue = extractFieldValue($googleMatch, $fieldName);
-        $openLibraryValue = extractFieldValue($openLibraryMatch, $fieldName);
+        $googleValue = extractFieldValue($googleMatch, $fieldName, $currentISBN);
+        $openLibraryValue = extractFieldValue($openLibraryMatch, $fieldName, $currentISBN);
 
         // Check if we have data from either source
         if (!empty($googleValue) || !empty($openLibraryValue)) {
@@ -735,7 +735,7 @@ function preferEnglishVersion($value1, $value2) {
 /**
  * Extract field value with special handling for complex fields
  */
-function extractFieldValue($match, $fieldName) {
+function extractFieldValue($match, $fieldName, $currentISBN = null) {
     if (!$match || !is_array($match)) {
         return null;
     }
@@ -765,7 +765,20 @@ function extractFieldValue($match, $fieldName) {
             return null;
 
         case 'isbn':
-            // Return ISBN-10 specifically - convert from ISBN-13 if needed
+            // If we have a current ISBN-13, convert it to ISBN-10 for consistency
+            if (!empty($currentISBN)) {
+                $cleanCurrentISBN = preg_replace('/[^0-9X]/i', '', $currentISBN);
+                if (strlen($cleanCurrentISBN) === 13) {
+                    $convertedISBN10 = convertISBN13ToISBN10($cleanCurrentISBN);
+                    if ($convertedISBN10) {
+                        return $convertedISBN10;
+                    }
+                } elseif (strlen($cleanCurrentISBN) === 10) {
+                    return $cleanCurrentISBN;
+                }
+            }
+
+            // Fallback to original logic if no current ISBN or conversion failed
             if (isset($match['isbn']) && is_array($match['isbn'])) {
                 // Find the first 10-digit ISBN
                 foreach ($match['isbn'] as $isbn) {
@@ -799,7 +812,20 @@ function extractFieldValue($match, $fieldName) {
             return null;
 
         case 'isbn13':
-            // Return only the main ISBN13
+            // If we have a current ISBN, return it (prioritize consistency)
+            if (!empty($currentISBN)) {
+                $cleanCurrentISBN = preg_replace('/[^0-9X]/i', '', $currentISBN);
+                if (strlen($cleanCurrentISBN) === 13) {
+                    return $cleanCurrentISBN;
+                } elseif (strlen($cleanCurrentISBN) === 10) {
+                    $convertedISBN13 = convertToISBN13($cleanCurrentISBN);
+                    if ($convertedISBN13) {
+                        return $convertedISBN13;
+                    }
+                }
+            }
+
+            // Fallback to original logic if no current ISBN or conversion failed
             if (isset($match['isbn13']) && !empty($match['isbn13'])) {
                 return $match['isbn13'];
             } elseif (isset($match['isbn']) && is_array($match['isbn'])) {

@@ -1191,137 +1191,16 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
             return null;
 
         case 'purchase_links':
-            // Generate simple Amazon URLs for each format using ISBN-10
-            $isbn13 = $match['isbn13'] ?? null;
-            $isbn = $match['isbn'] ?? null;
-
-            if (is_array($isbn) && !empty($isbn)) {
-                $isbn = $isbn[0];
-            }
-
-            $purchaseLinks = [];
-
-            if ($isbn13 || $isbn) {
-                // Prefer ISBN-10 for Amazon URLs, convert if needed
-                $isbn10 = null;
-                if ($isbn && strlen(preg_replace('/[^0-9X]/i', '', $isbn)) === 10) {
-                    $isbn10 = preg_replace('/[^0-9X]/i', '', $isbn);
-                } elseif ($isbn13 && strlen(preg_replace('/[^0-9X]/i', '', $isbn13)) === 13) {
-                    $isbn10 = convertISBN13ToISBN10(preg_replace('/[^0-9X]/i', '', $isbn13));
-                }
-
-                $mainIsbn = $isbn10 ?: ($isbn ?: $isbn13);
-
-                // Get Amazon buying options with prices
-                $buyingOptions = scrapeAmazonBuyingOptions($mainIsbn);
-
-                if (!empty($buyingOptions)) {
-                    // Use actual Amazon URLs from scraping
-                    foreach ($buyingOptions as $format => $data) {
-                        $formatKey = strtolower(str_replace([' ', '-'], '_', $format));
-                        if (is_array($data) && !empty($data['url'])) {
-                            $purchaseLinks[$formatKey] = $data['url'];
-                        } else {
-                            // Fallback for old format compatibility
-                            $purchaseLinks[$formatKey] = "https://www.amazon.co.uk/gp/product/" . $mainIsbn;
-                        }
-                    }
-                } else {
-                    // Fallback - create links for common formats
-                    $purchaseLinks['hardcover'] = "https://www.amazon.co.uk/gp/product/" . $mainIsbn;
-                    $purchaseLinks['paperback'] = "https://www.amazon.co.uk/gp/product/" . $mainIsbn;
-                    $purchaseLinks['kindle'] = "https://www.amazon.co.uk/gp/product/" . $mainIsbn;
-                    $purchaseLinks['audio_cd'] = "https://www.amazon.co.uk/gp/product/" . $mainIsbn;
-                }
-            }
-
-            return !empty($purchaseLinks) ? json_encode($purchaseLinks) : null;
+            // Loaded asynchronously via AJAX
+            return null;
 
         case 'format':
-            // Extract format from Amazon buying options (use the first/primary format)
-            $isbn13 = $match['isbn13'] ?? null;
-            $isbn = $match['isbn'] ?? null;
-
-            if (is_array($isbn) && !empty($isbn)) {
-                $isbn = $isbn[0];
-            }
-
-            if ($isbn13 || $isbn) {
-                // Prefer ISBN-10 for Amazon URLs, convert if needed
-                $isbn10 = null;
-                if ($isbn && strlen(preg_replace('/[^0-9X]/i', '', $isbn)) === 10) {
-                    $isbn10 = preg_replace('/[^0-9X]/i', '', $isbn);
-                } elseif ($isbn13 && strlen(preg_replace('/[^0-9X]/i', '', $isbn13)) === 13) {
-                    $isbn10 = convertISBN13ToISBN10(preg_replace('/[^0-9X]/i', '', $isbn13));
-                }
-
-                $mainIsbn = $isbn10 ?: ($isbn ?: $isbn13);
-                $buyingOptions = scrapeAmazonBuyingOptions($mainIsbn);
-
-                if (!empty($buyingOptions)) {
-                    // Return the first format found (usually the primary/default one)
-                    $formats = array_keys($buyingOptions);
-                    return normalizeFormat($formats[0]);
-                }
-            }
-
-            // Fallback to standard field extraction
-            return normalizeFormat($match['format'] ?? null);
+            // Loaded asynchronously via AJAX
+            return null;
 
         case 'price_range':
-            // Extract price range from Amazon buying options
-            $isbn13 = $match['isbn13'] ?? null;
-            $isbn = $match['isbn'] ?? null;
-
-            if (is_array($isbn) && !empty($isbn)) {
-                $isbn = $isbn[0];
-            }
-
-            if ($isbn13 || $isbn) {
-                // Prefer ISBN-10 for Amazon URLs, convert if needed
-                $isbn10 = null;
-                if ($isbn && strlen(preg_replace('/[^0-9X]/i', '', $isbn)) === 10) {
-                    $isbn10 = preg_replace('/[^0-9X]/i', '', $isbn);
-                } elseif ($isbn13 && strlen(preg_replace('/[^0-9X]/i', '', $isbn13)) === 13) {
-                    $isbn10 = convertISBN13ToISBN10(preg_replace('/[^0-9X]/i', '', $isbn13));
-                }
-
-                $mainIsbn = $isbn10 ?: ($isbn ?: $isbn13);
-                $buyingOptions = scrapeAmazonBuyingOptions($mainIsbn);
-
-                if (!empty($buyingOptions)) {
-                    // Get the first price and convert to range
-                    $firstData = reset($buyingOptions);
-                    $firstPrice = '';
-
-                    if (is_array($firstData) && !empty($firstData['price'])) {
-                        $firstPrice = $firstData['price'];
-                    } elseif (is_string($firstData)) {
-                        $firstPrice = $firstData;
-                    }
-
-                    // Extract numeric value from price string like "£13.70"
-                    if (preg_match('/£(\d+\.\d{2})/', $firstPrice, $matches)) {
-                        $price = floatval($matches[1]);
-
-                        // Map price to range
-                        if ($price < 5) {
-                            return 'Under £5';
-                        } elseif ($price <= 10) {
-                            return '£5-£10';
-                        } elseif ($price <= 15) {
-                            return '£10-£15';
-                        } elseif ($price <= 20) {
-                            return '£15-£20';
-                        } else {
-                            return 'Over £20';
-                        }
-                    }
-                }
-            }
-
-            // Fallback to standard field extraction
-            return $match['price_range'] ?? null;
+            // Loaded asynchronously via AJAX
+            return null;
 
         default:
             // Standard field extraction

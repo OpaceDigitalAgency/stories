@@ -174,8 +174,11 @@ function fetchOpenLibraryDataNew($isbn, $title, $author, $isForEnrichment = fals
             return ['_status' => $status];
         }
 
-        // For validation (not enrichment), allow title/author fallback
-        if (empty($data[$key]) && !$isForEnrichment && (!empty($title) || !empty($author))) {
+        // For enrichment OR validation, use search API to get rich metadata
+        if (empty($data[$key]) || $isForEnrichment) {
+            // For enrichment, we ALWAYS want to use search API to get rich metadata
+            // For validation, only use search API as fallback when main API fails
+            if ($isForEnrichment || (!empty($title) || !empty($author))) {
             $query = '';
             if (!empty($title)) {
                 $query .= "title=" . urlencode($title);
@@ -359,6 +362,7 @@ function fetchOpenLibraryDataNew($isbn, $title, $author, $isForEnrichment = fals
             }
 
             return null;
+            }
         }
 
         if (!empty($data[$key])) {

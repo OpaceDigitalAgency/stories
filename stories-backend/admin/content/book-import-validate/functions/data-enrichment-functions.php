@@ -94,7 +94,9 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
         'characters' => ['confidence' => 40, 'label' => 'Characters'], // From OpenLibrary person
         'settings' => ['confidence' => 40, 'label' => 'Settings'], // From OpenLibrary place
         // Fields that require external sources
-        'price_range' => ['confidence' => 0, 'label' => 'Price Range']
+        'price_range' => ['confidence' => 0, 'label' => 'Price Range'],
+        'alternative_isbns' => ['confidence' => 70, 'label' => 'Alternative ISBNs'],
+        'purchase_links' => ['confidence' => 80, 'label' => 'Purchase Links']
     ];
 
     // Find best matches from each source
@@ -522,6 +524,19 @@ function extractFieldValue($match, $fieldName) {
 
     // Handle special field mappings and transformations
     switch ($fieldName) {
+        case 'alternative_isbns':
+            // Extract all ISBNs from OpenLibrary data except the main one
+            if (isset($match['isbn']) && is_array($match['isbn'])) {
+                $allIsbns = $match['isbn'];
+                // Remove the main ISBN if it exists
+                $mainIsbn = $match['isbn13'] ?? $match['isbn'][0] ?? '';
+                $alternativeIsbns = array_filter($allIsbns, function($isbn) use ($mainIsbn) {
+                    return $isbn !== $mainIsbn && strlen($isbn) >= 10;
+                });
+                return !empty($alternativeIsbns) ? implode(',', array_slice($alternativeIsbns, 0, 10)) : null;
+            }
+            break;
+
         case 'tags':
             // Google Books categories[] + OpenLibrary subject[] + subject_key[] + OpenLibrary subject_facet[]
             // Processing: Deduplicates and capitalizes entries
@@ -663,13 +678,14 @@ function extractFieldValue($match, $fieldName) {
             return $ageRange;
 
         case 'reading_level':
-            // Open Library: use lexile[]
+            // Open Library: use lexile[] with conversion to readable format
             if (isset($match['lexile']) && is_array($match['lexile']) && !empty($match['lexile'])) {
-                return $match['lexile'][0] . 'L';
+                $lexileValue = $match['lexile'][0];
+                return convertLexileToReadingLevel($lexileValue);
             }
             // Also check if lexile is a direct value
             elseif (isset($match['lexile']) && is_numeric($match['lexile'])) {
-                return $match['lexile'] . 'L';
+                return convertLexileToReadingLevel($match['lexile']);
             }
             break;
 
@@ -727,29 +743,46 @@ function extractFieldValue($match, $fieldName) {
             break;
 
         case 'settings':
-            // Use Open Library place_facet[]
+            // Use Open Library place_facet[] with deduplication
+            $places = [];
             if (isset($match['place_facet']) && is_array($match['place_facet'])) {
-                $places = array_map(function($place) {
-                    // Ensure place is a string before trimming
-                    if (!is_string($place)) {
-                        $place = (string) $place;
-                    }
-                    return ucwords(strtolower(trim($place)));
-                }, $match['place_facet']);
-                return implode(', ', array_slice($places, 0, 3));
+                $places = $match['place_facet'];
+            } elseif (isset($match['place']) && is_array($match['place'])) {
+                $places = $match['place'];
             }
-            // Fallback to place[] if place_facet not available
-            elseif (isset($match['place']) && is_array($match['place'])) {
-                $places = array_map(function($place) {
-                    // Ensure place is a string before trimming
+            
+            if (!empty($places)) {
+                $cleanPlaces = [];
+                foreach ($places as $place) {
                     if (!is_string($place)) {
                         $place = (string) $place;
                     }
-                    return ucwords(strtolower(trim($place)));
-                }, $match['place']);
-                return implode(', ', array_slice($places, 0, 3));
+                    $place = trim($place);
+                    if (empty($place)) continue;
+                    
+                    // Deduplicate similar places (e.g., "London, London (England)" -> "London (England)")
+                    $place = deduplicateLocation($place);
+                    $cleanPlaces[] = ucwords(strtolower($place));
+                }
+                
+                $uniquePlaces = array_unique($cleanPlaces);
+                return implode(', ', array_slice($uniquePlaces, 0, 3));
             }
             break;
+
+        case 'publisher':
+            // Normalize publisher and get/create publisher_id
+            if (isset($match['publisher']) && is_array($match['publisher']) && !empty($match['publisher'])) {
+                $publisherName = $match['publisher'][0];
+            } elseif (isset($match['publisher']) && is_string($match['publisher'])) {
+                $publisherName = $match['publisher'];
+            } else {
+                return null;
+            }
+            
+            // Clean and normalize publisher name
+            $publisherName = normalizePublisherName($publisherName);
+            return $publisherName;
 
         case 'price_range':
             // Scrape price from Amazon UK using ISBN
@@ -767,6 +800,42 @@ function extractFieldValue($match, $fieldName) {
             $priceRange = scrapePriceFromAmazon($isbn);
             error_log("Price range result for ISBN " . (is_array($isbn) ? json_encode($isbn) : $isbn) . ": " . ($priceRange ?? 'null'));
             return $priceRange;
+
+        case 'purchase_links':
+            // Generate enhanced purchase links with edition-specific data
+            $isbn13 = $match['isbn13'] ?? null;
+            $isbn = $match['isbn'] ?? null;
+            
+            if (is_array($isbn) && !empty($isbn)) {
+                $isbn = $isbn[0];
+            }
+            
+            $purchaseLinks = [];
+            
+            if ($isbn13 || $isbn) {
+                $mainIsbn = $isbn13 ?: $isbn;
+                
+                // Amazon UK link
+                $purchaseLinks['amazon_uk'] = "https://www.amazon.co.uk/dp/" . $mainIsbn;
+                
+                // Goodreads link
+                $purchaseLinks['goodreads'] = "https://www.goodreads.com/book/isbn/" . $mainIsbn;
+                
+                // Google Books link
+                $purchaseLinks['google_books'] = "https://books.google.com/books?isbn=" . $mainIsbn;
+                
+                // Add edition information if available
+                if (isset($match['publisher']) && !empty($match['publisher'])) {
+                    $publisher = is_array($match['publisher']) ? $match['publisher'][0] : $match['publisher'];
+                    $purchaseLinks['_edition_info'] = [
+                        'publisher' => $publisher,
+                        'isbn13' => $isbn13,
+                        'isbn' => $isbn
+                    ];
+                }
+            }
+            
+            return !empty($purchaseLinks) ? json_encode($purchaseLinks) : null;
 
         default:
             // Standard field extraction
@@ -830,6 +899,110 @@ function truncateText($text, $maxLength = 500) {
     }
 
     return substr($text, 0, $maxLength) . '...';
+}
+
+/**
+ * Convert Lexile reading level to readable format
+ */
+function convertLexileToReadingLevel($lexileValue) {
+    if (!is_numeric($lexileValue)) {
+        return $lexileValue . 'L';
+    }
+    
+    $lexile = (int) $lexileValue;
+    
+    // Convert Lexile to reading level categories
+    if ($lexile < 200) {
+        return 'Beginning Reader';
+    } elseif ($lexile < 400) {
+        return 'Early Reader';
+    } elseif ($lexile < 600) {
+        return 'Elementary';
+    } elseif ($lexile < 800) {
+        return 'Middle Grade';
+    } elseif ($lexile < 1000) {
+        return 'Young Adult';
+    } else {
+        return 'Advanced';
+    }
+}
+
+/**
+ * Deduplicate location strings (e.g., "London, London (England)" -> "London (England)")
+ */
+function deduplicateLocation($location) {
+    // Handle patterns like "London, London (England)"
+    if (preg_match('/^([^,]+),\s*\1\s*\(([^)]+)\)$/', $location, $matches)) {
+        return $matches[1] . ' (' . $matches[2] . ')';
+    }
+    
+    // Handle patterns like "New York, New York"
+    if (preg_match('/^([^,]+),\s*\1$/', $location, $matches)) {
+        return $matches[1];
+    }
+    
+    return $location;
+}
+
+/**
+ * Normalize publisher name
+ */
+function normalizePublisherName($publisherName) {
+    // Clean up common publisher name variations
+    $publisherName = trim($publisherName);
+    
+    // Remove common suffixes that create duplicates
+    $suffixesToRemove = [
+        ', an imprint of Random House Children\'s Books',
+        ', an imprint of Random House',
+        ' Children\'s Books',
+        ' Publishing',
+        ' Publishers',
+        ' Ltd',
+        ' Limited',
+        ' Inc',
+        ' LLC'
+    ];
+    
+    foreach ($suffixesToRemove as $suffix) {
+        if (stripos($publisherName, $suffix) !== false) {
+            $publisherName = str_ireplace($suffix, '', $publisherName);
+            break; // Only remove one suffix to avoid over-cleaning
+        }
+    }
+    
+    return trim($publisherName);
+}
+
+/**
+ * Get or create publisher ID from normalized name
+ */
+function getOrCreatePublisherId($publisherName) {
+    global $pdo;
+    
+    if (empty($publisherName)) {
+        return null;
+    }
+    
+    $normalizedName = normalizePublisherName($publisherName);
+    
+    // Check if publisher exists
+    $stmt = $pdo->prepare("SELECT id FROM publishers WHERE name = ?");
+    $stmt->execute([$normalizedName]);
+    $publisher = $stmt->fetch();
+    
+    if ($publisher) {
+        return $publisher['id'];
+    }
+    
+    // Create new publisher
+    $slug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $normalizedName));
+    $slug = trim($slug, '-');
+    
+    $stmt = $pdo->prepare("INSERT INTO publishers (name, slug, created_at, updated_at) VALUES (?, ?, NOW(), NOW())");
+    $stmt->execute([$normalizedName, $slug]);
+    
+    return $pdo->lastInsertId();
 }
 
 /**

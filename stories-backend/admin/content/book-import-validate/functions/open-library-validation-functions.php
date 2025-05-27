@@ -31,8 +31,8 @@ function fetchOpenLibraryDataNew($isbn, $title, $author, $isForEnrichment = fals
         // Log that we're starting Open Library fetch
         error_log("Starting Open Library data fetch for ISBN: $isbn");
 
-        // Try ISBN search first
-        $url = "https://openlibrary.org/api/books?bibkeys=ISBN:" . urlencode($isbn) . "&format=json&jscmd=data";
+        // Try ISBN search first using the search API that returns rich metadata
+        $url = "https://openlibrary.org/search.json?q=" . urlencode($isbn) . "&fields=*,availability&limit=1";
 
         // Add step for URL generation
         $status['steps'][] = [
@@ -116,9 +116,29 @@ function fetchOpenLibraryDataNew($isbn, $title, $author, $isForEnrichment = fals
                 'message' => "JSON parsed successfully"
             ];
         }
+        // Since we're now using the search API as primary, check for docs structure
+        if (!empty($data['docs']) && !empty($data['docs'][0])) {
+            // We have search API response with rich metadata
+            $bookInfo = $data['docs'][0];
+            
+            $status['steps'][] = [
+                'name' => 'data_extraction',
+                'status' => 'success',
+                'message' => "Found rich metadata in search API response"
+            ];
+            
+            $status['status'] = 'success';
+            $status['message'] = "Successfully retrieved Open Library data with rich metadata";
+            $status['processing_time'] = round(microtime(true) - $startTime, 2);
+            
+            // Add status to the book info
+            $bookInfo['_status'] = $status;
+            
+            return $bookInfo;
+        }
+        
+        // Fallback: check for old API structure (shouldn't happen with new URL)
         $key = "ISBN:$isbn";
-
-        // For data enrichment, try search API to get rich metadata even for exact ISBN
         if (empty($data[$key]) && $isForEnrichment) {
             // Try search API with ISBN to get rich metadata
             $searchUrl = "https://openlibrary.org/search.json?q=isbn:" . urlencode($isbn) . "&fields=*,availability&limit=1";

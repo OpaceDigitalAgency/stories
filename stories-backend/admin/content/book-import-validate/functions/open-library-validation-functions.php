@@ -118,21 +118,58 @@ function fetchOpenLibraryDataNew($isbn, $title, $author, $isForEnrichment = fals
         }
         $key = "ISBN:$isbn";
 
-        // For data enrichment, ONLY use exact ISBN matches - do not fall back to title/author searches
-        // This prevents returning data for different editions when enriching specific ISBNs
+        // For data enrichment, try search API to get rich metadata even for exact ISBN
         if (empty($data[$key]) && $isForEnrichment) {
-            // Return null for enrichment if exact ISBN not found
+            // Try search API with ISBN to get rich metadata
+            $searchUrl = "https://openlibrary.org/search.json?q=isbn:" . urlencode($isbn) . "&fields=*,availability&limit=1";
+
+            $status['steps'][] = [
+                'name' => 'enrichment_search_api',
+                'status' => 'in_progress',
+                'message' => "Trying search API for enrichment data",
+                'fetch_url' => $searchUrl
+            ];
+
+            $ch = curl_init($searchUrl);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+            $searchResponse = curl_exec($ch);
+            $searchHttpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($searchResponse !== false && $searchHttpCode === 200) {
+                $searchData = json_decode($searchResponse, true);
+                if (!empty($searchData['docs']) && !empty($searchData['docs'][0])) {
+                    // Use the search result for enrichment
+                    $bookInfo = $searchData['docs'][0];
+
+                    $status['steps'][count($status['steps']) - 1] = [
+                        'name' => 'enrichment_search_api',
+                        'status' => 'success',
+                        'message' => "Found enrichment data via search API",
+                        'fetch_url' => $searchUrl
+                    ];
+
+                    // Return the search result data (which has rich metadata)
+                    return $bookInfo;
+                }
+            }
+
+            // If search API also fails, return error
+            $status['steps'][count($status['steps']) - 1] = [
+                'name' => 'enrichment_search_api',
+                'status' => 'error',
+                'message' => "No enrichment data found via search API",
+                'fetch_url' => $searchUrl
+            ];
+
             $endTime = microtime(true);
             $totalTime = round($endTime - $startTime, 2);
 
             $status['status'] = 'error';
-            $status['message'] = "No exact ISBN match found in Open Library for enrichment";
+            $status['message'] = "No ISBN match found in Open Library for enrichment";
             $status['processing_time'] = $totalTime;
-            $status['steps'][] = [
-                'name' => 'enrichment_isbn_only',
-                'status' => 'error',
-                'message' => "Enrichment requires exact ISBN match - no title/author fallback"
-            ];
 
             return ['_status' => $status];
         }

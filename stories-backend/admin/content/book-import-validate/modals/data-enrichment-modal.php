@@ -314,11 +314,13 @@ function fetchAmazonDataForFields(fields) {
     // Check if we have Amazon-derived fields that need data
     const amazonFields = ['purchase_links', 'format', 'price_range'];
     const hasAmazonFields = amazonFields.some(fieldName =>
-        fields[fieldName] && fields[fieldName].source === 'amazon_derived'
+        fields[fieldName] && fields[fieldName].new_data && fields[fieldName].new_data.source === 'amazon_derived'
     );
 
     if (!hasAmazonFields || !currentBookISBN) {
         console.log('📦 No Amazon fields to populate or no ISBN available');
+        console.log('📦 Debug - fields:', fields);
+        console.log('📦 Debug - currentBookISBN:', currentBookISBN);
         return;
     }
 
@@ -326,7 +328,7 @@ function fetchAmazonDataForFields(fields) {
 
     // Show loading indicators for Amazon fields
     amazonFields.forEach(fieldName => {
-        if (fields[fieldName] && fields[fieldName].source === 'amazon_derived') {
+        if (fields[fieldName] && fields[fieldName].new_data && fields[fieldName].new_data.source === 'amazon_derived') {
             const $fieldDiv = $(`.enrichment-field[data-field="${fieldName}"]`);
             const $badge = $fieldDiv.find('.badge:contains("Amazon")');
             $badge.removeClass('badge-warning').addClass('badge-info').text('Amazon (Loading...)');
@@ -349,7 +351,7 @@ function fetchAmazonDataForFields(fields) {
 
             // Update badges to show no data found
             amazonFields.forEach(fieldName => {
-                if (fields[fieldName] && fields[fieldName].source === 'amazon_derived') {
+                if (fields[fieldName] && fields[fieldName].new_data && fields[fieldName].new_data.source === 'amazon_derived') {
                     const $fieldDiv = $(`.enrichment-field[data-field="${fieldName}"]`);
                     const $badge = $fieldDiv.find('.badge:contains("Amazon")');
                     $badge.removeClass('badge-info').addClass('badge-secondary').text('Amazon (No data)');
@@ -362,7 +364,7 @@ function fetchAmazonDataForFields(fields) {
 
         // Update badges to show error
         amazonFields.forEach(fieldName => {
-            if (fields[fieldName] && fields[fieldName].source === 'amazon_derived') {
+            if (fields[fieldName] && fields[fieldName].new_data && fields[fieldName].new_data.source === 'amazon_derived') {
                 const $fieldDiv = $(`.enrichment-field[data-field="${fieldName}"]`);
                 const $badge = $fieldDiv.find('.badge:contains("Amazon")');
                 $badge.removeClass('badge-info').addClass('badge-danger').text('Amazon (Error)');
@@ -380,8 +382,11 @@ function updateAmazonFields(amazonData) {
         purchaseLinksField.find('.badge:contains("Amazon")').removeClass('badge-info').addClass('badge-warning').text('Amazon');
         purchaseLinksField.find('.field-checkbox').prop('disabled', false);
 
-        // Update the field data for form submission
-        purchaseLinksField.find('.field-checkbox').data('amazon-value', jsonValue);
+        // Update the global enrichment data for form submission
+        if (currentEnrichmentData && currentEnrichmentData.fields && currentEnrichmentData.fields.purchase_links) {
+            currentEnrichmentData.fields.purchase_links.new_data.value = jsonValue;
+            currentEnrichmentData.fields.purchase_links.new_data.status = 'ready';
+        }
     }
 
     // Update format field
@@ -391,8 +396,11 @@ function updateAmazonFields(amazonData) {
         formatField.find('.badge:contains("Amazon")').removeClass('badge-info').addClass('badge-warning').text('Amazon');
         formatField.find('.field-checkbox').prop('disabled', false);
 
-        // Update the field data for form submission
-        formatField.find('.field-checkbox').data('amazon-value', amazonData.selected_format);
+        // Update the global enrichment data for form submission
+        if (currentEnrichmentData && currentEnrichmentData.fields && currentEnrichmentData.fields.format) {
+            currentEnrichmentData.fields.format.new_data.value = amazonData.selected_format;
+            currentEnrichmentData.fields.format.new_data.status = 'ready';
+        }
     }
 
     // Update price_range field
@@ -416,8 +424,11 @@ function updateAmazonFields(amazonData) {
         priceRangeField.find('.badge:contains("Amazon")').removeClass('badge-info').addClass('badge-warning').text('Amazon');
         priceRangeField.find('.field-checkbox').prop('disabled', false);
 
-        // Update the field data for form submission
-        priceRangeField.find('.field-checkbox').data('amazon-value', priceRange);
+        // Update the global enrichment data for form submission
+        if (currentEnrichmentData && currentEnrichmentData.fields && currentEnrichmentData.fields.price_range) {
+            currentEnrichmentData.fields.price_range.new_data.value = priceRange;
+            currentEnrichmentData.fields.price_range.new_data.status = 'ready';
+        }
     }
 }
 

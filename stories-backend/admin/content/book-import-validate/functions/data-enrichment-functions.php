@@ -1592,20 +1592,21 @@ function scrapeAmazonBuyingOptions($isbn) {
     foreach ($patterns as $label => $pat) {
         foreach ($responses as $resp) {
             if (preg_match($pat, $resp, $m)) {
-                $relativeUrl = $m[2];
+                $relativeUrl = $m[1];  // URL captured in group 1
                 // Determine full URL
                 if (stripos($relativeUrl, 'javascript:') === 0 || !preg_match('#^/#', $relativeUrl)) {
-                    // Fallback to the main product page (default format)
-                    $fullUrl = $endpoints['desktop'];
+                    // Construct ref-based URL for the default selected format
+                    $suffix = 'tmm_' . strtolower($label) . '_swatch_0';
+                    $fullUrl = "https://www.amazon.co.uk/gp/product/{$cleanISBN}/ref={$suffix}";
                 } else {
                     $fullUrl = 'https://www.amazon.co.uk' . $relativeUrl;
                 }
                 $buyingOptions[$label] = [
-                    'price' => '£' . $m[1],
+                    'price' => '£' . $m[2],   // price captured in group 2
                     'url'   => $fullUrl
                 ];
                 if (AMAZON_DEBUG) {
-                    echo "<p><strong>✅ Found {$label}:</strong> Price £{$m[1]}, URL: {$fullUrl}</p>\n";
+                    echo "<p><strong>✅ Found {$label}:</strong> Price £{$m[2]}, URL: {$fullUrl}</p>\n";
                 }
                 break; // exit inner loop once found, continue to next pattern
             }

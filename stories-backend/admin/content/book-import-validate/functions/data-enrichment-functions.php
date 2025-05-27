@@ -21,13 +21,13 @@ function fixDuplicateLocation($location) {
     if (preg_match($pattern, $location, $matches)) {
         return $matches[1] . ' ' . $matches[2];
     }
-    
+
     // Pattern: "City, City" -> "City" (no parentheses)
     $pattern2 = '/^([^,]+),\s*\1$/i';
     if (preg_match($pattern2, $location, $matches)) {
         return $matches[1];
     }
-    
+
     return $location;
 }
 
@@ -123,7 +123,7 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
     // Find best matches from each source
     $googleMatch = findBestDataMatch($googleResults, $title, $author, $currentISBN);
     $openLibraryMatch = findBestDataMatch($openLibraryResults, $title, $author, $currentISBN);
-    
+
     // Validate OpenLibrary match if we have an ISBN
     if (!empty($currentISBN) && $openLibraryMatch && !validateOpenLibraryISBNMatch($openLibraryMatch, $currentISBN)) {
         error_log("OpenLibrary match rejected - ISBN mismatch. Expected: $currentISBN");
@@ -255,7 +255,7 @@ function findBestDataMatch($results, $title, $author, $currentISBN) {
         // ISBN matching (if we have current ISBN) - STRICT validation
         if (!empty($currentISBN)) {
             $resultISBNs = [];
-            
+
             // Collect all ISBNs from the result
             if (isset($result['isbn13'])) {
                 $resultISBNs[] = $result['isbn13'];
@@ -267,7 +267,7 @@ function findBestDataMatch($results, $title, $author, $currentISBN) {
                     $resultISBNs[] = $result['isbn'];
                 }
             }
-            
+
             // Check for exact match
             $exactMatch = false;
             foreach ($resultISBNs as $isbn) {
@@ -277,7 +277,7 @@ function findBestDataMatch($results, $title, $author, $currentISBN) {
                     break;
                 }
             }
-            
+
             if ($exactMatch) {
                 $score += 500; // Very high bonus for exact ISBN match
             } else {
@@ -490,6 +490,40 @@ function convertToISBN13($isbn) {
 }
 
 /**
+ * Convert ISBN-13 to ISBN-10
+ */
+function convertISBN13ToISBN10($isbn) {
+    $clean = preg_replace('/[^0-9X]/i', '', $isbn);
+
+    if (strlen($clean) === 10) {
+        return $clean; // Already ISBN-10
+    }
+
+    if (strlen($clean) === 13 && substr($clean, 0, 3) === '978') {
+        // Extract the middle 9 digits
+        $isbn10 = substr($clean, 3, 9);
+
+        // Calculate ISBN-10 checksum
+        $sum = 0;
+        for ($i = 0; $i < 9; $i++) {
+            $digit = intval($isbn10[$i]);
+            $sum += $digit * (10 - $i);
+        }
+        $checkDigit = (11 - ($sum % 11)) % 11;
+
+        if ($checkDigit === 10) {
+            $checkDigit = 'X';
+        } elseif ($checkDigit === 11) {
+            $checkDigit = 0;
+        }
+
+        return $isbn10 . $checkDigit;
+    }
+
+    return null; // Cannot convert non-978 prefix or invalid format
+}
+
+/**
  * Validate ISBN exists on Goodreads (for review scraping confidence)
  */
 function validateISBNOnGoodreads($isbn) {
@@ -605,14 +639,14 @@ function extractFieldValue($match, $fieldName) {
                 $allIsbns = $match['isbn'];
                 // Get the main ISBN (prefer ISBN13, fallback to first ISBN)
                 $mainIsbn = $match['isbn13'] ?? $match['isbn'][0] ?? '';
-                
+
                 $alternativeIsbns = [];
                 foreach ($allIsbns as $isbn) {
                     if (is_string($isbn) && strlen($isbn) >= 10 && $isbn !== $mainIsbn) {
                         $alternativeIsbns[] = $isbn;
                     }
                 }
-                
+
                 // Return formatted for scrollable display
                 if (!empty($alternativeIsbns)) {
                     $limitedIsbns = array_slice($alternativeIsbns, 0, 20);
@@ -622,13 +656,36 @@ function extractFieldValue($match, $fieldName) {
             return null;
 
         case 'isbn':
-            // Return only the main ISBN, not the long list
-            if (isset($match['isbn13']) && !empty($match['isbn13'])) {
-                return $match['isbn13'];
-            } elseif (isset($match['isbn']) && is_array($match['isbn']) && !empty($match['isbn'])) {
-                return $match['isbn'][0];
+            // Return ISBN-10 specifically - convert from ISBN-13 if needed
+            if (isset($match['isbn']) && is_array($match['isbn'])) {
+                // Find the first 10-digit ISBN
+                foreach ($match['isbn'] as $isbn) {
+                    if (is_string($isbn) && strlen(preg_replace('/[^0-9X]/i', '', $isbn)) === 10) {
+                        return $isbn;
+                    }
+                }
+                // If no 10-digit found, convert from 13-digit
+                foreach ($match['isbn'] as $isbn) {
+                    if (is_string($isbn) && strlen(preg_replace('/[^0-9X]/i', '', $isbn)) === 13) {
+                        $isbn10 = convertISBN13ToISBN10($isbn);
+                        if ($isbn10) {
+                            return $isbn10;
+                        }
+                    }
+                }
+                // Fallback to first ISBN
+                return !empty($match['isbn']) ? $match['isbn'][0] : null;
             } elseif (isset($match['isbn']) && is_string($match['isbn'])) {
+                $cleanIsbn = preg_replace('/[^0-9X]/i', '', $match['isbn']);
+                if (strlen($cleanIsbn) === 10) {
+                    return $match['isbn'];
+                } elseif (strlen($cleanIsbn) === 13) {
+                    return convertISBN13ToISBN10($match['isbn']);
+                }
                 return $match['isbn'];
+            } elseif (isset($match['isbn13']) && !empty($match['isbn13'])) {
+                // Convert ISBN-13 to ISBN-10
+                return convertISBN13ToISBN10($match['isbn13']);
             }
             return null;
 
@@ -639,12 +696,26 @@ function extractFieldValue($match, $fieldName) {
             } elseif (isset($match['isbn']) && is_array($match['isbn'])) {
                 // Find the first 13-digit ISBN
                 foreach ($match['isbn'] as $isbn) {
-                    if (is_string($isbn) && strlen($isbn) === 13) {
+                    if (is_string($isbn) && strlen(preg_replace('/[^0-9X]/i', '', $isbn)) === 13) {
                         return $isbn;
+                    }
+                }
+                // Convert from 10-digit if available
+                foreach ($match['isbn'] as $isbn) {
+                    if (is_string($isbn) && strlen(preg_replace('/[^0-9X]/i', '', $isbn)) === 10) {
+                        return convertToISBN13($isbn);
                     }
                 }
                 // Fallback to first ISBN if no 13-digit found
                 return !empty($match['isbn']) ? $match['isbn'][0] : null;
+            } elseif (isset($match['isbn']) && is_string($match['isbn'])) {
+                $cleanIsbn = preg_replace('/[^0-9X]/i', '', $match['isbn']);
+                if (strlen($cleanIsbn) === 13) {
+                    return $match['isbn'];
+                } elseif (strlen($cleanIsbn) === 10) {
+                    return convertToISBN13($match['isbn']);
+                }
+                return $match['isbn'];
             }
             return null;
 
@@ -723,7 +794,7 @@ function extractFieldValue($match, $fieldName) {
                     if (!$isAgeRelated) {
                         // Normalize capitalization
                         $normalizedTag = ucwords(strtolower($cleanTag));
-                        
+
                         // Check for duplicates (case-insensitive)
                         $isDuplicate = false;
                         foreach ($cleanTags as $existingTag) {
@@ -732,7 +803,7 @@ function extractFieldValue($match, $fieldName) {
                                 break;
                             }
                         }
-                        
+
                         if (!$isDuplicate) {
                             $cleanTags[] = $normalizedTag;
                         }
@@ -766,7 +837,7 @@ function extractFieldValue($match, $fieldName) {
             } elseif (isset($match['format']) && is_string($match['format'])) {
                 $formats = explode(',', $match['format']);
             }
-            
+
             if (!empty($formats)) {
                 $normalizedFormats = [];
                 foreach ($formats as $format) {
@@ -898,7 +969,7 @@ function extractFieldValue($match, $fieldName) {
             } elseif (isset($match['place']) && is_array($match['place'])) {
                 $places = $match['place'];
             }
-            
+
             if (!empty($places)) {
                 $cleanPlaces = [];
                 foreach ($places as $place) {
@@ -912,7 +983,7 @@ function extractFieldValue($match, $fieldName) {
                         $cleanPlaces[] = ucwords(strtolower($place));
                     }
                 }
-                
+
                 $uniquePlaces = array_unique($cleanPlaces);
                 return implode(', ', array_slice($uniquePlaces, 0, 3));
             }
@@ -927,7 +998,7 @@ function extractFieldValue($match, $fieldName) {
             } else {
                 return null;
             }
-            
+
             // Clean and normalize publisher name
             $publisherName = normalizePublisherName($publisherName);
             return $publisherName;
@@ -944,7 +1015,7 @@ function extractFieldValue($match, $fieldName) {
             } else {
                 return null;
             }
-            
+
             // Use enhanced price scraping with fallbacks
             $priceRange = scrapePriceFromAmazonEnhanced($isbn);
             error_log("Price range result for ISBN " . (is_array($isbn) ? json_encode($isbn) : $isbn) . ": " . ($priceRange ?? 'null'));
@@ -954,25 +1025,25 @@ function extractFieldValue($match, $fieldName) {
             // Generate enhanced purchase links with edition-specific data
             $isbn13 = $match['isbn13'] ?? null;
             $isbn = $match['isbn'] ?? null;
-            
+
             if (is_array($isbn) && !empty($isbn)) {
                 $isbn = $isbn[0];
             }
-            
+
             $purchaseLinks = [];
-            
+
             if ($isbn13 || $isbn) {
                 $mainIsbn = $isbn13 ?: $isbn;
-                
+
                 // Amazon UK link
                 $purchaseLinks['amazon_uk'] = "https://www.amazon.co.uk/dp/" . $mainIsbn;
-                
+
                 // Goodreads link
                 $purchaseLinks['goodreads'] = "https://www.goodreads.com/book/isbn/" . $mainIsbn;
-                
+
                 // Google Books link
                 $purchaseLinks['google_books'] = "https://books.google.com/books?isbn=" . $mainIsbn;
-                
+
                 // Add edition information if available
                 if (isset($match['publisher']) && !empty($match['publisher'])) {
                     $publisher = is_array($match['publisher']) ? $match['publisher'][0] : $match['publisher'];
@@ -983,7 +1054,7 @@ function extractFieldValue($match, $fieldName) {
                     ];
                 }
             }
-            
+
             return !empty($purchaseLinks) ? json_encode($purchaseLinks) : null;
 
         default:
@@ -1032,7 +1103,7 @@ function normalizeLanguage($language) {
         if (empty($language)) {
             return 'Unknown';
         }
-        
+
         // Look for English variants first
         foreach ($language as $lang) {
             $langCode = strtolower(trim($lang));
@@ -1040,7 +1111,7 @@ function normalizeLanguage($language) {
                 return 'English';
             }
         }
-        
+
         // If no English found, take the first language
         $language = $language[0];
     } elseif (!is_string($language)) {
@@ -1069,7 +1140,7 @@ function normalizeFormat($format) {
     if (empty($format)) {
         return null;
     }
-    
+
     $format = trim($format);
     $formatMap = [
         'hardcover' => 'Hardcover',
@@ -1089,7 +1160,7 @@ function normalizeFormat($format) {
         'school & library binding' => 'Library Binding',
         'mass market paperback' => 'Mass Market Paperback'
     ];
-    
+
     $lowerFormat = strtolower($format);
     return $formatMap[$lowerFormat] ?? ucwords($format);
 }
@@ -1101,9 +1172,9 @@ function convertLexileToReadingLevel($lexileValue) {
     if (!is_numeric($lexileValue)) {
         return $lexileValue . 'L';
     }
-    
+
     $lexile = (int) $lexileValue;
-    
+
     // Convert Lexile to reading level categories
     if ($lexile < 200) {
         return 'Beginning Reader';
@@ -1128,12 +1199,12 @@ function deduplicateLocation($location) {
     if (preg_match('/^([^,]+),\s*\1\s*\(([^)]+)\)$/', $location, $matches)) {
         return $matches[1] . ' (' . $matches[2] . ')';
     }
-    
+
     // Handle patterns like "New York, New York"
     if (preg_match('/^([^,]+),\s*\1$/', $location, $matches)) {
         return $matches[1];
     }
-    
+
     return $location;
 }
 
@@ -1143,7 +1214,7 @@ function deduplicateLocation($location) {
 function normalizePublisherName($publisherName) {
     // Clean up common publisher name variations
     $publisherName = trim($publisherName);
-    
+
     // Remove common suffixes that create duplicates
     $suffixesToRemove = [
         ', an imprint of Random House Children\'s Books',
@@ -1156,14 +1227,14 @@ function normalizePublisherName($publisherName) {
         ' Inc',
         ' LLC'
     ];
-    
+
     foreach ($suffixesToRemove as $suffix) {
         if (stripos($publisherName, $suffix) !== false) {
             $publisherName = str_ireplace($suffix, '', $publisherName);
             break; // Only remove one suffix to avoid over-cleaning
         }
     }
-    
+
     return trim($publisherName);
 }
 
@@ -1172,29 +1243,29 @@ function normalizePublisherName($publisherName) {
  */
 function getOrCreatePublisherId($publisherName) {
     global $pdo;
-    
+
     if (empty($publisherName)) {
         return null;
     }
-    
+
     $normalizedName = normalizePublisherName($publisherName);
-    
+
     // Check if publisher exists
     $stmt = $pdo->prepare("SELECT id FROM publishers WHERE name = ?");
     $stmt->execute([$normalizedName]);
     $publisher = $stmt->fetch();
-    
+
     if ($publisher) {
         return $publisher['id'];
     }
-    
+
     // Create new publisher
     $slug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $normalizedName));
     $slug = trim($slug, '-');
-    
+
     $stmt = $pdo->prepare("INSERT INTO publishers (name, slug, created_at, updated_at) VALUES (?, ?, NOW(), NOW())");
     $stmt->execute([$normalizedName, $slug]);
-    
+
     return $pdo->lastInsertId();
 }
 

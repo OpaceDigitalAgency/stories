@@ -94,6 +94,13 @@ function handleGetEnrichmentData() {
         // TEMP DEBUG: Check specific field before filtering
         error_log("Tags field before filtering: " . json_encode($enrichedData['fields']['tags'] ?? 'NOT_FOUND'));
 
+        // Capture error log output for debugging
+        ob_start();
+        error_log("CAPTURE_START");
+        $enrichedDataDebug = getEnrichedBookData($title, $author, $currentISBN);
+        error_log("CAPTURE_END");
+        $debugOutput = ob_get_clean();
+
         // Filter and combine with current data
         $enrichedData['fields'] = filterRelevantFields($enrichedData['fields'], $currentBookData);
         $enrichedData['current_data'] = $currentBookData;
@@ -118,7 +125,9 @@ function handleGetEnrichmentData() {
                     'book_id' => $bookId
                 ],
                 'raw_tags_before_filter' => $rawEnrichedData['fields']['tags'] ?? 'NOT_FOUND',
-                'filtered_tags_after_filter' => $enrichedData['fields']['tags'] ?? 'NOT_FOUND'
+                'filtered_tags_after_filter' => $enrichedData['fields']['tags'] ?? 'NOT_FOUND',
+                'google_books_raw' => $rawEnrichedData['google_match'] ?? 'NOT_FOUND',
+                'openlibrary_raw' => $rawEnrichedData['openlibrary_match'] ?? 'NOT_FOUND'
             ]
         ]);
     } catch (Exception $e) {

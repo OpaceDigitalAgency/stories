@@ -263,10 +263,14 @@ function displayEnrichmentResults(data, debug) {
                     <div class="col-md-6">
                         <strong>Raw Tags (Before Filter):</strong><br>
                         <pre style="font-size: 11px; max-height: 200px; overflow-y: auto;">${JSON.stringify(debug.raw_tags_before_filter, null, 2)}</pre>
+                        <strong>Google Books Categories:</strong><br>
+                        <pre style="font-size: 11px; max-height: 150px; overflow-y: auto;">${JSON.stringify(debug.google_books_raw?.categories || 'NOT_FOUND', null, 2)}</pre>
                     </div>
                     <div class="col-md-6">
                         <strong>Filtered Tags (After Filter):</strong><br>
                         <pre style="font-size: 11px; max-height: 200px; overflow-y: auto;">${JSON.stringify(debug.filtered_tags_after_filter, null, 2)}</pre>
+                        <strong>OpenLibrary Subjects:</strong><br>
+                        <pre style="font-size: 11px; max-height: 150px; overflow-y: auto;">${JSON.stringify(debug.openlibrary_raw?.subject || 'NOT_FOUND', null, 2)}</pre>
                     </div>
                 </div>
                 <small>

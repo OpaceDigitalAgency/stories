@@ -179,7 +179,6 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
                 // Special handling for Amazon-derived fields - these will be populated via AJAX
                 // to avoid blocking the main enrichment request
                 $combinedFields[$fieldName] = [
-                    'current_value' => null,
                     'new_data' => [
                         'value' => null,
                         'source' => 'amazon_derived',

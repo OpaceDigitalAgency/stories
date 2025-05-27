@@ -101,6 +101,10 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
     $googleMatch = findBestDataMatch($googleResults, $title, $author, $currentISBN);
     $openLibraryMatch = findBestDataMatch($openLibraryResults, $title, $author, $currentISBN);
 
+    // Debug logging
+    error_log("Google match data: " . json_encode($googleMatch));
+    error_log("OpenLibrary match data: " . json_encode($openLibraryMatch));
+
     $combinedFields = [];
     $maxConfidence = 0;
     $isbnValidated = 'unknown';
@@ -109,6 +113,11 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
     foreach ($allFields as $fieldName => $fieldConfig) {
         $googleValue = extractFieldValue($googleMatch, $fieldName);
         $openLibraryValue = extractFieldValue($openLibraryMatch, $fieldName);
+
+        // Debug specific fields
+        if (in_array($fieldName, ['tags', 'price_range', 'age_range', 'settings'])) {
+            error_log("Field $fieldName - Google: " . json_encode($googleValue) . ", OpenLibrary: " . json_encode($openLibraryValue));
+        }
 
         // Check if we have data from either source
         if (!empty($googleValue) || !empty($openLibraryValue)) {

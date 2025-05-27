@@ -1642,35 +1642,104 @@ function validateCombinedISBN($combinedFields, $currentISBN) {
  * Scrape Amazon buying options (Hardcover, Paperback, Kindle, Audio CD) with prices
  * Returns array of format => price pairs
  */
-function scrapeAmazonBuyingOptions($isbn10) {
-    $url = "https://www.amazon.co.uk/dp/" . $isbn10;
+function scrapeAmazonBuyingOptions($isbn) {
+    if (empty($isbn)) {
+        echo "<p><strong>❌ Error:</strong> ISBN is empty.</p>\n";
+        return [];
+    }
 
-    $opts = [
-        "http" => [
-            "method" => "GET",
-            "header" => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
-        ]
-    ];
+    $cleanISBN = preg_replace('/[^0-9X]/i', '', $isbn);
+    $amazonUrl = "https://www.amazon.co.uk/gp/product/" . $cleanISBN;
 
-    $context = stream_context_create($opts);
-    $html = @file_get_contents($url, false, $context);
+    echo "<p><strong>🔍 Scraping URL:</strong> <a href=\"$amazonUrl\" target=\"_blank\">$amazonUrl</a></p>\n";
 
-    if (!$html) {
+    $ch = curl_init($amazonUrl);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    curl_setopt($ch, CURLOPT_ENCODING, ''); // Enable automatic decompression
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language: en-GB,en;q=0.5',
+        'Connection: keep-alive',
+        'Cache-Control: no-cache',
+        'Pragma: no-cache'
+    ]);
+
+    // Enable verbose output
+    curl_setopt($ch, CURLOPT_VERBOSE, true);
+    $verbose = fopen('php://temp', 'w+');
+    curl_setopt($ch, CURLOPT_STDERR, $verbose);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    curl_close($ch);
+
+    // Display verbose output
+    rewind($verbose);
+    $verboseLog = stream_get_contents($verbose);
+    fclose($verbose);
+    echo "<h4>🔧 cURL Verbose Output:</h4>\n<pre>" . htmlspecialchars($verboseLog) . "</pre>\n";
+
+    if ($response === false) {
+        echo "<p><strong>❌ cURL Error:</strong> $curlError</p>\n";
+        return [];
+    }
+
+    echo "<p><strong>📡 HTTP Status Code:</strong> $httpCode</p>\n";
+
+    if ($httpCode !== 200) {
+        echo "<p><strong>❌ HTTP Error:</strong> Received status code $httpCode</p>\n";
+        return [];
+    }
+
+    // Save response for analysis
+    $debugFile = '/tmp/amazon_response_' . $cleanISBN . '.html';
+    file_put_contents($debugFile, $response);
+    echo "<p><strong>📁 Response saved to:</strong> $debugFile</p>\n";
+
+    // Check for expected content
+    if (strpos($response, 'tmm-grid-swatch') === false && strpos($response, 'tmmSwatchesList') === false) {
+        echo "<p><strong>⚠️ Warning:</strong> Expected format selectors not found in the response.</p>\n";
+
+        if (strpos($response, 'Page Not Found') !== false) {
+            echo "<p><strong>❌ Error:</strong> Amazon returned 'Page Not Found' for ISBN $isbn</p>\n";
+        } elseif (strpos($response, 'captcha') !== false) {
+            echo "<p><strong>❌ Error:</strong> Amazon returned a captcha challenge for ISBN $isbn</p>\n";
+        } elseif (strpos($response, 'robot') !== false) {
+            echo "<p><strong>❌ Error:</strong> Amazon detected bot behavior for ISBN $isbn</p>\n";
+        }
+
         return [];
     }
 
     $buyingOptions = [];
 
-    // Try to match common formats and their prices
-    if (preg_match_all('/>(Hardcover|Paperback|Kindle|Audio CD)<\/a>.*?£(\d+\.\d{2})/is', $html, $matches, PREG_SET_ORDER)) {
-        foreach ($matches as $match) {
-            $format = strtolower(trim($match[1]));
-            $price = '£' . $match[2];
-            $buyingOptions[$format] = [
-                'price' => $price,
-                'url' => $url // Default to main URL; we could attempt format-specific URLs if needed
+    // Extract buying options
+    $formats = [
+        'Kindle' => 'KINDLE',
+        'Hardcover' => 'HARDCOVER',
+        'Paperback' => 'PAPERBACK',
+        'Audio CD' => 'AUDIOBOOK'
+    ];
+
+    foreach ($formats as $label => $code) {
+        $pattern = '/tmm-grid-swatch-' . $code . '.*?href="([^"]*)".*?aria-label="£(\d+\.\d{2})"/s';
+        if (preg_match($pattern, $response, $matches)) {
+            $buyingOptions[$label] = [
+                'price' => '£' . $matches[2],
+                'url' => 'https://www.amazon.co.uk' . $matches[1],
+                'asin' => extractASINFromURL($matches[1])
             ];
+            echo "<p><strong>✅ Found $label:</strong> Price £{$matches[2]}, URL: {$matches[1]}</p>\n";
         }
+    }
+
+    if (empty($buyingOptions)) {
+        echo "<p><strong>❌ No buying options found.</strong></p>\n";
     }
 
     return $buyingOptions;

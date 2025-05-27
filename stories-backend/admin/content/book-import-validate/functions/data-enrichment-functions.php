@@ -567,6 +567,17 @@ function extractFieldValue($match, $fieldName) {
                 ];
 
                 foreach ($allTags as $tag) {
+                    // Handle both string and array values
+                    if (is_array($tag)) {
+                        // If it's an array, skip it or flatten it
+                        continue;
+                    }
+
+                    if (!is_string($tag)) {
+                        // Convert to string if it's not already
+                        $tag = (string) $tag;
+                    }
+
                     $cleanTag = trim($tag);
                     $lowerTag = strtolower($cleanTag);
 
@@ -719,6 +730,10 @@ function extractFieldValue($match, $fieldName) {
             // Use Open Library place_facet[]
             if (isset($match['place_facet']) && is_array($match['place_facet'])) {
                 $places = array_map(function($place) {
+                    // Ensure place is a string before trimming
+                    if (!is_string($place)) {
+                        $place = (string) $place;
+                    }
                     return ucwords(strtolower(trim($place)));
                 }, $match['place_facet']);
                 return implode(', ', array_slice($places, 0, 3));
@@ -726,6 +741,10 @@ function extractFieldValue($match, $fieldName) {
             // Fallback to place[] if place_facet not available
             elseif (isset($match['place']) && is_array($match['place'])) {
                 $places = array_map(function($place) {
+                    // Ensure place is a string before trimming
+                    if (!is_string($place)) {
+                        $place = (string) $place;
+                    }
                     return ucwords(strtolower(trim($place)));
                 }, $match['place']);
                 return implode(', ', array_slice($places, 0, 3));
@@ -782,6 +801,11 @@ function normalizeLanguage($language) {
         'pt' => 'Portuguese',
         'por' => 'Portuguese'
     ];
+
+    // Ensure language is a string before trimming
+    if (!is_string($language)) {
+        $language = (string) $language;
+    }
 
     $lang = strtolower(trim($language));
     return $languageMap[$lang] ?? $language;

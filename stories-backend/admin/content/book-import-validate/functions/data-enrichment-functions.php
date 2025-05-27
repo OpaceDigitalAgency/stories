@@ -237,7 +237,7 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
 /**
  * Find the best matching book from search results
  */
-function findBestDataMatch($results, $title, $author, $currentISBN) {
+function findBestDataMatch($results, $title, $author, $currentISBN, $currentPublisher = null, $currentDate = null, $currentFormat = null, $currentCountry = null) {
     $bestMatch = null;
     $bestScore = 0;
 
@@ -300,6 +300,46 @@ function findBestDataMatch($results, $title, $author, $currentISBN) {
                 // If no ISBN match, heavily penalize this result - it's probably wrong edition
                 $score -= 500;
                 error_log("No ISBN match for $currentISBN in result: " . ($result['title'] ?? 'unknown') . " with ISBNs: " . implode(', ', $resultISBNs));
+            }
+        } else {
+            // No current ISBN - use fallback scoring based on other fields
+            error_log("No current ISBN available, using fallback scoring for: " . ($result['title'] ?? 'unknown'));
+
+            // Publisher matching (if we have current publisher)
+            if (!empty($currentPublisher)) {
+                $publisherSimilarity = calculateStringSimilarity($currentPublisher, $result['publisher'] ?? '');
+                $score += $publisherSimilarity * 100; // High weight for publisher match
+                error_log("Publisher similarity: $publisherSimilarity for '$currentPublisher' vs '" . ($result['publisher'] ?? '') . "'");
+            }
+
+            // Publication date matching (if we have current date)
+            if (!empty($currentDate)) {
+                $resultDate = $result['publication_date'] ?? '';
+                if (!empty($resultDate)) {
+                    // Extract year for comparison
+                    $currentYear = date('Y', strtotime($currentDate));
+                    $resultYear = date('Y', strtotime($resultDate));
+                    if ($currentYear === $resultYear) {
+                        $score += 200; // Good bonus for same year
+                        error_log("Publication year match: $currentYear");
+                    } elseif (abs($currentYear - $resultYear) <= 1) {
+                        $score += 100; // Smaller bonus for close years
+                        error_log("Publication year close: $currentYear vs $resultYear");
+                    }
+                }
+            }
+
+            // Format matching (if we have current format)
+            if (!empty($currentFormat)) {
+                $formatSimilarity = calculateStringSimilarity($currentFormat, $result['format'] ?? '');
+                $score += $formatSimilarity * 80; // Good weight for format match
+                error_log("Format similarity: $formatSimilarity for '$currentFormat' vs '" . ($result['format'] ?? '') . "'");
+            }
+
+            // Country/language matching (if available)
+            if (!empty($currentCountry)) {
+                $countrySimilarity = calculateStringSimilarity($currentCountry, $result['country'] ?? '');
+                $score += $countrySimilarity * 60; // Moderate weight for country match
             }
         }
 
@@ -1335,29 +1375,7 @@ function extractAlternativeISBNs($openLibraryMatch, $currentISBN) {
     return !empty($alternativeISBNs) ? implode(',', array_slice($alternativeISBNs, 0, 20)) : null;
 }
 
-/**
- * Check if two ISBNs are equivalent (ISBN-10 vs ISBN-13 conversion)
- */
-function areISBNsEquivalent($isbn1, $isbn2) {
-    $clean1 = preg_replace('/[^0-9X]/i', '', $isbn1);
-    $clean2 = preg_replace('/[^0-9X]/i', '', $isbn2);
 
-    // If they're the same, they're equivalent
-    if ($clean1 === $clean2) {
-        return true;
-    }
-
-    // Check if one is ISBN-10 and other is ISBN-13 equivalent
-    if (strlen($clean1) === 10 && strlen($clean2) === 13) {
-        $converted = convertToISBN13($clean1);
-        return $converted === $clean2;
-    } elseif (strlen($clean1) === 13 && strlen($clean2) === 10) {
-        $converted = convertISBN13ToISBN10($clean1);
-        return $converted === $clean2;
-    }
-
-    return false;
-}
 
 /**
  * Normalize publisher name

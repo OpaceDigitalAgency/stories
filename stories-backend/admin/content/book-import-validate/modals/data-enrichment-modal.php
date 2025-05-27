@@ -304,63 +304,8 @@ function displayEnrichmentResults(data, debug) {
     // Display enrichment fields
     displayEnrichmentFields(data.fields);
 
-    // Fetch Amazon data asynchronously
-    var $amazonContainer = $('.amazon-data-container');
-    var $amazonBadge = $('#amazon-status-badge');
-
-    if (!$amazonContainer.length) {
-        console.error('📦 Amazon container not found in DOM');
-        return;
-    }
-
-    console.log('📦 Starting AJAX fetch for Amazon data. ISBN:', currentBookISBN);
-
-    // Show loading indicator
-    $amazonBadge.html('<span class="badge badge-info">Checking...</span>');
-    $amazonContainer.html('<p><i class="fas fa-spinner fa-spin"></i> Loading Amazon data…</p>');
-
-    // Use relative URL for AJAX call
-    $.post('book-import-validate/ajax/data-enrichment-ajax.php', {
-        action: 'get_amazon_data',
-        isbn: currentBookISBN
-    }, function(res) {
-        console.log('📦 Amazon AJAX response received:', res);
-
-        if (res.success && res.data && res.data.buying_options && Object.keys(res.data.buying_options).length > 0) {
-            var html = '';
-            var optionsCount = Object.keys(res.data.buying_options).length;
-
-            // Update status badge
-            $amazonBadge.html('<span class="badge badge-success">' + optionsCount + ' formats found</span>');
-
-            // Display selected format and its price
-            if (res.data.selected_format && res.data.selected_price) {
-                html += '<p><strong>Format:</strong> ' + res.data.selected_format + '</p>';
-                html += '<p><strong>Price:</strong> ' + res.data.selected_price + '</p>';
-            }
-            html += '<h6>Purchase Links</h6>';
-            html += '<ul>';
-            $.each(res.data.buying_options, function(format, info) {
-                html += '<li>' + format + ': <a href="' + info.url + '" target="_blank">' + info.price + '</a></li>';
-            });
-            html += '</ul>';
-            $amazonContainer.html(html);
-        } else {
-            console.log('📦 No Amazon buying options found or empty response');
-            console.log('📦 Debug info:', res.debug);
-
-            // Update status badge
-            $amazonBadge.html('<span class="badge badge-warning">No data found</span>');
-            $amazonContainer.html('<p>No Amazon data available.</p>');
-        }
-    }, 'json').fail(function(xhr, status, error) {
-        console.error('📦 Amazon AJAX error:', { xhr, status, error });
-        console.error('📦 Response text:', xhr.responseText);
-
-        // Update status badge
-        $amazonBadge.html('<span class="badge badge-danger">Error</span>');
-        $amazonContainer.html('<p>Error loading Amazon data.</p>');
-    });
+    // Amazon data is now integrated into the main enrichment fields above
+    // No separate AJAX call needed
 
     $('#enrichment-results').show();
 }
@@ -635,6 +580,19 @@ function formatCurrentValue(fieldName, value) {
         return value.split(',').map(award => `<span class="badge badge-light mr-1">${award.trim()}</span>`).join('');
     } else if (fieldName === 'characters' || fieldName === 'settings') {
         return value.split(',').map(item => `<span class="badge badge-light mr-1">${item.trim()}</span>`).join('');
+    } else if (fieldName === 'purchase_links') {
+        // Handle JSON purchase links from Amazon
+        try {
+            const links = JSON.parse(value);
+            let html = '<ul class="list-unstyled mb-0">';
+            Object.entries(links).forEach(([format, info]) => {
+                html += `<li><strong>${format}:</strong> <a href="${info.url}" target="_blank">${info.price}</a></li>`;
+            });
+            html += '</ul>';
+            return html;
+        } catch (e) {
+            return value; // Fallback to raw value if not valid JSON
+        }
     }
 
     return value;

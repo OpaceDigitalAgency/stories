@@ -1639,8 +1639,7 @@ function validateCombinedISBN($combinedFields, $currentISBN) {
 }
 
 /**
- * Scrape Amazon buying options (Hardcover, Paperback, Kindle, Audio CD) with prices
- * Returns array of format => price pairs
+ * Scrape Amazon buying options (Hardcover, Paperback, Kindle, Audio CD) with debugging output
  */
 function scrapeAmazonBuyingOptions($isbn) {
     if (empty($isbn)) {
@@ -1649,97 +1648,73 @@ function scrapeAmazonBuyingOptions($isbn) {
     }
 
     $cleanISBN = preg_replace('/[^0-9X]/i', '', $isbn);
-    $amazonUrl = "https://www.amazon.co.uk/gp/product/" . $cleanISBN;
-
-    echo "<p><strong>🔍 Scraping URL:</strong> <a href=\"$amazonUrl\" target=\"_blank\">$amazonUrl</a></p>\n";
-
-    $ch = curl_init($amazonUrl);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-    curl_setopt($ch, CURLOPT_ENCODING, ''); // Enable automatic decompression
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language: en-GB,en;q=0.5',
-        'Connection: keep-alive',
-        'Cache-Control: no-cache',
-        'Pragma: no-cache'
-    ]);
-
-    // Enable verbose output
-    curl_setopt($ch, CURLOPT_VERBOSE, true);
-    $verbose = fopen('php://temp', 'w+');
-    curl_setopt($ch, CURLOPT_STDERR, $verbose);
-
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $curlError = curl_error($ch);
-    curl_close($ch);
-
-    // Display verbose output
-    rewind($verbose);
-    $verboseLog = stream_get_contents($verbose);
-    fclose($verbose);
-    echo "<h4>🔧 cURL Verbose Output:</h4>\n<pre>" . htmlspecialchars($verboseLog) . "</pre>\n";
-
-    if ($response === false) {
-        echo "<p><strong>❌ cURL Error:</strong> $curlError</p>\n";
-        return [];
-    }
-
-    echo "<p><strong>📡 HTTP Status Code:</strong> $httpCode</p>\n";
-
-    if ($httpCode !== 200) {
-        echo "<p><strong>❌ HTTP Error:</strong> Received status code $httpCode</p>\n";
-        return [];
-    }
-
-    // Save response for analysis
-    $debugFile = '/tmp/amazon_response_' . $cleanISBN . '.html';
-    file_put_contents($debugFile, $response);
-    echo "<p><strong>📁 Response saved to:</strong> $debugFile</p>\n";
-
-    // Check for expected content
-    if (strpos($response, 'tmm-grid-swatch') === false && strpos($response, 'tmmSwatchesList') === false) {
-        echo "<p><strong>⚠️ Warning:</strong> Expected format selectors not found in the response.</p>\n";
-
-        if (strpos($response, 'Page Not Found') !== false) {
-            echo "<p><strong>❌ Error:</strong> Amazon returned 'Page Not Found' for ISBN $isbn</p>\n";
-        } elseif (strpos($response, 'captcha') !== false) {
-            echo "<p><strong>❌ Error:</strong> Amazon returned a captcha challenge for ISBN $isbn</p>\n";
-        } elseif (strpos($response, 'robot') !== false) {
-            echo "<p><strong>❌ Error:</strong> Amazon detected bot behavior for ISBN $isbn</p>\n";
-        }
-
-        return [];
-    }
-
-    $buyingOptions = [];
-
-    // Extract buying options
-    $formats = [
-        'Kindle' => 'KINDLE',
-        'Hardcover' => 'HARDCOVER',
-        'Paperback' => 'PAPERBACK',
-        'Audio CD' => 'AUDIOBOOK'
+    $endpoints = [
+        'desktop' => "https://www.amazon.co.uk/dp/{$cleanISBN}",
+        'mobile'  => "https://www.amazon.co.uk/gp/aw/d/{$cleanISBN}"
+    ];
+    $userAgents = [
+        'desktop' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'mobile'  => 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1'
     ];
 
-    foreach ($formats as $label => $code) {
-        $pattern = '/tmm-grid-swatch-' . $code . '.*?href="([^"]*)".*?aria-label="£(\d+\.\d{2})"/s';
-        if (preg_match($pattern, $response, $matches)) {
+    $response = '';
+    foreach ($endpoints as $type => $url) {
+        echo "<p><strong>🔍 [{$type}] Scraping URL:</strong> <a href=\"{$url}\" target=\"_blank\">{$url}</a></p>\n";
+
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_USERAGENT, $userAgents[$type]);
+        curl_setopt($ch, CURLOPT_ENCODING, '');
+        $body = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+
+        echo "<p><strong>📡 HTTP Status Code ({$type}):</strong> {$httpCode}</p>\n";
+        if ($body && $httpCode === 200) {
+            $response = $body;
+            break;
+        } else {
+            echo "<p><strong>⚠️ {$type} fetch failed:</strong> {$error}</p>\n";
+        }
+    }
+
+    if (empty($response)) {
+        echo "<p><strong>❌ All fetch attempts failed. No response.</strong></p>\n";
+        return [];
+    }
+
+    // Save raw response for offline inspection
+    $debugFile = "/tmp/amazon_response_{$cleanISBN}.html";
+    file_put_contents($debugFile, $response);
+    echo "<p><strong>📁 Response saved to:</strong> {$debugFile}</p>\n";
+
+    // Prepare to match formats
+    $patterns = [
+        'Hardcover' => '/Hardcover.*?£(\d+\.\d{2}).*?href="([^"]*)"/is',
+        'Paperback' => '/Paperback.*?£(\d+\.\d{2}).*?href="([^"]*)"/is',
+        'Kindle'    => '/Kindle Edition.*?£(\d+\.\d{2}).*?href="([^"]*)"/is',
+        'Audio CD'  => '/Audio CD.*?£(\d+\.\d{2}).*?href="([^"]*)"/is'
+    ];
+
+    $buyingOptions = [];
+    foreach ($patterns as $label => $pat) {
+        if (preg_match($pat, $response, $m)) {
             $buyingOptions[$label] = [
-                'price' => '£' . $matches[2],
-                'url' => 'https://www.amazon.co.uk' . $matches[1],
-                'asin' => extractASINFromURL($matches[1])
+                'price' => '£' . $m[1],
+                'url'   => 'https://www.amazon.co.uk' . $m[2]
             ];
-            echo "<p><strong>✅ Found $label:</strong> Price £{$matches[2]}, URL: {$matches[1]}</p>\n";
+            echo "<p><strong>✅ Found {$label}:</strong> Price £{$m[1]}, URL: {$m[2]}</p>\n";
+        } else {
+            echo "<p><strong>❌ No {$label} found via pattern.</strong></p>\n";
         }
     }
 
     if (empty($buyingOptions)) {
-        echo "<p><strong>❌ No buying options found.</strong></p>\n";
+        echo "<p><strong>❌ No buying options detected after parsing.</strong></p>\n";
     }
 
     return $buyingOptions;

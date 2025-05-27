@@ -176,13 +176,44 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
                     ];
                 }
             } elseif (in_array($fieldName, ['purchase_links', 'format', 'price_range'])) {
-                // Special handling for Amazon-derived fields - use custom extraction logic
+                // Special handling for Amazon-derived fields - use Amazon data directly
                 $amazonValue = null;
-                if ($googleMatch) {
-                    $amazonValue = extractFieldValue($googleMatch, $fieldName, $currentISBN);
-                }
-                if (empty($amazonValue) && $openLibraryMatch) {
-                    $amazonValue = extractFieldValue($openLibraryMatch, $fieldName, $currentISBN);
+
+                // For Amazon-derived fields, we need to extract from Amazon using the current ISBN
+                if ($currentISBN) {
+                    error_log("Fetching Amazon data for field '$fieldName' with ISBN: $currentISBN");
+                    $amazonData = getAmazonEnrichmentData($currentISBN);
+                    error_log("Amazon data for field '$fieldName': " . json_encode($amazonData));
+
+                    switch ($fieldName) {
+                        case 'purchase_links':
+                            if (!empty($amazonData['buying_options'])) {
+                                $amazonValue = json_encode($amazonData['buying_options']);
+                                error_log("Purchase links value: $amazonValue");
+                            }
+                            break;
+                        case 'format':
+                            $amazonValue = $amazonData['selected_format'] ?? null;
+                            error_log("Format value: $amazonValue");
+                            break;
+                        case 'price_range':
+                            if (!empty($amazonData['selected_price'])) {
+                                $price = floatval(str_replace('£', '', $amazonData['selected_price']));
+                                if ($price < 5) {
+                                    $amazonValue = 'Under £5';
+                                } elseif ($price <= 10) {
+                                    $amazonValue = '£5-£10';
+                                } elseif ($price <= 15) {
+                                    $amazonValue = '£10-£15';
+                                } elseif ($price <= 20) {
+                                    $amazonValue = '£15-£20';
+                                } else {
+                                    $amazonValue = 'Over £20';
+                                }
+                                error_log("Price range value: $amazonValue (from price: £$price)");
+                            }
+                            break;
+                    }
                 }
 
                 if (!empty($amazonValue)) {
@@ -1191,71 +1222,10 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
             return null;
 
         case 'purchase_links':
-            // Extract purchase links from Amazon UK using ISBN
-            if (isset($match['isbn13'])) {
-                $isbn = $match['isbn13'];
-            } elseif (isset($match['isbn']) && is_string($match['isbn'])) {
-                $isbn = $match['isbn'];
-            } elseif (isset($match['isbn']) && is_array($match['isbn']) && !empty($match['isbn'])) {
-                // Handle OpenLibrary array format
-                $isbn = is_array($match['isbn'][0]) ? $match['isbn'][0] : $match['isbn'][0];
-            } else {
-                return null;
-            }
-
-            // Use Amazon scraping function to get purchase links
-            $amazonData = getAmazonEnrichmentData($isbn);
-            if (!empty($amazonData['buying_options'])) {
-                return json_encode($amazonData['buying_options']);
-            }
-            return null;
-
         case 'format':
-            // Extract format from Amazon UK using ISBN
-            if (isset($match['isbn13'])) {
-                $isbn = $match['isbn13'];
-            } elseif (isset($match['isbn']) && is_string($match['isbn'])) {
-                $isbn = $match['isbn'];
-            } elseif (isset($match['isbn']) && is_array($match['isbn']) && !empty($match['isbn'])) {
-                // Handle OpenLibrary array format
-                $isbn = is_array($match['isbn'][0]) ? $match['isbn'][0] : $match['isbn'][0];
-            } else {
-                return null;
-            }
-
-            // Use Amazon scraping function to get format
-            $amazonData = getAmazonEnrichmentData($isbn);
-            return $amazonData['selected_format'] ?? null;
-
         case 'price_range':
-            // Extract price range from Amazon UK using ISBN
-            if (isset($match['isbn13'])) {
-                $isbn = $match['isbn13'];
-            } elseif (isset($match['isbn']) && is_string($match['isbn'])) {
-                $isbn = $match['isbn'];
-            } elseif (isset($match['isbn']) && is_array($match['isbn']) && !empty($match['isbn'])) {
-                // Handle OpenLibrary array format
-                $isbn = is_array($match['isbn'][0]) ? $match['isbn'][0] : $match['isbn'][0];
-            } else {
-                return null;
-            }
-
-            // Use Amazon scraping function to get price range
-            $amazonData = getAmazonEnrichmentData($isbn);
-            if (!empty($amazonData['selected_price'])) {
-                $price = floatval(str_replace('£', '', $amazonData['selected_price']));
-                if ($price < 5) {
-                    return 'Under £5';
-                } elseif ($price <= 10) {
-                    return '£5-£10';
-                } elseif ($price <= 15) {
-                    return '£10-£15';
-                } elseif ($price <= 20) {
-                    return '£15-£20';
-                } else {
-                    return 'Over £20';
-                }
-            }
+            // These fields are now handled directly in the main enrichment flow
+            // to avoid duplicate Amazon API calls
             return null;
 
         default:

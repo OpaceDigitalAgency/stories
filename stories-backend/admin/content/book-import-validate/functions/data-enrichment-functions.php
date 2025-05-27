@@ -9,6 +9,28 @@ require_once __DIR__ . '/google-books-validation-functions.php';
 require_once __DIR__ . '/open-library-validation-functions.php';
 
 /**
+ * Fix duplicate location strings like "London, London (England)" -> "London (England)"
+ *
+ * @param string $location The location string to fix
+ * @return string The cleaned location string
+ */
+function fixDuplicateLocation($location) {
+    // Pattern: "City, City (Country)" -> "City (Country)"
+    $pattern = '/^([^,]+),\s*\1\s*(\([^)]+\))$/i';
+    if (preg_match($pattern, $location, $matches)) {
+        return $matches[1] . ' ' . $matches[2];
+    }
+    
+    // Pattern: "City, City" -> "City" (no parentheses)
+    $pattern2 = '/^([^,]+),\s*\1$/i';
+    if (preg_match($pattern2, $location, $matches)) {
+        return $matches[1];
+    }
+    
+    return $location;
+}
+
+/**
  * Get comprehensive book data from multiple sources for enrichment
  *
  * @param string $title Book title
@@ -201,11 +223,37 @@ function findBestDataMatch($results, $title, $author, $currentISBN) {
         $authorSimilarity = calculateStringSimilarity($author, $result['author'] ?? '');
         $score += $authorSimilarity * 50;
 
-        // ISBN matching (if we have current ISBN)
+        // ISBN matching (if we have current ISBN) - STRICT validation
         if (!empty($currentISBN)) {
-            $resultISBN = $result['isbn13'] ?? $result['isbn'] ?? '';
-            if ($resultISBN === $currentISBN) {
-                $score += 200; // High bonus for exact ISBN match
+            $resultISBNs = [];
+            
+            // Collect all ISBNs from the result
+            if (isset($result['isbn13'])) {
+                $resultISBNs[] = $result['isbn13'];
+            }
+            if (isset($result['isbn'])) {
+                if (is_array($result['isbn'])) {
+                    $resultISBNs = array_merge($resultISBNs, $result['isbn']);
+                } else {
+                    $resultISBNs[] = $result['isbn'];
+                }
+            }
+            
+            // Check for exact match
+            $exactMatch = false;
+            foreach ($resultISBNs as $isbn) {
+                if (is_string($isbn) && ($isbn === $currentISBN ||
+                    str_replace('-', '', $isbn) === str_replace('-', '', $currentISBN))) {
+                    $exactMatch = true;
+                    break;
+                }
+            }
+            
+            if ($exactMatch) {
+                $score += 500; // Very high bonus for exact ISBN match
+            } else {
+                // If no ISBN match, heavily penalize this result
+                $score -= 300;
             }
         }
 
@@ -830,6 +878,8 @@ function extractFieldValue($match, $fieldName) {
                     }
                     $place = trim($place);
                     if (!empty($place)) {
+                        // Fix "London, London (England)" -> "London (England)"
+                        $place = fixDuplicateLocation($place);
                         $cleanPlaces[] = ucwords(strtolower($place));
                     }
                 }

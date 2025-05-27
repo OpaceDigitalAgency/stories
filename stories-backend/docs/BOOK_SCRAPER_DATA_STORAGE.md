@@ -135,3 +135,74 @@ These can be embedded into UI buttons. In the future, prices may be scraped via 
 - Enable price scraping via Google or Amazon for quick enrichment.
 - Use affiliate tagging for monetised Amazon links.
 - Expand metadata to store enrichment logs (source, confidence, etc.).
+
+
+### 1. **Fallbacks and Defaults**
+- If `maturityRating = "NOT_MATURE"` (Google Books), use `"All Ages"` as age range.
+- If `maturityRating = "MATURE"` (Google Books), use `"18+"` or `"Adult"`.
+
+### 2. **Age Range Logic**
+- Use Open Library `subject` or `facet` like "Children's Books/Ages 9-12 Fiction".
+- Match Goodreads genres (e.g. `Middle Grade`, `Young Adult`) to age ranges:
+  - "Middle Grade" = `9–12 years`
+  - "Young Adult" = `12+ years` or `Teen`
+
+### 3. **Metadata (`metadata` JSON field)**
+
+Currently stores extra matched fields such as:
+```json
+{
+  "awards": "...",
+  "characters": "...",
+  "settings": "...",
+  "rating": "4.13",
+  "review_count": "41954",
+  "rating_count": "753463"
+}
+```
+
+From Goodreads `https://www.goodreads.com/book/show/474073.Coraline`:
+
+- `aggregateRating.ratingValue` → rating
+- `aggregateRating.reviewCount` → review_count
+- `aggregateRating.ratingCount` → rating_count
+- `.BookPageMetadataSection__genreButton > span` → genres (loop)
+- `.DescListItem > dt:contains("Setting") + dd a` → settings
+- `.DescListItem > dt:contains("Characters") + dd a` → characters
+- `.DescListItem > dt:contains("Literary awards") + dd a` → awards
+
+
+---
+
+## 🔍 SELECTORS / MATCH STRATEGY (GOODREADS)
+
+| Field         | Selector / JSON Key                                 |
+|---------------|------------------------------------------------------|
+| Title         | `meta[property='og:title']` or `name` JSON-LD        |
+| Authors       | `meta[property='books:author']` / `.author a`        |
+| Awards        | `data-testid="Award"` inside `.DescListItem`         |
+| Characters    | `.DescListItem:contains("Characters") a`             |
+| Settings      | `.DescListItem:contains("Setting") a`                |
+| Format        | `.DescListItem:contains("Format") div.content`       |
+| Rating        | `script[type='application/ld+json'] → ratingValue`   |
+| Genres        | `.BookPageMetadataSection__genreButton span`         |
+| Pages         | `data-testid="pagesFormat"`                          |
+| Published     | `data-testid="publicationInfo"`                      |
+| Language      | `script[type='application/ld+json'] → inLanguage`    |
+
+---
+
+## ✅ EXAMPLE RESOURCES
+
+- [Google Books API Example](https://books.google.com/books?isbn=9780380977789)
+- [Open Library API](https://openlibrary.org/isbn/9780380977789.json)
+- [Goodreads Book Page](https://www.goodreads.com/book/show/474073.Coraline)
+
+---
+
+## 🛠️ Useful TODOs
+
+- Add logic to query Google search results for pricing where available.
+- Prioritise data sources in this order: `Google Books` → `Open Library` → `Goodreads`.
+- Include HTML escaping + cleanup when storing tags or long fields like awards.
+

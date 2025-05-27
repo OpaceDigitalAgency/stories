@@ -304,6 +304,14 @@ function displayEnrichmentResults(data, debug) {
     // Display enrichment fields
     displayEnrichmentFields(data.fields);
 
+    // Debug: Log all field names to see what's available
+    console.log('📦 All available fields:', Object.keys(data.fields));
+    console.log('📦 Amazon fields check:', ['purchase_links', 'format', 'price_range'].map(f => ({
+        field: f,
+        exists: !!data.fields[f],
+        structure: data.fields[f]
+    })));
+
     // Fetch Amazon data asynchronously to populate Amazon-derived fields
     fetchAmazonDataForFields(data.fields);
 

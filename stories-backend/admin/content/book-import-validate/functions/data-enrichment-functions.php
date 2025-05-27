@@ -151,8 +151,8 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
         $googleValue = extractFieldValue($googleMatch, $fieldName, $currentISBN);
         $openLibraryValue = extractFieldValue($openLibraryMatch, $fieldName, $currentISBN);
 
-        // Check if we have data from either source
-        if (!empty($googleValue) || !empty($openLibraryValue)) {
+        // Check if we have data from either source OR if this is an Amazon-derived field
+        if (!empty($googleValue) || !empty($openLibraryValue) || in_array($fieldName, ['purchase_links', 'format', 'price_range'])) {
             // Special handling for tags - always merge them
             if ($fieldName === 'tags') {
                 $mergedTags = mergeTagsFromSources($googleValue, $openLibraryValue);
@@ -187,6 +187,7 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
                         'status' => 'pending_amazon_data'
                     ]
                 ];
+                error_log("Created Amazon field: $fieldName with pending_amazon_data status");
             } elseif (!empty($googleValue) && !empty($openLibraryValue)) {
                 // Both sources have data - check if they match
                 if (normalizeForComparison($googleValue) === normalizeForComparison($openLibraryValue)) {
@@ -229,8 +230,8 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
                     'label' => $fieldConfig['label']
                 ];
             }
-        } else {
-            // No data from either source - show as unknown
+        } elseif (!in_array($fieldName, ['purchase_links', 'format', 'price_range'])) {
+            // No data from either source - show as unknown (but don't override Amazon fields)
             $combinedFields[$fieldName] = [
                 'value' => null,
                 'source' => 'unknown',

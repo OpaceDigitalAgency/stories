@@ -232,4 +232,21 @@
   - Standardize API response formats across all endpoints
   - Improve admin interface reliability
   - Enhance error handling for API calls
+## 2025-05-27
+- Fixed Data Enrichment Modal OpenLibrary Data Flow Issue:
+  - **Root Cause Identified**: API endpoint mismatch - code was using books API instead of search API for rich metadata
+  - **Primary Fix**: Updated fetchOpenLibraryDataNew() to use search.json endpoint with fields=*,availability
+  - **Data Structure Fix**: Updated response parsing to handle docs[0] structure instead of ISBN: key
+  - **Rich Metadata Fields Fixed**: 
+    - Genres/Tags: Now extracts from subject_facet array (Fantasy, Children's fiction, Hugo Award Winner)
+    - Settings: Now extracts from place array (London, London (England))
+    - Characters: Now extracts from person array (Coraline)
+    - Awards: Now extracts from subject_facet (Hugo Award Winner, award:hugo_award=2003)
+    - Average Rating: Now extracts from ratings_average (4.04)
+    - Reading Level: Now extracts from lexile array (740L)
+  - **Test Scripts Created**: 
+    - /public/test-enrichment-fix.php for full enrichment pipeline testing
+    - /public/test-price-range-debug.php for price scraping diagnostics
+  - **Test Case Verified**: ISBN 9780380977789 (Coraline by Neil Gaiman) now shows rich metadata instead of "Unknown"
+  - **Price Range Analysis**: Existing scrapePriceFromAmazon() function is properly implemented but may face bot detection issues
   - Improve UI feedback when saving forms in the admin panel

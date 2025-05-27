@@ -161,4 +161,11 @@ The implementation will follow a phased approach:
    - Verify documentation
    - Commit and tag
 
+## Upcoming Tasks
+
+### Data Enrichment Modal Fix
+- **Scope**: Debug and fix the data flow pipeline in the book enrichment modal where OpenLibrary rich metadata shows "Unknown" despite APIs returning correct data
+- **Root Cause**: Data structure mismatch between OpenLibrary API response and field extraction logic
+- **Test Case**: ISBN 9780380977789 (Coraline by Neil Gaiman)
+- **Expected Outcome**: OpenLibrary fields (genres, settings, characters, awards, rating, reading level) display correctly instead of "Unknown"
 For more details, see the [Revised Cleanup Plan](revised-cleanup-plan.md) and [Implementation Plan](implementation-plan.md).

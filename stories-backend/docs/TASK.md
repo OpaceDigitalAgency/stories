@@ -68,6 +68,16 @@
   - Updated edit action to use story-form.php instead of stories.php
   - Ensured proper navigation when clicking view or edit buttons
 
+### Data Enrichment Modal Issue 🔄
+- **Problem**: OpenLibrary rich metadata shows "Unknown" for most fields despite APIs returning correct data
+- **Root Cause**: Data flow break between OpenLibrary API response and field extraction logic
+- **Test Case**: ISBN 9780380977789 (Coraline by Neil Gaiman)
+- **Expected**: Rich metadata (genres, settings, characters, awards, rating, reading level)
+- **Current**: Shows "Unknown" for all OpenLibrary-specific fields
+- **Investigation Areas**: 
+  - Data structure debugging in combineMultiSourceData()
+  - API response verification in fetchOpenLibraryDataNew()
+  - Field mapping validation in extractFieldValue()
 ## Pending Tasks 🔄
 
 ### Testing

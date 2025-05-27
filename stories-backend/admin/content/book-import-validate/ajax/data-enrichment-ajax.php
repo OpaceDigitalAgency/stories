@@ -167,9 +167,7 @@ function handleApplyEnrichment() {
                 break;
 
             case 'tags':
-            case 'genres':
-            case 'subjects':
-                // Handle tags/genres/subjects using proper directory_item_tags junction table
+                // Handle tags (displayed as genres) using proper directory_item_tags junction table
                 if (!empty($value)) {
                     // Store for later processing after main update
                     $tagsToProcess[$fieldName] = $value;
@@ -388,9 +386,7 @@ function filterRelevantFields($fields, $currentBookData) {
         'awards' => 'Awards',
         'characters' => 'Characters',
         'settings' => 'Settings',
-        'tags' => 'Tags', // Special case - uses directory_item_tags junction table
-        'genres' => 'Genres', // Special case - uses directory_item_tags junction table
-        'subjects' => 'Subjects', // Special case - uses directory_item_tags junction table
+        'tags' => 'Genres', // Special case - uses directory_item_tags junction table
         'maturity_rating' => 'Maturity Rating',
         'average_rating' => 'Average Rating',
         'rating_count' => 'Rating Count',
@@ -402,8 +398,8 @@ function filterRelevantFields($fields, $currentBookData) {
     foreach ($validDbFields as $fieldName => $label) {
         // Get current value from database
         $currentValue = null;
-        if (in_array($fieldName, ['tags', 'genres', 'subjects'])) {
-            // Special handling for tags/genres/subjects
+        if ($fieldName === 'tags') {
+            // Special handling for tags (displayed as genres)
             $currentValue = isset($currentBookData['current_tags']) ?
                 array_column($currentBookData['current_tags'], 'name') : [];
         } else {
@@ -414,7 +410,7 @@ function filterRelevantFields($fields, $currentBookData) {
         $newFieldData = $fields[$fieldName] ?? null;
 
         // Only include field if we have new data OR it's a field we want to show
-        if ($newFieldData || in_array($fieldName, ['tags', 'genres', 'subjects'])) {
+        if ($newFieldData || $fieldName === 'tags') {
             $filteredFields[$fieldName] = [
                 'label' => $label,
                 'current_value' => $currentValue,

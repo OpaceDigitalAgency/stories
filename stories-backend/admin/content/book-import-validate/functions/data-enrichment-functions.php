@@ -1077,7 +1077,7 @@ function extractFieldValue($match, $fieldName) {
                     $place = trim($place);
                     if (!empty($place)) {
                         // Fix "London, London (England)" -> "London (England)"
-                        $place = fixDuplicateLocation($place);
+                        $place = deduplicateLocation($place);
                         $cleanPlaces[] = ucwords(strtolower($place));
                     }
                 }

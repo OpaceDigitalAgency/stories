@@ -11,9 +11,9 @@ echo "<h1>Testing OpenLibrary API Fix for Data Enrichment</h1>";
 echo "<h2>Test Case: Coraline by Neil Gaiman (ISBN: 9780380977789)</h2>";
 
 // Include the necessary files
-$functionFile = '../stories-backend/admin/content/book-import-validate/functions/data-enrichment-functions.php';
-$openLibraryFile = '../stories-backend/admin/content/book-import-validate/functions/open-library-validation-functions.php';
-$googleBooksFile = '../stories-backend/admin/content/book-import-validate/functions/google-books-validation-functions.php';
+$functionFile = '../admin/content/book-import-validate/functions/data-enrichment-functions.php';
+$openLibraryFile = '../admin/content/book-import-validate/functions/open-library-validation-functions.php';
+$googleBooksFile = '../admin/content/book-import-validate/functions/google-books-validation-functions.php';
 
 echo "<h3>File Checks:</h3>";
 if (file_exists($functionFile)) {

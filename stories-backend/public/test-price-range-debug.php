@@ -11,7 +11,7 @@ echo "<h1>Price Range Scraping Debug Test</h1>";
 echo "<h2>Test Case: Coraline by Neil Gaiman (ISBN: 9780380977789)</h2>";
 
 // Include the necessary files
-$functionFile = '../stories-backend/admin/content/book-import-validate/functions/data-enrichment-functions.php';
+$functionFile = '../admin/content/book-import-validate/functions/data-enrichment-functions.php';
 
 if (file_exists($functionFile)) {
     echo "<p>✅ Data enrichment functions file exists</p>";

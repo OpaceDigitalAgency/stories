@@ -753,13 +753,20 @@ function extractFieldValue($match, $fieldName) {
 
         case 'price_range':
             // Scrape price from Amazon UK using ISBN
-            if (isset($match['isbn13']) || isset($match['isbn'])) {
-                $isbn = $match['isbn13'] ?? $match['isbn'];
-                $priceRange = scrapePriceFromAmazon($isbn);
-                error_log("Price range result for ISBN $isbn: " . ($priceRange ?? 'null'));
-                return $priceRange;
+            if (isset($match['isbn13'])) {
+                $isbn = $match['isbn13'];
+            } elseif (isset($match['isbn']) && is_string($match['isbn'])) {
+                $isbn = $match['isbn'];
+            } elseif (isset($match['isbn']) && is_array($match['isbn']) && !empty($match['isbn'])) {
+                // Handle OpenLibrary array format
+                $isbn = is_array($match['isbn'][0]) ? $match['isbn'][0] : $match['isbn'][0];
+            } else {
+                return null;
             }
-            break;
+            
+            $priceRange = scrapePriceFromAmazon($isbn);
+            error_log("Price range result for ISBN " . (is_array($isbn) ? json_encode($isbn) : $isbn) . ": " . ($priceRange ?? 'null'));
+            return $priceRange;
 
         default:
             // Standard field extraction
@@ -900,6 +907,15 @@ function scrapePriceFromAmazon($isbn) {
         if ($httpCode !== 200 || empty($response)) {
             error_log("Amazon price scraping failed for ISBN $isbn: HTTP $httpCode");
             return null;
+        }
+
+        // Handle gzip compressed response
+        if (substr($response, 0, 3) === "\x1f\x8b\x08") {
+            $response = gzdecode($response);
+            if ($response === false) {
+                error_log("Failed to decompress gzip response for ISBN $isbn");
+                return null;
+            }
         }
 
         // Look for structured price patterns in Google search results

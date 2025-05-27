@@ -312,7 +312,8 @@ function displayEnrichmentFields(fields) {
         'isbn', 'isbn13', 'author', 'publisher', 'publication_date', 'page_count',
         'language', 'format', 'cover_url', 'preview_link', 'price_range', 'age_range',
         'reading_level', 'maturity_rating', 'average_rating', 'rating_count',
-        'internet_archive_id', 'series', 'awards', 'characters', 'settings', 'tags'
+        'internet_archive_id', 'series', 'awards', 'characters', 'settings', 'tags',
+        'alternative_isbns', 'purchase_links'
     ];
 
     // First, display fields in preferred order
@@ -610,6 +611,64 @@ function formatFieldValue(fieldName, value) {
         return value.split(',').map(award => `<span class="badge badge-warning mr-1">${award.trim()}</span>`).join('');
     } else if (fieldName === 'characters' || fieldName === 'settings') {
         return value.split(',').map(item => `<span class="badge badge-light mr-1">${item.trim()}</span>`).join('');
+    } else if (fieldName === 'alternative_isbns') {
+        // Display alternative ISBNs in a scrollable container
+        const isbns = value.split(',').map(isbn => isbn.trim()).filter(isbn => isbn.length >= 10);
+        if (isbns.length === 0) return '<span class="text-muted">None found</span>';
+
+        const isbnBadges = isbns.slice(0, 10).map(isbn => {
+            const isbnType = isbn.length === 13 ? 'ISBN-13' : 'ISBN-10';
+            return `<span class="badge badge-info mr-1 mb-1" title="${isbnType}: ${isbn}">${isbn}</span>`;
+        }).join('');
+
+        const moreCount = isbns.length > 10 ? ` <span class="text-muted">+${isbns.length - 10} more</span>` : '';
+        return `<div style="max-height: 100px; overflow-y: auto;">${isbnBadges}${moreCount}</div>`;
+    } else if (fieldName === 'purchase_links') {
+        // Parse and display purchase links for different formats
+        try {
+            const linksData = typeof value === 'string' ? JSON.parse(value) : value;
+            if (!linksData || typeof linksData !== 'object') {
+                return '<span class="text-muted">No links available</span>';
+            }
+
+            let linksHtml = '';
+
+            // Amazon UK link
+            if (linksData.amazon_uk) {
+                linksHtml += `<a href="${linksData.amazon_uk}" target="_blank" class="btn btn-sm btn-warning mr-1 mb-1">
+                    <i class="fab fa-amazon"></i> Amazon UK
+                </a>`;
+            }
+
+            // Goodreads link
+            if (linksData.goodreads) {
+                linksHtml += `<a href="${linksData.goodreads}" target="_blank" class="btn btn-sm btn-success mr-1 mb-1">
+                    <i class="fas fa-book"></i> Goodreads
+                </a>`;
+            }
+
+            // Google Books link
+            if (linksData.google_books) {
+                linksHtml += `<a href="${linksData.google_books}" target="_blank" class="btn btn-sm btn-primary mr-1 mb-1">
+                    <i class="fab fa-google"></i> Google Books
+                </a>`;
+            }
+
+            // Edition info if available
+            if (linksData._edition_info) {
+                const edition = linksData._edition_info;
+                linksHtml += `<div class="mt-1 small text-muted">
+                    Edition: ${edition.publisher || 'Unknown'}
+                    ${edition.isbn13 ? `(ISBN-13: ${edition.isbn13})` : ''}
+                    ${edition.isbn ? `(ISBN-10: ${edition.isbn})` : ''}
+                </div>`;
+            }
+
+            return linksHtml || '<span class="text-muted">No valid links</span>';
+        } catch (e) {
+            console.error('Error parsing purchase links:', e);
+            return '<span class="text-danger">Error parsing links</span>';
+        }
     }
 
     return value;

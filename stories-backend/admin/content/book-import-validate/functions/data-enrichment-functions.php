@@ -120,7 +120,7 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
         'purchase_links' => ['confidence' => 80, 'label' => 'Purchase Links']
     ];
 
-    // Find best matches from each source
+    // Find best matches from each source (with fallback parameters for non-ISBN matching)
     $googleMatch = findBestDataMatch($googleResults, $title, $author, $currentISBN);
     $openLibraryMatch = findBestDataMatch($openLibraryResults, $title, $author, $currentISBN);
 
@@ -1114,8 +1114,8 @@ function extractFieldValue($match, $fieldName) {
                 return null;
             }
 
-            // Use enhanced price scraping with fallbacks
-            $priceRange = scrapePriceFromAmazonEnhanced($isbn);
+            // Use price scraping function
+            $priceRange = scrapePriceFromAmazon($isbn);
             error_log("Price range result for ISBN " . (is_array($isbn) ? json_encode($isbn) : $isbn) . ": " . ($priceRange ?? 'null'));
             return $priceRange;
 

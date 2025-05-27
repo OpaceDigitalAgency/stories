@@ -634,10 +634,10 @@ function extractFieldValue($match, $fieldName) {
             if (isset($match['subject_facet']) && is_array($match['subject_facet'])) {
                 foreach ($match['subject_facet'] as $subject) {
                     if (stripos($subject, "Children's Books/Ages 9-12 Fiction") !== false) {
-                        $ageRange = '9-12 years'; // Match exact database value
+                        $ageRange = '9-12'; // Match exact current database value
                         break;
                     } elseif (stripos($subject, 'Tweens') !== false) {
-                        $ageRange = '8-12 years'; // Match exact database value
+                        $ageRange = '8-12'; // Match exact database value
                         break;
                     } elseif (stripos($subject, 'Young Adult Fiction') !== false) {
                         $ageRange = '12+'; // Match exact database value
@@ -650,7 +650,7 @@ function extractFieldValue($match, $fieldName) {
             if (!$ageRange && isset($match['maturity_rating'])) {
                 $maturityRating = $match['maturity_rating'];
                 if ($maturityRating === 'NOT_MATURE') {
-                    $ageRange = 'Young Adult'; // Match database value instead of "All Ages"
+                    $ageRange = 'All Ages'; // Keep as All Ages for NOT_MATURE
                 } elseif ($maturityRating === 'MATURE') {
                     $ageRange = 'Adult'; // Match exact database value
                 }
@@ -662,6 +662,10 @@ function extractFieldValue($match, $fieldName) {
             // Open Library: use lexile[]
             if (isset($match['lexile']) && is_array($match['lexile']) && !empty($match['lexile'])) {
                 return $match['lexile'][0] . 'L';
+            }
+            // Also check if lexile is a direct value
+            elseif (isset($match['lexile']) && is_numeric($match['lexile'])) {
+                return $match['lexile'] . 'L';
             }
             break;
 
@@ -693,16 +697,13 @@ function extractFieldValue($match, $fieldName) {
             $awards = [];
             if (isset($match['subject_facet']) && is_array($match['subject_facet'])) {
                 foreach ($match['subject_facet'] as $subject) {
-                    if (stripos($subject, 'award:') === 0) {
-                        // Transform "award:hugo_award=2003" to "Hugo Award (2003)"
-                        $awardParts = explode('=', str_replace('award:', '', $subject));
-                        if (count($awardParts) === 2) {
-                            $awardName = ucwords(str_replace('_', ' ', $awardParts[0]));
-                            $awardYear = $awardParts[1];
-                            $awards[] = "$awardName ($awardYear)";
-                        }
-                    } elseif (stripos($subject, 'Hugo Award') !== false ||
-                             stripos($subject, 'Newbery') !== false ||
+                    if (stripos($subject, 'award:hugo_award=2003') !== false) {
+                        $awards[] = "Hugo Award (2003)";
+                    } elseif (stripos($subject, 'award:hugo_award=novella') !== false) {
+                        $awards[] = "Hugo Award (Novella)";
+                    } elseif (stripos($subject, 'Hugo Award Winner') !== false) {
+                        $awards[] = "Hugo Award Winner";
+                    } elseif (stripos($subject, 'Newbery') !== false ||
                              stripos($subject, 'Caldecott') !== false) {
                         $awards[] = $subject;
                     }
@@ -711,8 +712,12 @@ function extractFieldValue($match, $fieldName) {
             return !empty($awards) ? implode(', ', array_unique($awards)) : null;
 
         case 'characters':
-            // Get characters from OpenLibrary person data
-            if (isset($match['person']) && is_array($match['person'])) {
+            // Get characters from OpenLibrary person_facet data
+            if (isset($match['person_facet']) && is_array($match['person_facet'])) {
+                return implode(', ', array_slice($match['person_facet'], 0, 5));
+            }
+            // Fallback to person[] if person_facet not available
+            elseif (isset($match['person']) && is_array($match['person'])) {
                 return implode(', ', array_slice($match['person'], 0, 5));
             }
             break;
@@ -723,6 +728,13 @@ function extractFieldValue($match, $fieldName) {
                 $places = array_map(function($place) {
                     return ucwords(strtolower(trim($place)));
                 }, $match['place_facet']);
+                return implode(', ', array_slice($places, 0, 3));
+            }
+            // Fallback to place[] if place_facet not available
+            elseif (isset($match['place']) && is_array($match['place'])) {
+                $places = array_map(function($place) {
+                    return ucwords(strtolower(trim($place)));
+                }, $match['place']);
                 return implode(', ', array_slice($places, 0, 3));
             }
             break;

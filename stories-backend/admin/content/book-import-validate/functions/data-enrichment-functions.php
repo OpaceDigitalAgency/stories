@@ -179,11 +179,14 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
                 // Special handling for Amazon-derived fields - these will be populated via AJAX
                 // to avoid blocking the main enrichment request
                 $combinedFields[$fieldName] = [
-                    'value' => null,
-                    'source' => 'amazon_derived',
-                    'confidence' => $fieldConfig['confidence'],
-                    'label' => $fieldConfig['label'],
-                    'status' => 'pending_amazon_data'
+                    'current_value' => null,
+                    'new_data' => [
+                        'value' => null,
+                        'source' => 'amazon_derived',
+                        'confidence' => $fieldConfig['confidence'],
+                        'label' => $fieldConfig['label'],
+                        'status' => 'pending_amazon_data'
+                    ]
                 ];
             } elseif (!empty($googleValue) && !empty($openLibraryValue)) {
                 // Both sources have data - check if they match

@@ -171,6 +171,24 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
                         'label' => $fieldConfig['label']
                     ];
                 }
+            } elseif (in_array($fieldName, ['purchase_links', 'format', 'price_range'])) {
+                // Special handling for Amazon-derived fields - use custom extraction logic
+                $amazonValue = null;
+                if ($googleMatch) {
+                    $amazonValue = extractFieldValue($googleMatch, $fieldName, $currentISBN);
+                }
+                if (empty($amazonValue) && $openLibraryMatch) {
+                    $amazonValue = extractFieldValue($openLibraryMatch, $fieldName, $currentISBN);
+                }
+
+                if (!empty($amazonValue)) {
+                    $combinedFields[$fieldName] = [
+                        'value' => $amazonValue,
+                        'source' => 'amazon_derived',
+                        'confidence' => $fieldConfig['confidence'],
+                        'label' => $fieldConfig['label']
+                    ];
+                }
             } elseif (!empty($googleValue) && !empty($openLibraryValue)) {
                 // Both sources have data - check if they match
                 if (normalizeForComparison($googleValue) === normalizeForComparison($openLibraryValue)) {

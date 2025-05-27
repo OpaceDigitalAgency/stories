@@ -411,7 +411,13 @@ function createSingleSourceField(fieldName, field, label, isUnknown) {
     const displayValue = isUnknown ? '<span class="text-muted">Unknown</span>' : formatFieldValue(fieldName, newData.value);
 
     const confidenceClass = confidence >= 80 ? 'success' : confidence >= 60 ? 'warning' : confidence >= 30 ? 'info' : 'secondary';
-    const sourceClass = source.includes('+') ? 'primary' : source === 'google_books' ? 'success' : source === 'open_library' ? 'info' : 'secondary';
+    const sourceClass = source.includes('+') ? 'primary' : source === 'google_books' ? 'success' : source === 'open_library' ? 'info' : source === 'amazon_derived' ? 'warning' : 'secondary';
+
+    // Display friendly source names
+    const displaySource = source === 'amazon_derived' ? 'Amazon' :
+                         source === 'google_books' ? 'Google Books' :
+                         source === 'open_library' ? 'OpenLibrary' :
+                         source.replace('_', ' ');
 
     // Determine benefit level for color coding
     const benefitLevel = determineBenefitLevel(field.current_value, newData.value, isUnknown);
@@ -426,7 +432,7 @@ function createSingleSourceField(fieldName, field, label, isUnknown) {
                            id="field_${fieldName}" name="fields[]" value="${fieldName}" ${isUnknown || benefitLevel === 'not_beneficial' ? 'disabled' : ''}>
                     <label class="form-check-label font-weight-bold" for="field_${fieldName}">
                         ${label}
-                        <span class="badge badge-${sourceClass} ml-2">${source}</span>
+                        <span class="badge badge-${sourceClass} ml-2">${displaySource}</span>
                         ${!isUnknown ? `<span class="badge badge-${confidenceClass} ml-1">(${confidence}%)</span>` : ''}
                         ${getBenefitIndicator(benefitLevel)}
                     </label>

@@ -58,11 +58,28 @@ try {
             if (empty($isbn)) {
                 echo json_encode(['success' => false, 'message' => 'ISBN is required']);
             } else {
+                // Log the request for debugging
+                error_log("Amazon data request for ISBN: $isbn");
+
+                // Ensure AMAZON_DEBUG is defined for this context
+                if (!defined('AMAZON_DEBUG')) {
+                    define('AMAZON_DEBUG', false);
+                }
+
                 // Fetch cached Amazon enrichment payload (includes all options, default format, and price)
                 $amazonPayload = getAmazonEnrichmentData($isbn);
+
+                // Log the result for debugging
+                error_log("Amazon payload result: " . json_encode($amazonPayload));
+
                 echo json_encode([
                     'success' => true,
-                    'data' => $amazonPayload
+                    'data' => $amazonPayload,
+                    'debug' => [
+                        'isbn_used' => $isbn,
+                        'options_count' => count($amazonPayload['buying_options'] ?? []),
+                        'selected_format' => $amazonPayload['selected_format'] ?? null
+                    ]
                 ]);
             }
             break;

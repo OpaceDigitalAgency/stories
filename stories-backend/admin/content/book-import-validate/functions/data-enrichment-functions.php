@@ -1580,78 +1580,60 @@ function scrapeAmazonBuyingOptions($isbn) {
         echo "<p><strong>📁 Response saved to:</strong> {$debugFile}</p>\n";
     }
 
-    // Updated patterns to match actual Amazon HTML structure
-    // Multiple patterns for each format to handle different HTML structures
+    // Updated patterns based on actual Amazon HTML structure
+    // Each format is in a div with id="tmm-grid-swatch-{FORMAT}" containing href and aria-label with price
     $patterns = [
-        'Hardcover' => [
-            '/id="tmm-grid-swatch-HARDCOVER"[^>]*>.*?href="([^"]+)".*?aria-label="[^"]*£(\d+\.\d{2})[^"]*"/is',
-            '/tmm-grid-swatch-HARDCOVER[^>]*>.*?href="([^"]+)".*?aria-label="[^"]*£(\d+\.\d{2})[^"]*"/is',
-            '/HARDCOVER.*?href="([^"]+)".*?£(\d+\.\d{2})/is'
-        ],
-        'Paperback' => [
-            '/id="tmm-grid-swatch-PAPERBACK"[^>]*>.*?href="([^"]+)".*?aria-label="[^"]*£(\d+\.\d{2})[^"]*"/is',
-            '/tmm-grid-swatch-PAPERBACK[^>]*>.*?href="([^"]+)".*?aria-label="[^"]*£(\d+\.\d{2})[^"]*"/is',
-            '/PAPERBACK.*?href="([^"]+)".*?£(\d+\.\d{2})/is'
-        ],
-        'Kindle' => [
-            '/id="tmm-grid-swatch-KINDLE"[^>]*>.*?href="([^"]+)".*?aria-label="[^"]*£(\d+\.\d{2})[^"]*"/is',
-            '/tmm-grid-swatch-KINDLE[^>]*>.*?href="([^"]+)".*?aria-label="[^"]*£(\d+\.\d{2})[^"]*"/is',
-            '/KINDLE.*?href="([^"]+)".*?£(\d+\.\d{2})/is'
-        ],
-        'Audio CD' => [
-            '/id="tmm-grid-swatch-AUDIOBOOK"[^>]*>.*?href="([^"]+)".*?aria-label="[^"]*£(\d+\.\d{2})[^"]*"/is',
-            '/tmm-grid-swatch-AUDIOBOOK[^>]*>.*?href="([^"]+)".*?aria-label="[^"]*£(\d+\.\d{2})[^"]*"/is',
-            '/AUDIOBOOK.*?href="([^"]+)".*?£(\d+\.\d{2})/is'
-        ],
+        'Hardcover' => '/id="tmm-grid-swatch-HARDCOVER".*?href="([^"]+)".*?aria-label="£(\d+\.\d{2})"/is',
+        'Paperback' => '/id="tmm-grid-swatch-PAPERBACK".*?href="([^"]+)".*?aria-label="£(\d+\.\d{2})"/is',
+        'Kindle' => '/id="tmm-grid-swatch-KINDLE".*?href="([^"]+)".*?aria-label="£(\d+\.\d{2})"/is',
+        'Audio CD' => '/id="tmm-grid-swatch-AUDIOBOOK".*?href="([^"]+)".*?aria-label="£(\d+\.\d{2})"/is',
     ];
 
     $buyingOptions = [];
-    foreach ($patterns as $label => $patternArray) {
+    foreach ($patterns as $label => $pattern) {
         $found = false;
 
-        // Try each pattern for this format
-        foreach ($patternArray as $patternIndex => $pattern) {
-            foreach ($responses as $responseType => $resp) {
-                if (preg_match($pattern, $resp, $m)) {
-                    $relativeUrl = $m[1];  // URL captured in group 1
-                    $price = $m[2];        // Price captured in group 2
+        // Try the pattern against each response type (desktop/mobile)
+        foreach ($responses as $responseType => $resp) {
+            if (preg_match($pattern, $resp, $m)) {
+                $relativeUrl = $m[1];  // URL captured in group 1
+                $price = $m[2];        // Price captured in group 2
 
-                    if (AMAZON_DEBUG) {
-                        echo "<p><strong>🎯 Pattern {$patternIndex} matched for {$label} in {$responseType}:</strong> URL: {$relativeUrl}, Price: £{$price}</p>\n";
-                    }
-
-                    // Determine full URL
-                    if (stripos($relativeUrl, 'javascript:') === 0 || !preg_match('#^/#', $relativeUrl)) {
-                        // Construct ref-based URL for the default selected format
-                        $formatMap = [
-                            'Hardcover' => 'hardcover',
-                            'Paperback' => 'pap',
-                            'Kindle' => 'kin',
-                            'Audio CD' => 'abk'
-                        ];
-                        $suffix = 'tmm_' . $formatMap[$label] . '_swatch_0';
-                        $fullUrl = "https://www.amazon.co.uk/gp/product/{$cleanISBN}/ref={$suffix}";
-                    } else {
-                        $fullUrl = 'https://www.amazon.co.uk' . $relativeUrl;
-                    }
-
-                    $buyingOptions[$label] = [
-                        'price' => '£' . $price,
-                        'url'   => $fullUrl
-                    ];
-
-                    if (AMAZON_DEBUG) {
-                        echo "<p><strong>✅ Found {$label}:</strong> Price £{$price}, URL: {$fullUrl}</p>\n";
-                    }
-
-                    $found = true;
-                    break 2; // Break out of both response and pattern loops
+                if (AMAZON_DEBUG) {
+                    echo "<p><strong>🎯 Pattern matched for {$label} in {$responseType}:</strong> URL: {$relativeUrl}, Price: £{$price}</p>\n";
                 }
+
+                // Determine full URL
+                if (stripos($relativeUrl, 'javascript:') === 0 || !preg_match('#^/#', $relativeUrl)) {
+                    // Construct ref-based URL for the default selected format
+                    $formatMap = [
+                        'Hardcover' => 'hardcover',
+                        'Paperback' => 'pap',
+                        'Kindle' => 'kin',
+                        'Audio CD' => 'abk'
+                    ];
+                    $suffix = 'tmm_' . $formatMap[$label] . '_swatch_0';
+                    $fullUrl = "https://www.amazon.co.uk/gp/product/{$cleanISBN}/ref={$suffix}";
+                } else {
+                    $fullUrl = 'https://www.amazon.co.uk' . $relativeUrl;
+                }
+
+                $buyingOptions[$label] = [
+                    'price' => '£' . $price,
+                    'url'   => $fullUrl
+                ];
+
+                if (AMAZON_DEBUG) {
+                    echo "<p><strong>✅ Found {$label}:</strong> Price £{$price}, URL: {$fullUrl}</p>\n";
+                }
+
+                $found = true;
+                break; // Move to next format after finding this one
             }
         }
 
         if (AMAZON_DEBUG && !$found) {
-            echo "<p><strong>❌ No {$label} found via any pattern or response.</strong></p>\n";
+            echo "<p><strong>❌ No {$label} found in any response.</strong></p>\n";
         }
     }
 
@@ -1788,12 +1770,12 @@ function scrapePriceFromAmazon($isbn) {
 }
 
 /**
- * Get cached Amazon enrichment payload for a given ISBN:
+ * Get Amazon enrichment payload for a given ISBN:
  * - buying_options: array of all formats with price & URL
  * - selected_format: the default format (first in list, typically Hardcover)
  * - selected_price: price of the selected_format
  *
- * Caches result for 10 minutes in the system temp directory.
+ * No caching since prices change frequently.
  *
  * @param string $isbn ISBN-10 or 13 for lookup
  * @return array {
@@ -1804,20 +1786,15 @@ function scrapePriceFromAmazon($isbn) {
  */
 function getAmazonEnrichmentData($isbn) {
     $cleanISBN = preg_replace('/[^0-9X]/i', '', $isbn);
-    $cacheFile = sys_get_temp_dir() . '/amazon_enrich_' . $cleanISBN . '.json';
-    $ttl = 600; // seconds
 
-    // Return cached if fresh
-    if (file_exists($cacheFile) && (filemtime($cacheFile) > time() - $ttl)) {
-        $json = file_get_contents($cacheFile);
-        $data = json_decode($json, true);
-        if (is_array($data)) {
-            return $data;
-        }
-    }
+    // Log the request for debugging
+    error_log("getAmazonEnrichmentData called with ISBN: $isbn, cleaned: $cleanISBN");
 
-    // Fetch raw buying options
+    // Fetch raw buying options (no caching since prices change frequently)
     $options = scrapeAmazonBuyingOptions($cleanISBN);
+
+    error_log("scrapeAmazonBuyingOptions returned: " . json_encode($options));
+
     $selectedFormat = null;
     $selectedPrice = null;
     if (!empty($options)) {
@@ -1833,8 +1810,7 @@ function getAmazonEnrichmentData($isbn) {
         'selected_price'   => $selectedPrice,
     ];
 
-    // Cache for next time
-    @file_put_contents($cacheFile, json_encode($payload));
+    error_log("Final Amazon payload: " . json_encode($payload));
 
     return $payload;
 }

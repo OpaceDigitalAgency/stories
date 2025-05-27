@@ -106,7 +106,7 @@
                     </div>
                     <!-- Amazon Buying Options -->
                     <div class="mt-4">
-                        <h5>Amazon Buying Options</h5>
+                        <h5>Amazon Buying Options <span id="amazon-status-badge"></span></h5>
                         <div class="amazon-data-container text-muted">Click “Enrich” to load Amazon info.</div>
                     </div>
 
@@ -306,13 +306,18 @@ function displayEnrichmentResults(data, debug) {
 
     // Fetch Amazon data asynchronously
     var $amazonContainer = $('.amazon-data-container');
+    var $amazonBadge = $('#amazon-status-badge');
+
     if (!$amazonContainer.length) {
         console.error('📦 Amazon container not found in DOM');
         return;
     }
 
     console.log('📦 Starting AJAX fetch for Amazon data. ISBN:', currentBookISBN);
-    $amazonContainer.html('<p>Loading Amazon data…</p>');
+
+    // Show loading indicator
+    $amazonBadge.html('<span class="badge badge-info">Checking...</span>');
+    $amazonContainer.html('<p><i class="fas fa-spinner fa-spin"></i> Loading Amazon data…</p>');
 
     // Use relative URL for AJAX call
     $.post('book-import-validate/ajax/data-enrichment-ajax.php', {
@@ -320,8 +325,14 @@ function displayEnrichmentResults(data, debug) {
         isbn: currentBookISBN
     }, function(res) {
         console.log('📦 Amazon AJAX response received:', res);
+
         if (res.success && res.data && res.data.buying_options && Object.keys(res.data.buying_options).length > 0) {
             var html = '';
+            var optionsCount = Object.keys(res.data.buying_options).length;
+
+            // Update status badge
+            $amazonBadge.html('<span class="badge badge-success">' + optionsCount + ' formats found</span>');
+
             // Display selected format and its price
             if (res.data.selected_format && res.data.selected_price) {
                 html += '<p><strong>Format:</strong> ' + res.data.selected_format + '</p>';
@@ -336,11 +347,18 @@ function displayEnrichmentResults(data, debug) {
             $amazonContainer.html(html);
         } else {
             console.log('📦 No Amazon buying options found or empty response');
+            console.log('📦 Debug info:', res.debug);
+
+            // Update status badge
+            $amazonBadge.html('<span class="badge badge-warning">No data found</span>');
             $amazonContainer.html('<p>No Amazon data available.</p>');
         }
     }, 'json').fail(function(xhr, status, error) {
         console.error('📦 Amazon AJAX error:', { xhr, status, error });
         console.error('📦 Response text:', xhr.responseText);
+
+        // Update status badge
+        $amazonBadge.html('<span class="badge badge-danger">Error</span>');
         $amazonContainer.html('<p>Error loading Amazon data.</p>');
     });
 

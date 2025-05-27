@@ -1728,7 +1728,7 @@ function scrapeAmazonBuyingOptions($isbn) {
                 if (AMAZON_DEBUG) {
                     echo "<p><strong>✅ Found {$label}:</strong> Price £{$m[1]}, URL: {$fullUrl}</p>\n";
                 }
-                break 2; // exit both loops once found
+                break; // exit inner loop once found, continue to next pattern
             }
         }
         if (AMAZON_DEBUG) {
@@ -1866,4 +1866,56 @@ function scrapePriceFromAmazon($isbn) {
         error_log("Error scraping Amazon price for ISBN $isbn: " . $e->getMessage());
         return null;
     }
+}
+
+/**
+ * Get cached Amazon enrichment payload for a given ISBN:
+ * - buying_options: array of all formats with price & URL
+ * - selected_format: the default format (first in list, typically Hardcover)
+ * - selected_price: price of the selected_format
+ *
+ * Caches result for 10 minutes in the system temp directory.
+ *
+ * @param string $isbn ISBN-10 or 13 for lookup
+ * @return array {
+ *   @type array  "buying_options"
+ *   @type string "selected_format"
+ *   @type string "selected_price"
+ * }
+ */
+function getAmazonEnrichmentData($isbn) {
+    $cleanISBN = preg_replace('/[^0-9X]/i', '', $isbn);
+    $cacheFile = sys_get_temp_dir() . '/amazon_enrich_' . $cleanISBN . '.json';
+    $ttl = 600; // seconds
+
+    // Return cached if fresh
+    if (file_exists($cacheFile) && (filemtime($cacheFile) > time() - $ttl)) {
+        $json = file_get_contents($cacheFile);
+        $data = json_decode($json, true);
+        if (is_array($data)) {
+            return $data;
+        }
+    }
+
+    // Fetch raw buying options
+    $options = scrapeAmazonBuyingOptions($cleanISBN);
+    $selectedFormat = null;
+    $selectedPrice = null;
+    if (!empty($options)) {
+        // Preserve insertion order from scrape; first key is default format
+        $formats = array_keys($options);
+        $selectedFormat = $formats[0];
+        $selectedPrice = $options[$selectedFormat]['price'] ?? null;
+    }
+
+    $payload = [
+        'buying_options'   => $options,
+        'selected_format'  => $selectedFormat,
+        'selected_price'   => $selectedPrice,
+    ];
+
+    // Cache for next time
+    @file_put_contents($cacheFile, json_encode($payload));
+
+    return $payload;
 }

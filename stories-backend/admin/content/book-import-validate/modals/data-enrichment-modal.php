@@ -311,9 +311,14 @@ function displayEnrichmentResults(data, debug) {
         action: 'get_amazon_data',
         isbn: currentBookISBN
     }, function(res) {
-        if (res.success && res.data && Object.keys(res.data).length) {
-            var html = '<ul>';
-            $.each(res.data, function(format, info) {
+        if (res.success && res.data && res.data.buying_options) {
+            var html = '';
+            // Display selected format and its price
+            html += '<p><strong>Format:</strong> ' + res.data.selected_format + '</p>';
+            html += '<p><strong>Price:</strong> ' + res.data.selected_price + '</p>';
+            html += '<h6>Purchase Links</h6>';
+            html += '<ul>';
+            $.each(res.data.buying_options, function(format, info) {
                 html += '<li>' + format + ': <a href="' + info.url + '" target="_blank">' + info.price + '</a></li>';
             });
             html += '</ul>';

@@ -965,21 +965,21 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
             break;
 
         case 'format':
-            // For exact ISBN matches, return the specific format, not multiple formats
-            // Each ISBN should correspond to one specific format
-            if (isset($match['format'])) {
+            // OpenLibrary returns all formats for all editions, not specific to the ISBN
+            // Only return format if it's from Google Books or if it's a single format
+            if (isset($match['source']) && $match['source'] === 'google_books' && isset($match['format'])) {
                 if (is_string($match['format'])) {
-                    // Single format - normalize and return
                     return normalizeFormat(trim($match['format']));
-                } elseif (is_array($match['format']) && !empty($match['format'])) {
-                    // Multiple formats - this suggests the match might be for multiple editions
-                    // For exact ISBN matches, we should only get one format
-                    // Take the first format and normalize it
-                    $firstFormat = $match['format'][0];
-                    error_log("Warning: Multiple formats found for exact ISBN match: " . implode(', ', $match['format']) . ". Using first: $firstFormat");
-                    return normalizeFormat(trim($firstFormat));
                 }
+            } elseif (isset($match['format']) && is_string($match['format'])) {
+                // Single format from other sources - might be reliable
+                return normalizeFormat(trim($match['format']));
+            } elseif (isset($match['format']) && is_array($match['format']) && count($match['format']) === 1) {
+                // Single format in array - might be reliable
+                return normalizeFormat(trim($match['format'][0]));
             }
+            // Don't return format from OpenLibrary when it's an array of multiple formats
+            // as it represents all editions, not the specific ISBN
             return null;
 
         case 'summary':
@@ -1153,8 +1153,23 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
             error_log("Price range result for ISBN " . (is_array($isbn) ? json_encode($isbn) : $isbn) . ": " . ($priceRange ?? 'null'));
             return $priceRange;
 
+        case 'page_count':
+            // Handle multiple page count fields from different sources
+            if (isset($match['page_count']) && is_numeric($match['page_count'])) {
+                return intval($match['page_count']);
+            } elseif (isset($match['number_of_pages']) && is_numeric($match['number_of_pages'])) {
+                return intval($match['number_of_pages']);
+            } elseif (isset($match['number_of_pages_median']) && is_numeric($match['number_of_pages_median'])) {
+                // OpenLibrary specific field
+                return intval($match['number_of_pages_median']);
+            } elseif (isset($match['pageCount']) && is_numeric($match['pageCount'])) {
+                // Google Books field
+                return intval($match['pageCount']);
+            }
+            return null;
+
         case 'purchase_links':
-            // Generate enhanced purchase links with edition-specific data
+            // Generate Amazon buying options with actual format-specific links and prices
             $isbn13 = $match['isbn13'] ?? null;
             $isbn = $match['isbn'] ?? null;
 
@@ -1167,14 +1182,26 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
             if ($isbn13 || $isbn) {
                 $mainIsbn = $isbn13 ?: $isbn;
 
-                // Amazon UK link
-                $purchaseLinks['amazon_uk'] = "https://www.amazon.co.uk/dp/" . $mainIsbn;
+                // Get Amazon buying options with prices
+                $buyingOptions = scrapeAmazonBuyingOptions($mainIsbn);
 
-                // Goodreads link
-                $purchaseLinks['goodreads'] = "https://www.goodreads.com/book/isbn/" . $mainIsbn;
-
-                // Google Books link
-                $purchaseLinks['google_books'] = "https://books.google.com/books?isbn=" . $mainIsbn;
+                if (!empty($buyingOptions)) {
+                    // Create format-specific Amazon links with affiliate tag
+                    foreach ($buyingOptions as $format => $price) {
+                        $purchaseLinks['amazon_' . strtolower(str_replace(' ', '_', $format))] = [
+                            'url' => "https://www.amazon.co.uk/dp/" . $mainIsbn . "?tag=storiesfro0f0-20",
+                            'format' => $format,
+                            'price' => $price
+                        ];
+                    }
+                } else {
+                    // Fallback to basic Amazon link if scraping fails
+                    $purchaseLinks['amazon_uk'] = [
+                        'url' => "https://www.amazon.co.uk/dp/" . $mainIsbn . "?tag=storiesfro0f0-20",
+                        'format' => 'Unknown',
+                        'price' => 'Unknown'
+                    ];
+                }
 
                 // Add edition information if available
                 if (isset($match['publisher']) && !empty($match['publisher'])) {
@@ -1506,6 +1533,87 @@ function validateCombinedISBN($combinedFields, $currentISBN) {
     }
 
     return 'different';
+}
+
+/**
+ * Scrape Amazon buying options (Hardcover, Paperback, Kindle, Audio CD) with prices
+ * Returns array of format => price pairs
+ */
+function scrapeAmazonBuyingOptions($isbn) {
+    if (empty($isbn)) {
+        return [];
+    }
+
+    try {
+        // Clean ISBN
+        $cleanISBN = preg_replace('/[^0-9X]/i', '', $isbn);
+        $amazonUrl = "https://www.amazon.co.uk/dp/" . $cleanISBN;
+
+        error_log("Scraping Amazon buying options from: $amazonUrl");
+
+        $ch = curl_init($amazonUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+        curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language: en-GB,en;q=0.5',
+            'Accept-Encoding: gzip, deflate',
+            'Connection: keep-alive',
+            'Cache-Control: no-cache',
+            'Pragma: no-cache'
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode !== 200 || empty($response)) {
+            error_log("Amazon buying options scraping failed for ISBN $isbn: HTTP $httpCode");
+            return [];
+        }
+
+        // Handle gzip compressed response
+        if (substr($response, 0, 3) === "\x1f\x8b\x08") {
+            $response = gzdecode($response);
+            if ($response === false) {
+                error_log("Failed to decompress gzip response for ISBN $isbn");
+                return [];
+            }
+        }
+
+        $buyingOptions = [];
+
+        // Look for format and price patterns
+        // Kindle Edition £4.53
+        if (preg_match('/Kindle Edition[^£]*£(\d+\.\d{2})/i', $response, $matches)) {
+            $buyingOptions['Kindle'] = '£' . $matches[1];
+        }
+
+        // Hardcover £13.70
+        if (preg_match('/Hardcover[^£]*£(\d+\.\d{2})/i', $response, $matches)) {
+            $buyingOptions['Hardcover'] = '£' . $matches[1];
+        }
+
+        // Paperback £7.89
+        if (preg_match('/Paperback[^£]*£(\d+\.\d{2})/i', $response, $matches)) {
+            $buyingOptions['Paperback'] = '£' . $matches[1];
+        }
+
+        // Audio CD £18.91
+        if (preg_match('/Audio CD[^£]*£(\d+\.\d{2})/i', $response, $matches)) {
+            $buyingOptions['Audio CD'] = '£' . $matches[1];
+        }
+
+        error_log("Amazon buying options found for ISBN $isbn: " . json_encode($buyingOptions));
+        return $buyingOptions;
+
+    } catch (Exception $e) {
+        error_log("Error scraping Amazon buying options for ISBN $isbn: " . $e->getMessage());
+        return [];
+    }
 }
 
 /**

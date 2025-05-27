@@ -1,7 +1,7 @@
 <?php
 /**
  * Test Amazon Scraping for Data Enrichment
- * 
+ *
  * This script tests the Amazon scraping functionality to verify:
  * 1. Multiple formats are detected (Kindle, Hardcover, Paperback, Audio CD)
  * 2. Correct URLs are generated using /gp/product/ and ISBN-10
@@ -111,4 +111,3 @@ if ($convertedISBN10 === $testISBN10) {
 
 echo "<hr>\n";
 echo "<p><em>Test completed. Check the results above to verify Amazon scraping functionality.</em></p>\n";
-?>

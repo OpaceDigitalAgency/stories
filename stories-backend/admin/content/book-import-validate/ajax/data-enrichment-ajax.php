@@ -98,7 +98,20 @@ function handleGetEnrichmentData() {
 
         echo json_encode([
             'success' => true,
-            'data' => $enrichedData
+            'data' => $enrichedData,
+            'debug' => [
+                'google_results_count' => count($enrichedData['sources_checked']),
+                'sources_checked' => $enrichedData['sources_checked'],
+                'confidence_score' => $enrichedData['confidence_score'],
+                'isbn_validated' => $enrichedData['isbn_validated'],
+                'fields_found' => array_keys($enrichedData['fields']),
+                'request_params' => [
+                    'title' => $title,
+                    'author' => $author,
+                    'isbn' => $currentISBN,
+                    'book_id' => $bookId
+                ]
+            ]
         ]);
     } catch (Exception $e) {
         error_log("Enrichment error: " . $e->getMessage());

@@ -231,7 +231,7 @@ function fetchEnrichmentData(title, author, currentISBN) {
 
             if (response.success) {
                 currentEnrichmentData = response.data;
-                displayEnrichmentResults(response.data);
+                displayEnrichmentResults(response.data, response.debug);
             } else {
                 showEnrichmentError(response.message || 'Unknown error occurred');
             }
@@ -245,10 +245,32 @@ function fetchEnrichmentData(title, author, currentISBN) {
     });
 }
 
-function displayEnrichmentResults(data) {
+function displayEnrichmentResults(data, debug) {
     if (!data.fields || Object.keys(data.fields).length === 0) {
         $('#no-enrichment-data').show();
         return;
+    }
+
+    // Show debug information if available
+    if (debug) {
+        console.log('Debug information:', debug);
+
+        // Add debug panel to the modal
+        const debugHtml = `
+            <div class="alert alert-info mt-3" id="debug-panel">
+                <h6><i class="fas fa-bug"></i> Debug Information</h6>
+                <small>
+                    <strong>Sources Checked:</strong> ${debug.sources_checked.join(', ')}<br>
+                    <strong>Fields Found:</strong> ${debug.fields_found.join(', ')}<br>
+                    <strong>Confidence Score:</strong> ${debug.confidence_score}<br>
+                    <strong>ISBN Validated:</strong> ${debug.isbn_validated}<br>
+                    <strong>Request:</strong> ${JSON.stringify(debug.request_params)}
+                </small>
+            </div>
+        `;
+
+        // Insert debug panel after confidence score
+        $('#confidence-details').after(debugHtml);
     }
 
     // Show confidence score

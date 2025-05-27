@@ -118,26 +118,70 @@ function fetchOpenLibraryDataNew($isbn, $title, $author, $isForEnrichment = fals
             ];
         }
         // Since we're now using the search API as primary, check for docs structure
-        if (!empty($data['docs']) && !empty($data['docs'][0])) {
+        if (!empty($data['docs'])) {
             // We have search API response with rich metadata
-            $bookInfo = $data['docs'][0];
-            
+            // For enrichment, we need to find the exact edition that contains our ISBN
+            $bookInfo = null;
+
+            if ($isForEnrichment && !empty($isbn)) {
+                // For enrichment, find the exact edition with our ISBN
+                $cleanSearchISBN = preg_replace('/[^0-9X]/i', '', $isbn);
+
+                foreach ($data['docs'] as $doc) {
+                    // Check if this edition contains our ISBN
+                    $docISBNs = $doc['isbn'] ?? [];
+                    if (!is_array($docISBNs)) {
+                        $docISBNs = [$docISBNs];
+                    }
+
+                    foreach ($docISBNs as $docISBN) {
+                        $cleanDocISBN = preg_replace('/[^0-9X]/i', '', $docISBN);
+                        if ($cleanDocISBN === $cleanSearchISBN || areISBNsEquivalent($cleanSearchISBN, $cleanDocISBN)) {
+                            $bookInfo = $doc;
+                            break 2; // Break out of both loops
+                        }
+                    }
+                }
+
+                if (!$bookInfo) {
+                    $status['steps'][] = [
+                        'name' => 'isbn_validation',
+                        'status' => 'error',
+                        'message' => "No edition found with exact ISBN match: $isbn"
+                    ];
+
+                    $status['status'] = 'error';
+                    $status['message'] = "No edition found with exact ISBN match";
+                    $status['processing_time'] = round(microtime(true) - $startTime, 2);
+                    return ['_status' => $status];
+                }
+
+                $status['steps'][] = [
+                    'name' => 'isbn_validation',
+                    'status' => 'success',
+                    'message' => "Found edition with exact ISBN match"
+                ];
+            } else {
+                // For validation or when no ISBN, use first result
+                $bookInfo = $data['docs'][0];
+            }
+
             $status['steps'][] = [
                 'name' => 'data_extraction',
                 'status' => 'success',
                 'message' => "Found rich metadata in search API response"
             ];
-            
+
             $status['status'] = 'success';
             $status['message'] = "Successfully retrieved Open Library data with rich metadata";
             $status['processing_time'] = round(microtime(true) - $startTime, 2);
-            
+
             // Add status to the book info
             $bookInfo['_status'] = $status;
-            
+
             return $bookInfo;
         }
-        
+
         // Fallback: check for old API structure (shouldn't happen with new URL)
         $key = "ISBN:$isbn";
         if (empty($data[$key]) && $isForEnrichment) {

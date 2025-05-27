@@ -125,9 +125,17 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
     $openLibraryMatch = findBestDataMatch($openLibraryResults, $title, $author, $currentISBN);
 
     // Validate OpenLibrary match if we have an ISBN - STRICT validation
-    if (!empty($currentISBN) && $openLibraryMatch && !validateOpenLibraryISBNMatch($openLibraryMatch, $currentISBN)) {
-        error_log("OpenLibrary match rejected - ISBN mismatch. Expected: $currentISBN, Got ISBNs: " . json_encode($openLibraryMatch['isbn'] ?? 'none'));
-        $openLibraryMatch = null;
+    if (!empty($currentISBN) && $openLibraryMatch) {
+        $isValidMatch = validateOpenLibraryISBNMatch($openLibraryMatch, $currentISBN);
+        error_log("OpenLibrary ISBN validation for $currentISBN: " . ($isValidMatch ? 'PASSED' : 'FAILED'));
+        error_log("OpenLibrary ISBNs found: " . json_encode($openLibraryMatch['isbn'] ?? 'none'));
+
+        if (!$isValidMatch) {
+            error_log("OpenLibrary match REJECTED - ISBN mismatch. Expected: $currentISBN");
+            $openLibraryMatch = null;
+        } else {
+            error_log("OpenLibrary match ACCEPTED - ISBN validation passed");
+        }
     }
 
     $combinedFields = [];

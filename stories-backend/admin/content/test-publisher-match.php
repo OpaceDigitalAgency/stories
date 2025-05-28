@@ -2,6 +2,10 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
+// Include authentication
+session_start();
+require_once '../../auth.php';
+
 try {
     require_once '../../db-connect.php';
     echo '<p>✅ Database connection loaded</p>';

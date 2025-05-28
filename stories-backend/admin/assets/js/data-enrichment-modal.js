@@ -249,6 +249,9 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         // Update modal header with book title immediately
         $('#enrichment-book-title').text(title || 'Unknown Title');
         
+        // Show the ISBN identifiers section
+        $('#enrichment-book-identifiers').show();
+        
         // Make AJAX call to get book data from database
         $.ajax({
             url: 'book-import-validate/ajax/data-enrichment-ajax.php',

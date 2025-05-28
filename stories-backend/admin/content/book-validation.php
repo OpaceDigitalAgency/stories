@@ -419,12 +419,122 @@ if (!$bookValidationScriptLoaded) {
 }
 ?>
 
-<!-- All JavaScript functionality has been moved to external files for better performance -->
+<!-- Data Enrichment Modal Structure (scripts loaded dynamically) -->
+<div class="modal fade" id="dataEnrichmentModal" tabindex="-1" role="dialog" aria-labelledby="dataEnrichmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="dataEnrichmentModalLabel">
+                    <i class="fas fa-database"></i> Enrich Book Data
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Loading State -->
+                <div id="enrichment-loading" class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="sr-only">Searching for book data...</span>
+                    </div>
+                    <p class="mt-3">Searching for enrichment data...</p>
+                </div>
+
+                <!-- Error State -->
+                <div id="enrichment-error" class="alert alert-danger" style="display: none;">
+                    <h6><i class="fas fa-exclamation-triangle"></i> Error</h6>
+                    <p id="error-message"></p>
+                </div>
+
+                <!-- Results -->
+                <div id="enrichment-results" style="display: none;">
+                    <!-- Enrichment Fields -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0 d-flex justify-content-between align-items-center">
+                                <span>
+                                    <i class="fas fa-edit"></i> Available Data Enrichments
+                                    <small class="text-muted ml-2">Select fields to update</small>
+                                </span>
+                                <div>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" id="select-all-fields">
+                                        <i class="fas fa-check-square"></i> Select All
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary ml-1" id="deselect-all-fields">
+                                        <i class="fas fa-square"></i> Deselect All
+                                    </button>
+                                </div>
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <form id="enrichment-form">
+                                <div class="row" id="enrichment-fields">
+                                    <!-- Fields will be populated dynamically -->
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-primary" id="apply-enrichment-btn" disabled>
+                    <i class="fas fa-save"></i> Apply Selected Changes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Load data enrichment scripts dynamically when needed
+function loadDataEnrichmentScripts() {
+    if (window.dataEnrichmentScriptsLoaded) {
+        return Promise.resolve();
+    }
+
+    return new Promise((resolve, reject) => {
+        const scripts = [
+            '/admin/assets/js/data-enrichment-modal.js',
+            '/admin/assets/js/data-enrichment-helpers.js',
+            '/admin/assets/js/data-enrichment-utils.js'
+        ];
+
+        let loadedCount = 0;
+
+        scripts.forEach(src => {
+            const script = document.createElement('script');
+            script.src = src;
+            script.onload = () => {
+                loadedCount++;
+                if (loadedCount === scripts.length) {
+                    window.dataEnrichmentScriptsLoaded = true;
+                    resolve();
+                }
+            };
+            script.onerror = () => reject(new Error(`Failed to load ${src}`));
+            document.head.appendChild(script);
+        });
+    });
+}
+
+// Override the openDataEnrichmentModal function to load scripts first
+window.openDataEnrichmentModal = function(bookId, title, author, currentISBN) {
+    loadDataEnrichmentScripts().then(() => {
+        // Call the actual function from the loaded script
+        if (window.openDataEnrichmentModal !== arguments.callee) {
+            window.openDataEnrichmentModal(bookId, title, author, currentISBN);
+        }
+    }).catch(error => {
+        console.error('Failed to load data enrichment scripts:', error);
+        alert('Error loading data enrichment functionality. Please refresh the page and try again.');
+    });
+};
+</script>
 
 <?php
-// Include the data enrichment modal
-require_once 'book-import-validate/modals/data-enrichment-modal.php';
-
 // Include footer
 require_once '../includes/footer.php';
 ?>

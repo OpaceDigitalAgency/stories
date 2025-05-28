@@ -474,6 +474,10 @@ function filterRelevantFields($fields, $currentBookData) {
                 $filteredFields[$fieldName]['new_data'] = [
                     'options' => $newFieldData['options']
                 ];
+            } elseif ($newFieldData && isset($newFieldData['new_data'])) {
+                // Amazon-derived fields that already have the correct structure
+                $filteredFields[$fieldName]['new_data'] = $newFieldData['new_data'];
+                error_log("Preserved Amazon field structure for $fieldName: " . json_encode($newFieldData['new_data']));
             } elseif ($newFieldData && isset($newFieldData['value'])) {
                 // Single source field with actual data
                 $filteredFields[$fieldName]['new_data'] = [

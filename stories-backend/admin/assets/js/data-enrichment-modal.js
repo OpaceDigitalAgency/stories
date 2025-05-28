@@ -30,16 +30,23 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
 
     // Update modal header with book title and ISBN information
     function updateModalHeader(title, isbn) {
+        console.log('📖 updateModalHeader called with:', { title, isbn, isbnType: typeof isbn });
+
         // Update book title
         $('#enrichment-book-title').text(title || 'Unknown Title');
+        console.log('📖 Updated book title to:', title || 'Unknown Title');
 
         // Process ISBN information
         let isbn13 = '-', isbn10 = '-';
 
         if (isbn && typeof isbn === 'string') {
+            console.log('📖 Processing ISBN string:', isbn);
             const cleanISBN = isbn.replace(/[^0-9X]/gi, '');
+            console.log('📖 Cleaned ISBN:', cleanISBN, 'Length:', cleanISBN.length);
+
             if (cleanISBN.length === 13) {
                 isbn13 = cleanISBN;
+                console.log('📖 Set ISBN-13:', isbn13);
                 // Try to convert to ISBN-10
                 if (cleanISBN.startsWith('978')) {
                     const isbn10Digits = cleanISBN.substring(3, 12);
@@ -49,9 +56,11 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     }
                     const checkDigit = (11 - (sum % 11)) % 11;
                     isbn10 = isbn10Digits + (checkDigit === 10 ? 'X' : checkDigit);
+                    console.log('📖 Converted to ISBN-10:', isbn10);
                 }
             } else if (cleanISBN.length === 10) {
                 isbn10 = cleanISBN;
+                console.log('📖 Set ISBN-10:', isbn10);
                 // Convert to ISBN-13
                 const isbn13Prefix = '978' + cleanISBN.substring(0, 9);
                 let sum = 0;
@@ -60,12 +69,22 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 }
                 const checkDigit = (10 - (sum % 10)) % 10;
                 isbn13 = isbn13Prefix + checkDigit;
+                console.log('📖 Converted to ISBN-13:', isbn13);
+            } else {
+                console.log('📖 ISBN length not 10 or 13, keeping as dashes');
             }
+        } else {
+            console.log('📖 No valid ISBN provided, keeping as dashes');
         }
 
         // Update ISBN displays
+        console.log('📖 Setting ISBN displays - ISBN-13:', isbn13, 'ISBN-10:', isbn10);
         $('#enrichment-isbn13').text(isbn13);
         $('#enrichment-isbn10').text(isbn10);
+        console.log('📖 ISBN elements found:', {
+            isbn13Element: $('#enrichment-isbn13').length,
+            isbn10Element: $('#enrichment-isbn10').length
+        });
 
         // Add conversion verification using backend functions
         if (isbn13 !== '-' && isbn10 !== '-') {
@@ -630,28 +649,46 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
 
     // Update status badges to show completion instead of "Checking..."
     function updateStatusBadges(sourcesChecked) {
+        console.log('🔄 Updating status badges for sources:', sourcesChecked);
+
         // Update Google Books status
         if (sourcesChecked.includes('google_books')) {
             $('#google-books-status-badge').html('<span class="badge badge-success">✓ Google Books</span>');
+            console.log('✅ Updated Google Books status to success');
         } else {
             $('#google-books-status-badge').html('<span class="badge badge-secondary">Google Books</span>');
+            console.log('⚪ Updated Google Books status to not checked');
         }
 
-        // Update OpenLibrary status
+        // Update OpenLibrary status - handle both ID variations
         if (sourcesChecked.includes('open_library')) {
-            $('#open-library-status-badge').html('<span class="badge badge-success">✓ OpenLibrary</span>');
+            // Try both possible IDs (with and without hyphen)
+            const openLibraryElement = $('#open-library-status-badge').length > 0 ?
+                $('#open-library-status-badge') : $('#openlibrary-status-badge');
+            openLibraryElement.html('<span class="badge badge-success">✓ OpenLibrary</span>');
+            console.log('✅ Updated OpenLibrary status to success');
         } else {
-            $('#open-library-status-badge').html('<span class="badge badge-secondary">OpenLibrary</span>');
+            // Try both possible IDs (with and without hyphen)
+            const openLibraryElement = $('#open-library-status-badge').length > 0 ?
+                $('#open-library-status-badge') : $('#openlibrary-status-badge');
+            openLibraryElement.html('<span class="badge badge-secondary">OpenLibrary</span>');
+            console.log('⚪ Updated OpenLibrary status to not checked');
         }
     }
 
     // Auto-select fields with single source and beneficial updates
     function autoSelectBeneficialFields(fields) {
+        console.log('🎯 Auto-selecting beneficial fields...');
+        let autoSelectedCount = 0;
+
         Object.keys(fields).forEach(fieldName => {
             const field = fields[fieldName];
 
             // Skip fields with no new data
-            if (!field.new_data) return;
+            if (!field.new_data) {
+                console.log(`⏭️ Skipping ${fieldName} - no new data`);
+                return;
+            }
 
             // For single source fields, auto-select if beneficial
             if (!field.new_data.options) {
@@ -660,14 +697,33 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
 
                 if (!isUnknown && !isPendingAmazon) {
                     const benefitLevel = determineBenefitLevel(field.current_value, field.new_data.value, false);
+                    const isEmpty = field.current_value === null || field.current_value === '' || field.current_value === 'None';
+
+                    console.log(`🔍 Checking ${fieldName}:`, {
+                        currentValue: field.current_value,
+                        newValue: field.new_data.value,
+                        benefitLevel,
+                        isEmpty,
+                        shouldAutoSelect: benefitLevel === 'beneficial' || isEmpty
+                    });
 
                     // Auto-select beneficial fields or fields where current value is empty
-                    if (benefitLevel === 'beneficial' || isEmpty(field.current_value)) {
+                    if (benefitLevel === 'beneficial' || isEmpty) {
                         $(`#field_${fieldName}`).prop('checked', true).trigger('change');
+                        autoSelectedCount++;
+                        console.log(`✅ Auto-selected ${fieldName}`);
+                    } else {
+                        console.log(`⚪ Not auto-selecting ${fieldName} - not beneficial enough`);
                     }
+                } else {
+                    console.log(`⏭️ Skipping ${fieldName} - unknown or pending Amazon data`);
                 }
+            } else {
+                console.log(`⏭️ Skipping ${fieldName} - has multiple options`);
             }
         });
+
+        console.log(`🎯 Auto-selected ${autoSelectedCount} fields total`);
     }
 
     // Make functions globally available

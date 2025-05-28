@@ -223,7 +223,7 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
                             error_log("Looking for publisher match for: " . $option['value']);
                             $bestMatch = findBestPublisherMatch($option['value']);
                             error_log("Publisher match result: " . json_encode($bestMatch));
-                            if ($bestMatch && $bestMatch['confidence'] > 75) { // Lowered threshold to catch more matches
+                            if ($bestMatch && $bestMatch['confidence'] >= 60) { // Lowered threshold to catch more matches
                                 $option['recommended'] = $bestMatch['name'];
                                 $option['recommendation_confidence'] = $bestMatch['confidence'];
                                 $option['match_type'] = $bestMatch['match_type'];
@@ -232,6 +232,7 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
                                 error_log("No suitable match found (confidence too low or no match)");
                             }
                         }
+                        unset($option); // Break the reference to avoid issues
                         error_log("Final publisher options with recommendations: " . json_encode($options));
                     }
 
@@ -283,7 +284,7 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
                     'database_match' => $currentPublisherMatch
                 ];
                 error_log("Current publisher exactly matches database: " . $currentPublisherMatch['name']);
-            } elseif ($currentPublisherMatch['confidence'] > 75) {
+            } elseif ($currentPublisherMatch['confidence'] >= 60) {
                 // Current value has a good match - offer recommendation
                 $combinedFields['publisher'] = [
                     'current_value' => $currentPublisher,
@@ -1681,6 +1682,7 @@ function normalizePublisherName($publisherName) {
 /**
  * Find best matching publisher from existing database entries
  * Returns array with recommended publisher and confidence score
+ * Uses enhanced similarity algorithm from comprehensive cleanup script
  */
 function findBestPublisherMatch($publisherName) {
     global $db;
@@ -1702,65 +1704,126 @@ function findBestPublisherMatch($publisherName) {
         $stmt->execute();
         $existingPublishers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $normalizedInput = strtolower(normalizePublisherName($publisherName));
         $bestMatch = null;
         $bestScore = 0;
 
         foreach ($existingPublishers as $publisher) {
-            $normalizedExisting = strtolower(normalizePublisherName($publisher['name']));
+            $similarity = calculateEnhancedPublisherSimilarity($publisherName, $publisher['name']);
 
-            // Exact match (highest score)
-            if ($normalizedInput === $normalizedExisting) {
-                return [
-                    'id' => $publisher['id'],
-                    'name' => $publisher['name'],
-                    'confidence' => 100,
-                    'match_type' => 'exact'
-                ];
-            }
-
-            // Check if one contains the other (partial match)
-            $containsScore = 0;
-            if (strpos($normalizedExisting, $normalizedInput) !== false) {
-                // Existing publisher contains input (e.g., "HarperCollins Children's Books" contains "HarperCollins")
-                $containsScore = 85;
-            } elseif (strpos($normalizedInput, $normalizedExisting) !== false) {
-                // Input contains existing (e.g., "HarperCollins Publishers" contains "HarperCollins")
-                $containsScore = 80;
-            }
-
-            if ($containsScore > $bestScore) {
+            if ($similarity > $bestScore && $similarity >= 60) { // Lowered threshold to catch more matches
                 $bestMatch = [
                     'id' => $publisher['id'],
                     'name' => $publisher['name'],
-                    'confidence' => $containsScore,
-                    'match_type' => 'partial'
+                    'confidence' => $similarity,
+                    'match_type' => $similarity >= 90 ? 'exact' : ($similarity >= 80 ? 'partial' : 'fuzzy')
                 ];
-                $bestScore = $containsScore;
-            }
-
-            // Fuzzy string matching for similar names
-            $similarity = calculateStringSimilarity($normalizedInput, $normalizedExisting);
-            $fuzzyScore = $similarity * 100;
-
-            if ($fuzzyScore > 70 && $fuzzyScore > $bestScore) {
-                $bestMatch = [
-                    'id' => $publisher['id'],
-                    'name' => $publisher['name'],
-                    'confidence' => $fuzzyScore,
-                    'match_type' => 'fuzzy'
-                ];
-                $bestScore = $fuzzyScore;
+                $bestScore = $similarity;
             }
         }
 
-        // Only return matches with confidence > 75%
-        return ($bestScore > 75) ? $bestMatch : null;
+        // Only return matches with confidence >= 60%
+        return ($bestScore >= 60) ? $bestMatch : null;
 
     } catch (Exception $e) {
         error_log("Error finding publisher match: " . $e->getMessage());
         return null;
     }
+}
+
+/**
+ * Enhanced publisher similarity calculation using the algorithm from comprehensive cleanup
+ * Returns similarity score from 0-100
+ */
+function calculateEnhancedPublisherSimilarity($str1, $str2) {
+    $original1 = $str1;
+    $original2 = $str2;
+
+    $str1 = strtolower(trim($str1));
+    $str2 = strtolower(trim($str2));
+
+    // If identical, return 100%
+    if ($str1 === $str2) return 100;
+
+    // Create normalized versions for better matching
+    $norm1 = $str1;
+    $norm2 = $str2;
+
+    // Remove common publisher suffixes/prefixes that don't affect identity
+    $commonWords = [
+        'ltd', 'limited', 'plc', 'inc', 'books', 'publishing', 'publishers', 'press',
+        'children\'s', 'childrens', 'uk', 'usa', 'group', 'imprint', 'young', 'readers',
+        'an', 'of', 'for', '&', 'and', 'the'
+    ];
+
+    foreach ($commonWords as $word) {
+        $norm1 = preg_replace('/\b' . preg_quote($word, '/') . '\b/', '', $norm1);
+        $norm2 = preg_replace('/\b' . preg_quote($word, '/') . '\b/', '', $norm2);
+    }
+
+    // Clean up extra spaces
+    $norm1 = preg_replace('/\s+/', ' ', trim($norm1));
+    $norm2 = preg_replace('/\s+/', ' ', trim($norm2));
+
+    // Special cases for known publisher variations
+    $specialCases = [
+        ['harper', 'harpercollins'],
+        ['penguin', 'penguinrandomhouse'],
+        ['random', 'penguinrandomhouse'],
+        ['macmillan', 'macmillanchildrens'],
+        ['scholastic', 'scholasticpress'],
+        ['simon', 'simonschuster'],
+        ['hachette', 'hachettechildrens']
+    ];
+
+    foreach ($specialCases as $case) {
+        if ((strpos($norm1, $case[0]) !== false && strpos($norm2, $case[1]) !== false) ||
+            (strpos($norm1, $case[1]) !== false && strpos($norm2, $case[0]) !== false)) {
+            return 90;
+        }
+    }
+
+    // Calculate various similarity metrics
+    $scores = [];
+
+    // 1. Levenshtein on normalized strings
+    if (strlen($norm1) > 0 && strlen($norm2) > 0) {
+        $levenshtein = levenshtein($norm1, $norm2);
+        $maxLen = max(strlen($norm1), strlen($norm2));
+        $scores[] = $maxLen > 0 ? (1 - $levenshtein / $maxLen) * 100 : 0;
+    }
+
+    // 2. Substring matching on original strings
+    if (strlen($str1) > 3 && strlen($str2) > 3) {
+        if (strpos($str1, $str2) !== false || strpos($str2, $str1) !== false) {
+            $scores[] = 85;
+        }
+    }
+
+    // 3. Word overlap on normalized strings
+    $words1 = array_filter(explode(' ', $norm1));
+    $words2 = array_filter(explode(' ', $norm2));
+    if (count($words1) > 0 && count($words2) > 0) {
+        $commonWords = array_intersect($words1, $words2);
+        $wordOverlap = (count($commonWords) / max(count($words1), count($words2))) * 100;
+        $scores[] = $wordOverlap;
+    }
+
+    // 4. Core publisher name matching (first significant word)
+    $core1 = '';
+    $core2 = '';
+    if (count($words1) > 0) $core1 = $words1[0];
+    if (count($words2) > 0) $core2 = $words2[0];
+
+    if (strlen($core1) > 3 && strlen($core2) > 3) {
+        if ($core1 === $core2) {
+            $scores[] = 80;
+        } elseif (strpos($core1, $core2) !== false || strpos($core2, $core1) !== false) {
+            $scores[] = 70;
+        }
+    }
+
+    // Return the highest similarity score
+    return count($scores) > 0 ? max($scores) : 0;
 }
 
 /**

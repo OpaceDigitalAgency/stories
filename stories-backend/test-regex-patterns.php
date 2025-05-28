@@ -34,27 +34,46 @@ $amazonHtml = '<div id="formats" class="a-section a-spacing-none MMGridLayout"> 
 
                                </a></span></span>  </div>       </div>          </ul>  </div>          </div>';
 
-echo "<h3>1. Testing Selected Format Detection</h3>\n";
+echo "<h3>1. Testing Selected Format Detection (New Method)</h3>\n";
 
-// Test the selected format pattern
-$selectedPattern = '/id="tmm-grid-swatch-(\w+)"[^>]*class="[^"]*selected[^"]*".*?href="javascript:void\(0\)".*?aria-label="£(\d+\.\d{2})"/is';
+// Test each format individually to see which one is selected
+$formatChecks = [
+    'HARDCOVER' => 'Hardcover',
+    'PAPERBACK' => 'Paperback',
+    'KINDLE' => 'Kindle',
+    'AUDIOBOOK' => 'Audio CD'
+];
 
-if (preg_match($selectedPattern, $amazonHtml, $selectedMatch)) {
-    echo "<p><strong>✅ Selected format found:</strong> {$selectedMatch[1]} at £{$selectedMatch[2]}</p>\n";
-} else {
-    echo "<p><strong>❌ No selected format found</strong></p>\n";
-    
-    // Try simpler patterns to debug
-    echo "<h4>Debug: Testing simpler patterns</h4>\n";
-    
+$selectedFormat = null;
+$selectedPrice = null;
+
+foreach ($formatChecks as $formatKey => $formatName) {
+    $pattern = '/id="tmm-grid-swatch-' . $formatKey . '"[^>]*class="[^"]*selected[^"]*".*?href="javascript:void\(0\)".*?aria-label="£(\d+\.\d{2})"/is';
+
+    if (preg_match($pattern, $amazonHtml, $selectedMatch)) {
+        $selectedFormat = $formatName;
+        $selectedPrice = $selectedMatch[1];
+        echo "<p><strong>✅ Selected format found:</strong> {$formatName} at £{$selectedPrice}</p>\n";
+        break;
+    } else {
+        echo "<p>❌ {$formatName} not selected</p>\n";
+    }
+}
+
+if (!$selectedFormat) {
+    echo "<p><strong>❌ No selected format found with new method</strong></p>\n";
+
+    // Debug: Check what we can find
+    echo "<h4>Debug: Testing individual components</h4>\n";
+
     if (preg_match('/id="tmm-grid-swatch-HARDCOVER"[^>]*class="[^"]*selected[^"]*"/is', $amazonHtml)) {
         echo "<p>✓ Found HARDCOVER with selected class</p>\n";
     }
-    
+
     if (preg_match('/href="javascript:void\(0\)"/is', $amazonHtml)) {
         echo "<p>✓ Found javascript:void(0) href</p>\n";
     }
-    
+
     if (preg_match('/aria-label="£13\.70"/is', $amazonHtml)) {
         echo "<p>✓ Found £13.70 price</p>\n";
     }

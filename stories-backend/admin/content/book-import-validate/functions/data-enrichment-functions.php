@@ -1588,28 +1588,29 @@ function scrapeAmazonBuyingOptions($isbn) {
     $buyingOptions = [];
     $selectedFormat = null;
 
-    // First, detect which format is selected (has "selected" class and javascript:void(0))
+    // First, detect which format is selected by checking each format individually
     foreach ($responses as $responseType => $resp) {
-        // Look for the selected format - it has both "selected" class and javascript:void(0) href
-        if (preg_match('/id="tmm-grid-swatch-(\w+)"[^>]*class="[^"]*selected[^"]*".*?href="javascript:void\(0\)".*?aria-label="£(\d+\.\d{2})"/is', $resp, $selectedMatch)) {
-            $formatKey = $selectedMatch[1];
-            $selectedPrice = $selectedMatch[2];
+        // Check each format to see which one has "selected" class and javascript:void(0)
+        $formatChecks = [
+            'HARDCOVER' => 'Hardcover',
+            'PAPERBACK' => 'Paperback',
+            'KINDLE' => 'Kindle',
+            'AUDIOBOOK' => 'Audio CD'
+        ];
 
-            // Map format keys to display names
-            $formatNames = [
-                'HARDCOVER' => 'Hardcover',
-                'PAPERBACK' => 'Paperback',
-                'KINDLE' => 'Kindle',
-                'AUDIOBOOK' => 'Audio CD'
-            ];
+        foreach ($formatChecks as $formatKey => $formatName) {
+            // Look for this specific format with selected class and javascript:void(0)
+            $pattern = '/id="tmm-grid-swatch-' . $formatKey . '"[^>]*class="[^"]*selected[^"]*".*?href="javascript:void\(0\)".*?aria-label="£(\d+\.\d{2})"/is';
 
-            if (isset($formatNames[$formatKey])) {
-                $selectedFormat = $formatNames[$formatKey];
+            if (preg_match($pattern, $resp, $selectedMatch)) {
+                $selectedFormat = $formatName;
+                $selectedPrice = $selectedMatch[1];
+
                 if (AMAZON_DEBUG) {
                     echo "<p><strong>🎯 Selected format detected:</strong> {$selectedFormat} at £{$selectedPrice}</p>\n";
                 }
+                break 2; // Break out of both loops
             }
-            break;
         }
     }
 

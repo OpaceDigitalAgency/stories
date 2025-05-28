@@ -211,37 +211,63 @@ function getTableInfo($table) {
 
                 // DEBUG: Show all publishers for troubleshooting
                 echo '<div class="alert alert-light border">';
-                echo '<h6>🔍 DEBUG: All Publishers in Database (' . count($allPublishers) . ' total):</h6>';
-                echo '<div class="row">';
+                echo '<h6>🔍 DEBUG: Publisher Data Sources (' . count($allPublishers) . ' total combined):</h6>';
+
+                // Show breakdown by source
+                $bookSources = array_filter($allPublishers, function($pub) { return $pub['source'] === 'books_table'; });
+                $authorSources = array_filter($allPublishers, function($pub) { return $pub['source'] === 'authors_table'; });
+
+                echo '<div class="row mb-3">';
+                echo '<div class="col-md-6">';
+                echo '<strong>📚 From books.publisher field (' . count($bookSources) . '):</strong><br>';
+                echo '<small class="text-muted">These are the actual publisher strings used in books</small><br>';
+                foreach (array_slice($bookSources, 0, 10) as $pub) {
+                    echo '• ' . htmlspecialchars($pub['name']) . ' (' . $pub['book_count'] . ' books)<br>';
+                }
+                if (count($bookSources) > 10) echo '<small>... and ' . (count($bookSources) - 10) . ' more</small><br>';
+                echo '</div>';
+
+                echo '<div class="col-md-6">';
+                echo '<strong>👥 From authors table (' . count($authorSources) . '):</strong><br>';
+                echo '<small class="text-muted">These have publisher_id relationships</small><br>';
+                foreach (array_slice($authorSources, 0, 10) as $pub) {
+                    echo '• ' . htmlspecialchars($pub['name']) . ' (ID: ' . $pub['id'] . ', ' . $pub['book_count'] . ' books)<br>';
+                }
+                if (count($authorSources) > 10) echo '<small>... and ' . (count($authorSources) - 10) . ' more</small><br>';
+                echo '</div>';
+                echo '</div>';
+
+                // Show specific publishers we're looking for
                 $publisherNames = array_column($allPublishers, 'name');
-                $harperPublishers = array_filter($publisherNames, function($name) {
-                    return stripos($name, 'harper') !== false || stripos($name, 'collins') !== false;
+                $harperPublishers = array_filter($allPublishers, function($pub) {
+                    return stripos($pub['name'], 'harper') !== false || stripos($pub['name'], 'collins') !== false;
                 });
-                $bloomsburyPublishers = array_filter($publisherNames, function($name) {
-                    return stripos($name, 'bloomsbury') !== false;
+                $bloomsburyPublishers = array_filter($allPublishers, function($pub) {
+                    return stripos($pub['name'], 'bloomsbury') !== false;
                 });
-                $simonPublishers = array_filter($publisherNames, function($name) {
-                    return stripos($name, 'simon') !== false || stripos($name, 'schuster') !== false;
+                $simonPublishers = array_filter($allPublishers, function($pub) {
+                    return stripos($pub['name'], 'simon') !== false || stripos($pub['name'], 'schuster') !== false;
                 });
 
+                echo '<div class="row">';
                 echo '<div class="col-md-4">';
-                echo '<strong>Harper/Collins Publishers:</strong><br>';
-                foreach ($harperPublishers as $name) {
-                    echo '• ' . htmlspecialchars($name) . '<br>';
+                echo '<strong>🔍 Harper/Collins Found (' . count($harperPublishers) . '):</strong><br>';
+                foreach ($harperPublishers as $pub) {
+                    echo '• ' . htmlspecialchars($pub['name']) . ' (' . $pub['source'] . ', ' . $pub['book_count'] . ' books)<br>';
                 }
                 echo '</div>';
 
                 echo '<div class="col-md-4">';
-                echo '<strong>Bloomsbury Publishers:</strong><br>';
-                foreach ($bloomsburyPublishers as $name) {
-                    echo '• ' . htmlspecialchars($name) . '<br>';
+                echo '<strong>🔍 Bloomsbury Found (' . count($bloomsburyPublishers) . '):</strong><br>';
+                foreach ($bloomsburyPublishers as $pub) {
+                    echo '• ' . htmlspecialchars($pub['name']) . ' (' . $pub['source'] . ', ' . $pub['book_count'] . ' books)<br>';
                 }
                 echo '</div>';
 
                 echo '<div class="col-md-4">';
-                echo '<strong>Simon & Schuster Publishers:</strong><br>';
-                foreach ($simonPublishers as $name) {
-                    echo '• ' . htmlspecialchars($name) . '<br>';
+                echo '<strong>🔍 Simon & Schuster Found (' . count($simonPublishers) . '):</strong><br>';
+                foreach ($simonPublishers as $pub) {
+                    echo '• ' . htmlspecialchars($pub['name']) . ' (' . $pub['source'] . ', ' . $pub['book_count'] . ' books)<br>';
                 }
                 echo '</div>';
                 echo '</div>';

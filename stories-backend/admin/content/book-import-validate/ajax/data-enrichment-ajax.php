@@ -61,13 +61,21 @@ try {
                 // Log the request for debugging
                 error_log("Amazon data request for ISBN: $isbn");
 
+                // Convert ISBN-13 to ISBN-10 for Amazon (Amazon requires ISBN-10)
+                $isbn10 = convertISBN13ToISBN10($isbn);
+                if (!$isbn10) {
+                    // If conversion fails, try using the original ISBN
+                    $isbn10 = $isbn;
+                }
+                error_log("Amazon ISBN conversion: $isbn -> $isbn10");
+
                 // Ensure AMAZON_DEBUG is defined for this context
                 if (!defined('AMAZON_DEBUG')) {
-                    define('AMAZON_DEBUG', false);
+                    define('AMAZON_DEBUG', true); // Enable debug for troubleshooting
                 }
 
                 // Fetch cached Amazon enrichment payload (includes all options, default format, and price)
-                $amazonPayload = getAmazonEnrichmentData($isbn);
+                $amazonPayload = getAmazonEnrichmentData($isbn10);
 
                 // Log the result for debugging
                 error_log("Amazon payload result: " . json_encode($amazonPayload));
@@ -76,7 +84,8 @@ try {
                     'success' => true,
                     'data' => $amazonPayload,
                     'debug' => [
-                        'isbn_used' => $isbn,
+                        'isbn_original' => $isbn,
+                        'isbn_used' => $isbn10,
                         'options_count' => count($amazonPayload['buying_options'] ?? []),
                         'selected_format' => $amazonPayload['selected_format'] ?? null
                     ]

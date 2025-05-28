@@ -42,6 +42,12 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
     function applyEnrichmentChanges(bookId, selectedFields) {
         $('#apply-enrichment-btn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Applying...');
 
+        // Add debugging display
+        console.log('🔧 APPLY ENRICHMENT DEBUG:');
+        console.log('Book ID:', bookId);
+        console.log('Selected Fields:', selectedFields);
+        console.log('Fields JSON:', JSON.stringify(selectedFields));
+
         $.ajax({
             url: 'book-import-validate/ajax/data-enrichment-ajax.php',
             method: 'POST',
@@ -52,23 +58,52 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
             },
             dataType: 'json',
             success: function(response) {
+                console.log('🔧 Apply enrichment response:', response);
+
+                // Show detailed debugging information on screen
+                let debugMessage = '🔧 ENRICHMENT DEBUG RESPONSE:\n\n';
+                debugMessage += 'Success: ' + response.success + '\n';
+                debugMessage += 'Message: ' + (response.message || 'No message') + '\n';
+
+                if (response.debug) {
+                    debugMessage += 'Debug Info: ' + JSON.stringify(response.debug, null, 2) + '\n';
+                }
+
+                if (response.updated_fields) {
+                    debugMessage += 'Updated Fields: ' + JSON.stringify(response.updated_fields) + '\n';
+                }
+
+                if (response.additional_updates) {
+                    debugMessage += 'Additional Updates: ' + JSON.stringify(response.additional_updates) + '\n';
+                }
+
+                console.log(debugMessage);
+
                 if (response.success) {
                     $('#dataEnrichmentModal').modal('hide');
 
-                    // Show success message
-                    showAlert('success', `Successfully updated ${Object.keys(selectedFields).length} field(s)!`);
+                    // Show success message with debug info
+                    showAlert('success', `✅ SUCCESS! Updated ${Object.keys(selectedFields).length} field(s)!\n\n${debugMessage}`);
 
                     // Force page refresh with cache busting
                     setTimeout(() => {
                         window.location.href = window.location.href.split('?')[0] + '?_refresh=' + Date.now();
-                    }, 500);
+                    }, 2000);
                 } else {
-                    showAlert('danger', 'Error applying changes: ' + (response.message || 'Unknown error'));
+                    showAlert('danger', `❌ ERROR! ${response.message || 'Unknown error'}\n\n${debugMessage}`);
                     $('#apply-enrichment-btn').prop('disabled', false).html('<i class="fas fa-save"></i> Apply Selected Changes');
                 }
             },
             error: function(xhr, status, error) {
-                showAlert('danger', 'Network error: ' + error);
+                console.error('🔧 AJAX error:', error);
+                console.error('🔧 XHR response:', xhr.responseText);
+
+                let errorMessage = '🔧 AJAX ERROR DEBUG:\n\n';
+                errorMessage += 'Status: ' + status + '\n';
+                errorMessage += 'Error: ' + error + '\n';
+                errorMessage += 'Response Text: ' + xhr.responseText + '\n';
+
+                showAlert('danger', `❌ AJAX ERROR!\n\n${errorMessage}`);
                 $('#apply-enrichment-btn').prop('disabled', false).html('<i class="fas fa-save"></i> Apply Selected Changes');
             }
         });
@@ -189,7 +224,7 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
             const selectedFields = {};
             $('.field-checkbox:checked').each(function() {
                 const fieldName = $(this).val();
-                const fieldData = currentEnrichmentData.fields[fieldName];
+                const fieldData = window.currentEnrichmentData.fields[fieldName];
 
                 // Handle multi-source fields
                 if (fieldData.new_data && fieldData.new_data.options) {
@@ -213,12 +248,12 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
             }
 
             // Apply the changes
-            applyEnrichmentChanges(currentBookId, selectedFields);
+            applyEnrichmentChanges(window.currentBookId, selectedFields);
         });
 
         // Fix All button - selects all fields and applies them
         $('#fix-all-btn').click(function() {
-            if (!currentEnrichmentData || !currentEnrichmentData.fields) {
+            if (!window.currentEnrichmentData || !window.currentEnrichmentData.fields) {
                 alert('No enrichment data available.');
                 return;
             }
@@ -227,8 +262,8 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
             $('.field-checkbox:not(:disabled)').prop('checked', true).trigger('change');
 
             // For fields with multiple options, auto-select the highest confidence option
-            Object.keys(currentEnrichmentData.fields).forEach(fieldName => {
-                const fieldData = currentEnrichmentData.fields[fieldName];
+            Object.keys(window.currentEnrichmentData.fields).forEach(fieldName => {
+                const fieldData = window.currentEnrichmentData.fields[fieldName];
 
                 if (fieldData && fieldData.new_data && fieldData.new_data.options) {
                     // Find the option with highest confidence
@@ -251,7 +286,7 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
             const selectedFields = {};
             $('.field-checkbox:checked').each(function() {
                 const fieldName = $(this).val();
-                const fieldData = currentEnrichmentData.fields[fieldName];
+                const fieldData = window.currentEnrichmentData.fields[fieldName];
 
                 // Handle multi-source fields
                 if (fieldData.new_data && fieldData.new_data.options) {
@@ -270,7 +305,7 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
             });
 
             // Apply all changes immediately without user intervention
-            applyEnrichmentChanges(currentBookId, selectedFields);
+            applyEnrichmentChanges(window.currentBookId, selectedFields);
         });
     });
 

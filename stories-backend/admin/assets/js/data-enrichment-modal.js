@@ -3,14 +3,14 @@
 if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
     window.dataEnrichmentModalLoaded = true;
 
-    // Global variables for enrichment modal
-    let currentEnrichmentData = null;
-    let currentBookId = null;
-    let currentBookISBN = null;
+    // Global variables for enrichment modal - make them truly global
+    window.currentEnrichmentData = null;
+    window.currentBookId = null;
+    window.currentBookISBN = null;
 
     function openDataEnrichmentModal(bookId, title, author, currentISBN = '') {
-        currentBookId = bookId;
-        currentBookISBN = String(currentISBN || ''); // Ensure it's always a string
+        window.currentBookId = bookId;
+        window.currentBookISBN = String(currentISBN || ''); // Ensure it's always a string
 
         // Reset modal state
         $('#enrichment-loading').show();
@@ -25,11 +25,11 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         $('#dataEnrichmentModal').modal('show');
 
         // Fetch enrichment data
-        fetchEnrichmentData(title, author, currentISBN);
+        fetchEnrichmentData(title, author, window.currentBookISBN);
     }
 
     function fetchEnrichmentData(title, author, currentISBN) {
-        console.log('Fetching enrichment data for:', { title, author, currentISBN, bookId: currentBookId });
+        console.log('Fetching enrichment data for:', { title, author, currentISBN, bookId: window.currentBookId });
 
         $.ajax({
             url: 'book-import-validate/ajax/data-enrichment-ajax.php',
@@ -39,14 +39,14 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 title: title,
                 author: author,
                 current_isbn: currentISBN,
-                book_id: currentBookId
+                book_id: window.currentBookId
             },
             dataType: 'json',
             success: function(response) {
                 console.log('Enrichment response:', response);
                 $('#enrichment-loading').hide();
                 if (response.success) {
-                    currentEnrichmentData = response.data;
+                    window.currentEnrichmentData = response.data;
                     displayEnrichmentResults(response.data, response.debug);
                 } else {
                     showEnrichmentError(response.message || 'Unknown error occurred');
@@ -156,7 +156,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             return;
         }
 
-        console.log('📦 Starting AJAX fetch for Amazon data. ISBN:', currentBookISBN);
+        console.log('📦 Starting AJAX fetch for Amazon data. ISBN:', window.currentBookISBN);
 
         // Show loading indicators for Amazon fields
         amazonFields.forEach(fieldName => {
@@ -170,7 +170,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         // Fetch Amazon data
         $.post('book-import-validate/ajax/data-enrichment-ajax.php', {
             action: 'get_amazon_data',
-            isbn: currentBookISBN
+            isbn: window.currentBookISBN
         }, function(res) {
             console.log('📦 Amazon AJAX response received:', res);
 
@@ -209,14 +209,14 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         console.log('📦 updateEnrichmentDataWithAmazon called with:', amazonData);
 
         // Merge Amazon data into the current enrichment data
-        if (currentEnrichmentData && currentEnrichmentData.fields) {
+        if (window.currentEnrichmentData && window.currentEnrichmentData.fields) {
             Object.keys(amazonData).forEach(fieldName => {
                 const amazonFieldData = amazonData[fieldName];
 
                 // Add or update the field in the enrichment data
-                currentEnrichmentData.fields[fieldName] = {
+                window.currentEnrichmentData.fields[fieldName] = {
                     label: amazonFieldData.label || fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-                    current_value: currentEnrichmentData.fields[fieldName]?.current_value || null,
+                    current_value: window.currentEnrichmentData.fields[fieldName]?.current_value || null,
                     new_data: amazonFieldData.new_data
                 };
 
@@ -224,7 +224,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             });
 
             // Re-render the enrichment fields to include the new Amazon data
-            displayEnrichmentFields(currentEnrichmentData.fields);
+            displayEnrichmentFields(window.currentEnrichmentData.fields);
             console.log('📦 Re-rendered enrichment fields with Amazon data');
         } else {
             console.error('📦 No current enrichment data available to merge Amazon data');

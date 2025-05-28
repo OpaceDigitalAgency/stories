@@ -24,6 +24,62 @@ Each book record is imported or enriched by matching ISBNs and retrieving releva
 
 ## 🗂️ Database Table and API Field Mapping
 
+### Books Table Structure (Current as of May 28, 2025)
+
+| Database Field | Type | Description | API Sources |
+|---|---|---|---|
+| `directory_item_id` | int NOT NULL | Primary key linking to directory_items | - |
+| `title` | varchar(255) | Book title | Google Books, OpenLibrary |
+| `isbn` | varchar(20) | ISBN-10 format | Google Books, OpenLibrary |
+| `isbn13` | varchar(20) | ISBN-13 format | Google Books, OpenLibrary |
+| `author` | varchar(255) | Primary author name | Google Books, OpenLibrary |
+| `publisher` | varchar(255) | Publisher name | Google Books, OpenLibrary |
+| `publication_date` | date | Publication date (YYYY-MM-DD) | Google Books, OpenLibrary |
+| `page_count` | int | Number of pages | Google Books, OpenLibrary |
+| `price_range` | varchar(20) | Price range from Amazon | Amazon |
+| `age_range` | varchar(50) | Target age range | Google Books, OpenLibrary |
+| `reading_level` | varchar(50) | Reading difficulty level | OpenLibrary |
+| `language` | varchar(50) | Primary language | Google Books, OpenLibrary |
+| `format` | varchar(50) | Book format (hardcover, paperback, etc.) | Amazon |
+| `cover_url` | varchar(255) | Cover image URL | Google Books, OpenLibrary |
+| `purchase_links` | json | Amazon purchase links by format | Amazon |
+| `preview_link` | varchar(255) | Preview/sample link | Google Books |
+| `metadata` | json | Full API response data | All sources |
+| `series` | varchar(255) | Series name if applicable | Google Books, OpenLibrary |
+| `publisher_id` | int | Foreign key to authors table | Derived from publisher |
+| `internet_archive_id` | varchar(100) | Internet Archive identifier | OpenLibrary |
+| `awards` | text | Awards and recognitions | OpenLibrary |
+| `characters` | text | Main characters | OpenLibrary |
+| `settings` | text | Story settings/locations | OpenLibrary |
+| `last_validated` | timestamp | Last validation timestamp | System |
+| `validation_status` | enum | pending/valid/invalid/partial | System |
+| `alternative_isbns` | text | Comma-separated alternative ISBNs | OpenLibrary |
+
+### Related Tables
+
+#### Tags Table (for Genres)
+| Field | Type | Description |
+|---|---|---|
+| `id` | int | Primary key |
+| `name` | varchar(255) | Genre/tag name |
+| `slug` | varchar(255) | URL-friendly slug |
+
+#### Directory Item Tags Junction Table
+| Field | Type | Description |
+|---|---|---|
+| `directory_item_id` | int | Links to books.directory_item_id |
+| `tag_id` | int | Links to tags.id |
+
+#### Authors Table (includes Publishers)
+| Field | Type | Description |
+|---|---|---|
+| `id` | int | Primary key |
+| `name` | varchar(255) | Author/publisher name |
+| `type` | varchar(50) | 'author' or 'publisher' |
+| `slug` | varchar(255) | URL-friendly slug |
+| `bio` | text | Biography/description |
+| `avatar_url` | varchar(255) | Profile image URL |
+
 ```markdown
 +--------------------------+---------------------------+-------------------------------------------+-------------------------------------------+-------------------------------------------+
 | Table                   | Column                    | Google Books API                          | Open Library API                          | Amazon UK Scraping                       |

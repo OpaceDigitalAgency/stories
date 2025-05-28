@@ -485,9 +485,14 @@ function handleApplyEnrichment() {
     error_log("Final SQL: $sql");
     error_log("Final params: " . json_encode($params));
 
+    // Execute the update
     $stmt = $db->prepare($sql);
     if ($stmt->execute($params)) {
         error_log("SQL execution successful");
+
+        // CRITICAL: Synchronize age range and reading level after any update
+        synchronizeAgeAndReadingLevel($bookId);
+        error_log("Synchronized age/reading level for book ID: $bookId");
         $affectedRows = $stmt->rowCount();
         error_log("Affected rows: $affectedRows");
         // Process additional relationships and complex fields
@@ -1980,6 +1985,10 @@ function handleSynchronizeAgeRanges() {
             '12+' => '11-14 years',
             '12 and up' => '11-14 years',
             '9+' => '9-10 years',
+
+            // Additional mappings to catch remaining inconsistencies
+            'All Ages' => '5-6 years',
+            'Adult' => '18+ years',
             'Unknown' => null, // Keep as null for unknown
 
             // Additional mappings for common variations
@@ -2147,5 +2156,112 @@ function handleBulkFixSelected() {
         $db->rollBack();
         error_log("Error in bulk fix: " . $e->getMessage());
         echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+    }
+}
+
+/**
+ * Synchronize age range and reading level for a specific book
+ * This ensures consistency whenever either field is updated
+ */
+function synchronizeAgeAndReadingLevel($bookId) {
+    global $db;
+
+    try {
+        // Get current age range and reading level for the book
+        $stmt = $db->prepare("SELECT age_range, reading_level FROM books WHERE directory_item_id = ?");
+        $stmt->execute([$bookId]);
+        $book = $stmt->fetch();
+
+        if (!$book) {
+            error_log("Book not found for synchronization: $bookId");
+            return false;
+        }
+
+        $currentAge = $book['age_range'];
+        $currentReading = $book['reading_level'];
+
+        // Age range to reading level mapping
+        $ageToReadingMap = [
+            '0-12 months' => 'Pre-literacy (Sensory)',
+            '12-24 months' => 'Pre-literacy (Naming)',
+            '2-3 years' => 'Pre-literacy (Mimicry)',
+            '3-4 years' => 'Early Pre-reader',
+            '4-5 years' => 'Beginning Reader',
+            '5-6 years' => 'Early Reader',
+            '6-7 years' => 'Developing Reader',
+            '7-8 years' => 'Transitional Reader',
+            '8-9 years' => 'Fluent Reader',
+            '9-10 years' => 'Fluent Reader',
+            '10-11 years' => 'Fluent Reader',
+            '11-14 years' => 'Advanced Reader',
+            '14-16 years' => 'Advanced Reader',
+            '16-18 years' => 'Advanced Reader',
+            '18+ years' => 'Proficient Reader'
+        ];
+
+        // Reading level to age range mapping
+        $readingToAgeMap = [
+            'Pre-literacy (Sensory)' => '0-12 months',
+            'Pre-literacy (Naming)' => '12-24 months',
+            'Pre-literacy (Mimicry)' => '2-3 years',
+            'Early Pre-reader' => '3-4 years',
+            'Beginning Reader' => '4-5 years',
+            'Early Reader' => '5-6 years',
+            'Developing Reader' => '6-7 years',
+            'Transitional Reader' => '7-8 years',
+            'Fluent Reader' => '8-9 years', // Default to youngest fluent reader age
+            'Advanced Reader' => '11-14 years', // Default to middle advanced age
+            'Proficient Reader' => '18+ years'
+        ];
+
+        $updateFields = [];
+        $params = [];
+
+        // If age range is set but reading level is missing/inconsistent, sync reading level
+        if (!empty($currentAge) && isset($ageToReadingMap[$currentAge])) {
+            $expectedReading = $ageToReadingMap[$currentAge];
+            if (empty($currentReading) || !str_contains($currentReading, $expectedReading)) {
+                $updateFields[] = "reading_level = ?";
+                $params[] = $expectedReading;
+                error_log("Syncing reading level: '$currentAge' → '$expectedReading'");
+            }
+        }
+
+        // If reading level is set but age range is missing/inconsistent, sync age range
+        if (!empty($currentReading)) {
+            foreach ($readingToAgeMap as $readingStage => $expectedAge) {
+                if (str_contains($currentReading, $readingStage)) {
+                    if (empty($currentAge) || $currentAge !== $expectedAge) {
+                        $updateFields[] = "age_range = ?";
+                        $params[] = $expectedAge;
+                        error_log("Syncing age range: '$currentReading' → '$expectedAge'");
+                    }
+                    break;
+                }
+            }
+        }
+
+        // Execute synchronization update if needed
+        if (!empty($updateFields)) {
+            $params[] = $bookId;
+            $sql = "UPDATE books SET " . implode(', ', $updateFields) . " WHERE directory_item_id = ?";
+            $stmt = $db->prepare($sql);
+            $result = $stmt->execute($params);
+
+            if ($result) {
+                error_log("Successfully synchronized age/reading level for book $bookId");
+                return true;
+            } else {
+                error_log("Failed to synchronize age/reading level for book $bookId");
+                return false;
+            }
+        }
+
+        error_log("No synchronization needed for book $bookId");
+        return true;
+
+    } catch (Exception $e) {
+        error_log("Error synchronizing age/reading level for book $bookId: " . $e->getMessage());
+        return false;
     }
 }

@@ -1021,13 +1021,13 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
             if (isset($match['subject_facet']) && is_array($match['subject_facet'])) {
                 foreach ($match['subject_facet'] as $subject) {
                     if (stripos($subject, "Children's Books/Ages 9-12 Fiction") !== false) {
-                        $ageRange = '9-12'; // Match exact current database value
+                        $ageRange = '9-10 years'; // Use standard synchronized value
                         break;
                     } elseif (stripos($subject, 'Tweens') !== false) {
-                        $ageRange = '8-12'; // Match exact database value
+                        $ageRange = '8-9 years'; // Use standard synchronized value
                         break;
                     } elseif (stripos($subject, 'Young Adult Fiction') !== false) {
-                        $ageRange = '12+'; // Match exact database value
+                        $ageRange = '11-14 years'; // Use standard synchronized value
                         break;
                     }
                 }
@@ -1037,9 +1037,9 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
             if (!$ageRange && isset($match['maturity_rating'])) {
                 $maturityRating = $match['maturity_rating'];
                 if ($maturityRating === 'NOT_MATURE') {
-                    $ageRange = 'All Ages'; // Keep as All Ages for NOT_MATURE
+                    $ageRange = '5-6 years'; // Use standard value for general children's books
                 } elseif ($maturityRating === 'MATURE') {
-                    $ageRange = 'Adult'; // Match exact database value
+                    $ageRange = '18+ years'; // Use standard synchronized value
                 }
             }
 

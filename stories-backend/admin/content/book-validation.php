@@ -223,7 +223,7 @@ require_once '../includes/header.php';
                                     'publisher' => $publisher,
                                     'pub_date' => $pubDate,
                                     'format' => $format,
-                                    'status' => '<span class="badge badge-' . $statusClass . '" title="' . htmlspecialchars($statusMessage) . '"><i class="fas fa-' . $statusIcon . '"></i> ' . ucfirst($isbnStatus) . '</span>' .
+                                    'status' => '<span class="isbn-status badge badge-' . $statusClass . '" title="' . htmlspecialchars($statusMessage) . '" data-book-id="' . $book['id'] . '" data-isbn="' . htmlspecialchars($book['isbn13'] ?? $book['isbn'] ?? '') . '"><i class="fas fa-' . $statusIcon . '"></i> ' . ucfirst($isbnStatus) . '</span>' .
                                                '<br><span class="goodreads-status badge badge-secondary" data-book-id="' . $book['id'] . '" data-isbn="' . htmlspecialchars($book['isbn13'] ?? $book['isbn'] ?? '') . '"><i class="fas fa-spinner fa-spin"></i> Checking...</span>',
                                     'missing_data' => $missingDataDisplay,
                                     'actions' => '<a href="book-import-validate-new.php?action=validate_book&book_id=' . $book['id'] . '" ' .
@@ -415,7 +415,7 @@ require_once '../includes/header.php';
 static $bookValidationScriptLoaded = false;
 if (!$bookValidationScriptLoaded) {
     $bookValidationScriptLoaded = true;
-    $cacheBuster = '?v=' . time();
+    $cacheBuster = '?v=' . time() . '_' . rand(1000, 9999);
     echo '<script src="../assets/js/book-validation.js' . $cacheBuster . '"></script>';
 }
 ?>

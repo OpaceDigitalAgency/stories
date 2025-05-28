@@ -7,7 +7,8 @@ if (typeof window.bookValidationLoaded === 'undefined') {
         console.log('📚 Book validation JavaScript loaded');
 
         // Check if required elements exist
-        console.log('📚 Status field elements found:', $('.goodreads-status').length);
+        console.log('📚 ISBN status elements found:', $('.isbn-status').length);
+        console.log('📚 Goodreads status elements found:', $('.goodreads-status').length);
         console.log('📚 Validation table found:', $('#isbn-validation-table').length);
 
         // Disable auto-validation to reduce AJAX load - use manual validation instead
@@ -228,7 +229,7 @@ if (typeof window.bookValidationLoaded === 'undefined') {
                             if (typeof response === 'object' && response.status === 'success') {
                                 const validation = response.validation;
 
-                                // Preserve existing Goodreads status if it exists
+                                // Update only the ISBN status badge, preserve Goodreads status
                                 const existingGoodreadsStatus = $statusCell.find('.goodreads-status');
                                 let goodreadsHtml = '';
                                 if (existingGoodreadsStatus.length > 0) {
@@ -239,7 +240,7 @@ if (typeof window.bookValidationLoaded === 'undefined') {
                                     goodreadsHtml = `<br><span class="goodreads-status badge badge-secondary" data-book-id="${bookId}" data-isbn="${isbn}"><i class="fas fa-spinner fa-spin"></i> Checking...</span>`;
                                 }
 
-                                $statusCell.html(`<span class="badge badge-${validation.class}" title="${validation.message}"><i class="fas fa-${validation.icon}"></i> ${validation.status.charAt(0).toUpperCase() + validation.status.slice(1)}</span>${goodreadsHtml}`);
+                                $statusCell.html(`<span class="isbn-status badge badge-${validation.class}" title="${validation.message}" data-book-id="${bookId}" data-isbn="${$row.find('td:nth-child(3)').text().trim()}"><i class="fas fa-${validation.icon}"></i> ${validation.status.charAt(0).toUpperCase() + validation.status.slice(1)}</span>${goodreadsHtml}`);
 
                                 // Update Fix button if needed - preserve existing Enrich buttons
                                 const $actionsCell = $row.find('td:last-child');
@@ -308,8 +309,8 @@ if (typeof window.bookValidationLoaded === 'undefined') {
         // Function to perform instant validation for all books
         function performInstantValidation() {
             console.log('📚 performInstantValidation called');
-            const $statusElements = $('.goodreads-status');
-            console.log('📚 Found', $statusElements.length, 'status elements for instant validation');
+            const $statusElements = $('.isbn-status');
+            console.log('📚 Found', $statusElements.length, 'ISBN status elements for instant validation');
 
             $statusElements.each(function(index) {
                 const $statusElement = $(this);
@@ -334,22 +335,19 @@ if (typeof window.bookValidationLoaded === 'undefined') {
                 const isValidFormat = (cleanISBN.length === 10 || cleanISBN.length === 13);
 
                 if (isValidFormat) {
-                    // Only update if it's currently showing "Unknown" - don't overwrite "Valid" status
-                    if ($statusElement.hasClass('badge-secondary') || $statusElement.text().includes('Checking...')) {
-                        // Update class and text without overwriting the entire element
-                        $statusElement.removeClass('badge-secondary badge-warning badge-info')
+                    // Only update if it's currently showing "Unknown" - don't overwrite existing "Valid" status
+                    if ($statusElement.hasClass('badge-secondary') && $statusElement.text().includes('Unknown')) {
+                        // Update class and text, preserving the icon
+                        $statusElement.removeClass('badge-secondary badge-warning')
                                     .addClass('badge-success')
-                                    .text('Valid');
+                                    .html('<i class="fas fa-check"></i> Valid');
                         console.log(`📚 ✅ Instant validation: Valid ISBN format for ${isbn}`);
                     }
                 } else {
-                    // Only update if it's currently showing "Checking..." - don't overwrite existing status
-                    if ($statusElement.text().includes('Checking...')) {
-                        // Update class and text without overwriting the entire element
-                        $statusElement.removeClass('badge-secondary badge-success badge-info')
-                                    .addClass('badge-warning')
-                                    .text('Unknown');
-                        console.log(`📚 ⚠️ Instant validation: Invalid ISBN format for ${isbn}`);
+                    // Only update if it's currently showing "Unknown" - don't overwrite existing status
+                    if ($statusElement.hasClass('badge-secondary') && $statusElement.text().includes('Unknown')) {
+                        // Keep as Unknown for invalid format
+                        console.log(`📚 ⚠️ Instant validation: Invalid ISBN format for ${isbn} - keeping as Unknown`);
                     }
                 }
             });

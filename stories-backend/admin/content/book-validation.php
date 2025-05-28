@@ -514,9 +514,9 @@ if (!$bookValidationScriptLoaded) {
 static $dataEnrichmentScriptsLoaded = false;
 if (!$dataEnrichmentScriptsLoaded) {
     $dataEnrichmentScriptsLoaded = true;
-    echo '<script src="../assets/js/data-enrichment-modal.js"></script>';
-    echo '<script src="../assets/js/data-enrichment-helpers.js"></script>';
-    echo '<script src="../assets/js/data-enrichment-utils.js"></script>';
+    echo '<script src="/admin/assets/js/data-enrichment-modal.js"></script>';
+    echo '<script src="/admin/assets/js/data-enrichment-helpers.js"></script>';
+    echo '<script src="/admin/assets/js/data-enrichment-utils.js"></script>';
 }
 ?>
 

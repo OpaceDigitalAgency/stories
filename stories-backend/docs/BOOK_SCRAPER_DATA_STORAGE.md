@@ -524,6 +524,105 @@ From Goodreads `https://www.goodreads.com/book/show/474073.Coraline`:
 
 ---
 
+## 🛠️ Troubleshooting Data Save Issues
+
+### Common Issues When "Apply Selected Changes" Doesn't Save Data
+
+#### 1. **Database Table Structure Mismatch**
+The most common issue is when the enrichment system tries to update fields that don't exist in the actual `books` table.
+
+**Current Books Table Structure (as of May 28, 2025):**
+```sql
+CREATE TABLE `books` (
+  `directory_item_id` int NOT NULL,
+  `title` varchar(255) DEFAULT NULL,
+  `isbn` varchar(20) DEFAULT NULL,
+  `isbn13` varchar(20) DEFAULT NULL,
+  `author` varchar(255) DEFAULT NULL,
+  `publisher` varchar(255) DEFAULT NULL,
+  `publication_date` date DEFAULT NULL,
+  `page_count` int DEFAULT NULL,
+  `price_range` varchar(20) DEFAULT NULL,
+  `age_range` varchar(50) DEFAULT NULL,
+  `reading_level` varchar(50) DEFAULT NULL,
+  `language` varchar(50) DEFAULT NULL,
+  `format` varchar(50) DEFAULT NULL,
+  `cover_url` varchar(255) DEFAULT NULL,
+  `purchase_links` json DEFAULT NULL,
+  `preview_link` varchar(255) DEFAULT NULL,
+  `metadata` json DEFAULT NULL,
+  `series` varchar(255) DEFAULT NULL,
+  `publisher_id` int DEFAULT NULL,
+  `internet_archive_id` varchar(100) DEFAULT NULL,
+  `awards` text,
+  `characters` text,
+  `settings` text,
+  `last_validated` timestamp NULL DEFAULT NULL,
+  `validation_status` enum('pending','valid','invalid','partial') DEFAULT 'pending',
+  `alternative_isbns` text COMMENT 'Comma-separated list of alternative ISBNs from OpenLibrary'
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+```
+
+#### 2. **Debugging Steps**
+
+**Step 1: Check Error Logs**
+The system now includes comprehensive debugging. Check your server error logs for messages like:
+```
+=== APPLY ENRICHMENT DEBUG START ===
+Book ID: 2104
+Fields JSON: {"author":{"value":"Neil Gaiman","source":"google_books"}}
+Processing field: author with value: "Neil Gaiman"
+Column 'author' exists in books table: YES
+Added author to update: Neil Gaiman
+Total update fields prepared: 1
+Final SQL: UPDATE books SET author = ?, validation_status = 'partial', last_validated = NOW() WHERE directory_item_id = ?
+SQL execution successful
+Affected rows: 1
+```
+
+**Step 2: Verify Field Mapping**
+The system only updates fields that exist in the `books` table. Check the `filterRelevantFields()` function in `data-enrichment-ajax.php` for the complete list of supported fields.
+
+**Step 3: Check Database Connection**
+Verify that the database connection is working by checking for connection errors in the logs.
+
+#### 3. **Field Validation Issues**
+
+The system uses the `columnExists()` function to verify each field exists before attempting to update it. If a field doesn't exist in the database, it will be skipped with a log message like:
+```
+Skipping fieldname - column does not exist in books table
+```
+
+#### 4. **Empty Update Fields**
+
+If no valid fields are found to update, you'll see:
+```
+ERROR: No valid fields to update
+```
+
+This happens when:
+- All selected fields have empty values
+- All selected fields don't exist in the database table
+- The field data structure is malformed
+
+#### 5. **SQL Execution Errors**
+
+If the SQL execution fails, you'll see detailed error information:
+```
+SQL execution failed. Error info: ["HY000",1146,"Table 'stories_db.books' doesn't exist"]
+```
+
+### Quick Fixes
+
+1. **Update Database Schema**: Run the setup scripts to ensure all required columns exist:
+   ```bash
+   mysql -u stories_user -p stories_db < stories-backend/admin/scripts/setup_validation_system.sql
+   ```
+
+2. **Check Field Names**: Ensure the enrichment system is using the correct field names that match the database schema.
+
+3. **Verify Book ID**: Make sure the book ID being passed exists in the `books` table.
+
 ## 🛠️ Useful TODOs
 
 - Add logic to query Google search results for pricing where available.

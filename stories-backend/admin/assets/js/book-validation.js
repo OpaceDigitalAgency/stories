@@ -377,7 +377,8 @@ if (typeof window.bookValidationLoaded === 'undefined') {
                 const isbnString = String(isbn || '').trim();
                 if (!isbnString || isbnString === '') {
                     console.log('📚 No ISBN found for element', index);
-                    $statusElement.html('<span class="badge badge-secondary">No ISBN</span>');
+                    $statusElement.removeClass('badge-warning badge-success badge-danger').addClass('badge-secondary')
+                        .html('No ISBN');
                     return;
                 }
 
@@ -395,13 +396,16 @@ if (typeof window.bookValidationLoaded === 'undefined') {
                         success: function(response) {
                             console.log('📚 Goodreads response for ISBN ' + isbnString + ':', response);
                             if (response.success && response.exists) {
-                                $statusElement.html('<span class="badge" style="background-color: #28a745; color: white; border: none;"><i class="fas fa-book"></i> Goodreads</span>');
+                                $statusElement.removeClass('badge-secondary badge-warning badge-danger').addClass('badge-success')
+                                    .html('<i class="fas fa-book"></i> Goodreads');
                                 console.log('📚 ✅ Updated Goodreads status to: Found on Goodreads');
                             } else if (response.success) {
-                                $statusElement.html('<span class="badge" style="background-color: #dc3545; color: white; border: none;"><i class="fas fa-times"></i> Not on Goodreads</span>');
+                                $statusElement.removeClass('badge-secondary badge-warning badge-success').addClass('badge-danger')
+                                    .html('<i class="fas fa-times"></i> Not on Goodreads');
                                 console.log('📚 ❌ Updated Goodreads status to: Not on Goodreads');
                             } else {
-                                $statusElement.html('<span class="badge" style="background-color: #ffc107; color: white; border: none;"><i class="fas fa-exclamation-triangle"></i> Error</span>');
+                                $statusElement.removeClass('badge-secondary badge-success badge-danger').addClass('badge-warning')
+                                    .html('<i class="fas fa-exclamation-triangle"></i> Error');
                                 console.error('📚 Goodreads validation error:', response.message);
                             }
                         },
@@ -412,7 +416,8 @@ if (typeof window.bookValidationLoaded === 'undefined') {
                                 error: error,
                                 responseText: xhr.responseText
                             });
-                            $statusElement.html('<span class="badge badge-warning"><i class="fas fa-exclamation-triangle"></i> AJAX Error</span>');
+                            $statusElement.removeClass('badge-secondary badge-success badge-danger').addClass('badge-warning')
+                                .html('<i class="fas fa-exclamation-triangle"></i> AJAX Error');
                         }
                     });
                 }, index * 500); // 500ms delay between each request

@@ -254,7 +254,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         
         // Make AJAX call to get book data from database
         $.ajax({
-            url: 'book-import-validate/ajax/data-enrichment-ajax.php',
+            url: '/admin/content/book-import-validate/ajax/data-enrichment-ajax.php',
             method: 'POST',
             data: {
                 action: 'get_book_isbns',
@@ -335,7 +335,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         console.log('Fetching enrichment data for:', { title, author, currentISBN, bookId: window.currentBookId });
 
         $.ajax({
-            url: 'book-import-validate/ajax/data-enrichment-ajax.php',
+            url: '/admin/content/book-import-validate/ajax/data-enrichment-ajax.php',
             method: 'POST',
             data: {
                 action: 'get_enrichment_data',

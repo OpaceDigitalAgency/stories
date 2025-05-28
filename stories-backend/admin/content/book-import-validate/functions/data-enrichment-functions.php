@@ -226,7 +226,7 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
                                 error_log("Looking for publisher match for: " . $option['value']);
                                 $bestMatch = findBestPublisherMatch($option['value']);
                                 error_log("Publisher match result: " . json_encode($bestMatch));
-                                if ($bestMatch && $bestMatch['confidence'] >= 60) { // Lowered threshold to catch more matches
+                                if ($bestMatch && $bestMatch['confidence'] >= 30) { // Lowered threshold for debugging
                                     $option['recommended'] = $bestMatch['name'];
                                     $option['recommendation_confidence'] = $bestMatch['confidence'];
                                     $option['match_type'] = $bestMatch['match_type'];
@@ -290,7 +290,7 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
                     'database_match' => $currentPublisherMatch
                 ];
                 error_log("Current publisher exactly matches database: " . $currentPublisherMatch['name']);
-            } elseif ($currentPublisherMatch['confidence'] >= 60) {
+            } elseif ($currentPublisherMatch['confidence'] >= 30) {
                 // Current value has a good match - offer recommendation
                 $combinedFields['publisher'] = [
                     'current_value' => $currentPublisher,
@@ -1215,7 +1215,7 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
             // Try to find a better match from existing publishers
             $bestMatch = findBestPublisherMatch($publisherName);
 
-            if ($bestMatch && $bestMatch['confidence'] > 85) {
+            if ($bestMatch && $bestMatch['confidence'] > 30) {
                 // High confidence match - recommend the existing publisher
                 return $bestMatch['name'] . ' (recommended: ' . $bestMatch['confidence'] . '% match)';
             }

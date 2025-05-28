@@ -884,12 +884,45 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     }
                 }
             });
-        } else if (readingField.new_data && readingField.new_data.value === expectedReading) {
-            console.log('🔄 Single reading level option matches:', readingField.new_data.value);
-            // Single option matches
-            $(`input[name="field_reading_level"]`).prop('checked', true);
+        } else if (readingField.new_data) {
+            // Single source field - update the value and visual display
+            console.log('🔄 Single reading level field found. Current value:', readingField.new_data.value, 'Expected:', expectedReading);
+
+            // Update the data structure
+            readingField.new_data.value = expectedReading;
+            console.log('🔄 Updated reading level data to:', expectedReading);
+
+            // Enable the field and check it
+            $(`input[name="field_reading_level"]`).prop('checked', true).prop('disabled', false);
+
+            // Update the visual display
+            const $readingFieldDiv = $(`.enrichment-field[data-field="reading_level"]`);
+
+            // Remove disabled styling
+            $readingFieldDiv.removeClass('disabled-field exact-match');
+            $readingFieldDiv.find('label').removeClass('text-muted');
+            $readingFieldDiv.find('input').prop('disabled', false);
+
+            // Update the "New Value" display
+            const $newValueContainer = $readingFieldDiv.find('strong:contains("New Value:")').parent();
+            if ($newValueContainer.length > 0) {
+                // Find the content after "New Value:" and update it
+                const newValueHtml = $newValueContainer.html();
+                const updatedHtml = newValueHtml.replace(
+                    /(New Value:<\/strong>\s*).*/,
+                    `$1<span class="badge badge-info">${expectedReading}</span>`
+                );
+                $newValueContainer.html(updatedHtml);
+                console.log('🔄 Updated reading level visual display to:', expectedReading);
+            } else {
+                console.log('🔄 Could not find New Value container for reading level');
+            }
+
+            // Update border styling to show it's beneficial
+            $readingFieldDiv.removeClass('border-secondary border-danger').addClass('border-success');
+
         } else {
-            console.log('🔄 No matching reading level option found for:', expectedReading);
+            console.log('🔄 No reading level field data found');
         }
     }
 
@@ -935,12 +968,45 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     }
                 }
             });
-        } else if (ageField.new_data && ageField.new_data.value === expectedAge) {
-            console.log('🔄 Single age range option matches:', ageField.new_data.value);
-            // Single option matches
-            $(`input[name="field_age_range"]`).prop('checked', true);
+        } else if (ageField.new_data) {
+            // Single source field - update the value and visual display
+            console.log('🔄 Single age range field found. Current value:', ageField.new_data.value, 'Expected:', expectedAge);
+
+            // Update the data structure
+            ageField.new_data.value = expectedAge;
+            console.log('🔄 Updated age range data to:', expectedAge);
+
+            // Enable the field and check it
+            $(`input[name="field_age_range"]`).prop('checked', true).prop('disabled', false);
+
+            // Update the visual display
+            const $ageFieldDiv = $(`.enrichment-field[data-field="age_range"]`);
+
+            // Remove disabled styling
+            $ageFieldDiv.removeClass('disabled-field exact-match');
+            $ageFieldDiv.find('label').removeClass('text-muted');
+            $ageFieldDiv.find('input').prop('disabled', false);
+
+            // Update the "New Value" display
+            const $newValueContainer = $ageFieldDiv.find('strong:contains("New Value:")').parent();
+            if ($newValueContainer.length > 0) {
+                // Find the content after "New Value:" and update it
+                const newValueHtml = $newValueContainer.html();
+                const updatedHtml = newValueHtml.replace(
+                    /(New Value:<\/strong>\s*).*/,
+                    `$1<span class="badge badge-light">${expectedAge}</span>`
+                );
+                $newValueContainer.html(updatedHtml);
+                console.log('🔄 Updated age range visual display to:', expectedAge);
+            } else {
+                console.log('🔄 Could not find New Value container for age range');
+            }
+
+            // Update border styling to show it's beneficial
+            $ageFieldDiv.removeClass('border-secondary border-danger').addClass('border-success');
+
         } else {
-            console.log('🔄 No matching age range option found for:', expectedAge);
+            console.log('🔄 No age range field data found');
         }
     }
 

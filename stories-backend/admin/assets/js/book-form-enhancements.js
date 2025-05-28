@@ -492,7 +492,8 @@ function initReadingLevelDropdown() {
 }
 
 /**
- * Initialize publisher dropdown
+ * Initialize publisher dropdown - NO LONGER ADDS HARD-CODED OPTIONS
+ * Publisher dropdown is now purely dynamic from database via PHP
  */
 function initPublisherDropdown() {
     const publisherSelect = document.getElementById('publisher');
@@ -501,42 +502,8 @@ function initPublisherDropdown() {
     // Get the current value
     const currentValue = publisherSelect.value;
 
-    // Common publisher options to add if they don't exist
-    const publisherOptions = [
-        'Penguin Random House',
-        'HarperCollins Children\'s Books',
-        'Simon & Schuster',
-        'Hachette Book Group',
-        'Macmillan Publishers',
-        'Scholastic',
-        'Oxford University Press',
-        'Cambridge University Press',
-        'Bloomsbury Publishing',
-        'Usborne Publishing',
-        'Walker Books',
-        'Nosy Crow',
-        'Puffin Books',
-        'Ladybird Books',
-        'Orion Children\'s Books',
-        'Andersen Press',
-        'Egmont Books',
-        'Chicken House',
-        'Little Tiger Press',
-        'Barrington Stoke'
-    ];
-
-    // Get existing options
-    const existingOptions = Array.from(publisherSelect.options).map(option => option.value.toLowerCase());
-
-    // Add missing options
-    publisherOptions.forEach(publisher => {
-        if (!existingOptions.includes(publisher.toLowerCase())) {
-            const option = document.createElement('option');
-            option.value = publisher;
-            option.text = publisher;
-            publisherSelect.appendChild(option);
-        }
-    });
+    // REMOVED: Hard-coded publisher options - now using purely dynamic data from database
+    // The dropdown is populated by PHP from actual database content
 
     // Set the selected option if there's a value
     if (currentValue && currentValue !== 'custom') {

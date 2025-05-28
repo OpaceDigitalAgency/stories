@@ -1944,8 +1944,8 @@ function handleSynchronizeAgeRanges() {
             }
         }
 
-        // Get the standard age groups from reading levels
-        $stmt = $db->query("SELECT DISTINCT age_group FROM standard_reading_levels ORDER BY sort_order");
+        // Get the standard age groups from reading levels - fix SQL strict mode issue
+        $stmt = $db->query("SELECT age_group FROM standard_reading_levels GROUP BY age_group ORDER BY MIN(sort_order)");
         $standardAgeGroups = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
         if (empty($standardAgeGroups)) {

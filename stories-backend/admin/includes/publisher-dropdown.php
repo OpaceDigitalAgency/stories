@@ -5,35 +5,7 @@
  * This component provides a dropdown of common book publishers.
  */
 
-/**
- * Get a list of common book publishers
- *
- * @return array Array of publisher names
- */
-function getCommonPublishers() {
-    return [
-        'Penguin Random House',
-        'HarperCollins Children\'s Books',
-        'Simon & Schuster',
-        'Hachette Book Group',
-        'Macmillan Publishers',
-        'Scholastic',
-        'Oxford University Press',
-        'Cambridge University Press',
-        'Bloomsbury Publishing',
-        'Orion Children\'s Books',
-        'Usborne Publishing',
-        'Walker Books',
-        'Nosy Crow',
-        'Andersen Press',
-        'Puffin Books',
-        'Egmont Books',
-        'Little Tiger Press',
-        'Chicken House',
-        'Barrington Stoke',
-        'Frances Lincoln Children\'s Books'
-    ];
-}
+// REMOVED: Hard-coded publisher list - now using purely dynamic data from database
 
 /**
  * Get a list of publishers from the database
@@ -59,27 +31,23 @@ function getPublishersFromDatabase($db) {
 }
 
 /**
- * Render a publisher dropdown
+ * Render a publisher dropdown - PURELY DYNAMIC from database
  *
  * @param PDO $db Database connection
  * @param string $selectedPublisher Currently selected publisher
  * @return string HTML for the publisher dropdown
  */
 function renderPublisherDropdown($db, $selectedPublisher = '') {
-    // Get common publishers
-    $commonPublishers = getCommonPublishers();
-
-    // Get publishers from database
+    // Get publishers ONLY from database - no hard-coded values
     $dbPublishers = getPublishersFromDatabase($db);
 
-    // Merge and remove duplicates
-    $allPublishers = array_unique(array_merge($commonPublishers, $dbPublishers));
-    sort($allPublishers);
+    // Sort alphabetically
+    sort($dbPublishers);
 
     $html = '<select id="publisher" name="book_publisher" class="form-control">';
     $html .= '<option value="">Select Publisher</option>';
 
-    foreach ($allPublishers as $publisher) {
+    foreach ($dbPublishers as $publisher) {
         $selected = ($selectedPublisher == $publisher) ? 'selected' : '';
         $html .= '<option value="' . htmlspecialchars($publisher) . '" ' . $selected . '>' . htmlspecialchars($publisher) . '</option>';
     }
@@ -88,8 +56,8 @@ function renderPublisherDropdown($db, $selectedPublisher = '') {
     $html .= '</select>';
 
     // Add custom publisher input field
-    $customValue = (!empty($selectedPublisher) && !in_array($selectedPublisher, $allPublishers)) ? htmlspecialchars($selectedPublisher) : '';
-    $customDisplay = (!empty($selectedPublisher) && !in_array($selectedPublisher, $allPublishers)) ? '' : 'd-none';
+    $customValue = (!empty($selectedPublisher) && !in_array($selectedPublisher, $dbPublishers)) ? htmlspecialchars($selectedPublisher) : '';
+    $customDisplay = (!empty($selectedPublisher) && !in_array($selectedPublisher, $dbPublishers)) ? '' : 'd-none';
 
     $html .= '<input type="text" id="custom_publisher" name="custom_publisher" class="form-control mt-1 ' . $customDisplay . '"
         placeholder="Enter publisher name" value="' . $customValue . '">';

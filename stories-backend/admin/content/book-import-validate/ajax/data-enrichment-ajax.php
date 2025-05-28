@@ -753,8 +753,29 @@ function processPublisherRelationship($bookId, $publisherName) {
         // Clean up publisher name
         $cleanPublisherName = trim($publisherName);
 
+        // Check which column exists for publisher type
+        $hasTypeColumn = false;
+        $hasAuthorTypeColumn = false;
+
+        try {
+            $stmt = $db->query("SHOW COLUMNS FROM authors LIKE 'type'");
+            $hasTypeColumn = $stmt->fetch() !== false;
+        } catch (Exception $e) {}
+
+        try {
+            $stmt = $db->query("SHOW COLUMNS FROM authors LIKE 'author_type'");
+            $hasAuthorTypeColumn = $stmt->fetch() !== false;
+        } catch (Exception $e) {}
+
         // Check for exact match first
-        $stmt = $db->prepare("SELECT id, name FROM authors WHERE name = ? AND type = 'publisher'");
+        if ($hasTypeColumn) {
+            $stmt = $db->prepare("SELECT id, name FROM authors WHERE name = ? AND type = 'publisher'");
+        } elseif ($hasAuthorTypeColumn) {
+            $stmt = $db->prepare("SELECT id, name FROM authors WHERE name = ? AND author_type = 'publisher'");
+        } else {
+            // No type column - just match by name (less precise)
+            $stmt = $db->prepare("SELECT id, name FROM authors WHERE name = ?");
+        }
         $stmt->execute([$cleanPublisherName]);
         $existingPublisher = $stmt->fetch();
 
@@ -763,7 +784,14 @@ function processPublisherRelationship($bookId, $publisherName) {
             error_log("Found exact publisher match: {$existingPublisher['name']} (ID: $publisherId)");
         } else {
             // Check for similar publishers to prevent duplicates
-            $stmt = $db->prepare("SELECT id, name FROM authors WHERE type = 'publisher'");
+            if ($hasTypeColumn) {
+                $stmt = $db->prepare("SELECT id, name FROM authors WHERE type = 'publisher'");
+            } elseif ($hasAuthorTypeColumn) {
+                $stmt = $db->prepare("SELECT id, name FROM authors WHERE author_type = 'publisher'");
+            } else {
+                // No type column - get all authors
+                $stmt = $db->prepare("SELECT id, name FROM authors");
+            }
             $stmt->execute();
             $allPublishers = $stmt->fetchAll();
 
@@ -797,9 +825,18 @@ function processPublisherRelationship($bookId, $publisherName) {
                 error_log("Found similar publisher match: '{$bestMatch['name']}' for '$cleanPublisherName' (similarity: {$bestSimilarity}%)");
             } else {
                 // Create new publisher
-                $stmt = $db->prepare("INSERT INTO authors (name, type, slug) VALUES (?, 'publisher', ?)");
                 $slug = createSlug($cleanPublisherName);
-                $stmt->execute([$cleanPublisherName, $slug]);
+                if ($hasTypeColumn) {
+                    $stmt = $db->prepare("INSERT INTO authors (name, type, slug) VALUES (?, 'publisher', ?)");
+                    $stmt->execute([$cleanPublisherName, $slug]);
+                } elseif ($hasAuthorTypeColumn) {
+                    $stmt = $db->prepare("INSERT INTO authors (name, author_type, slug) VALUES (?, 'publisher', ?)");
+                    $stmt->execute([$cleanPublisherName, $slug]);
+                } else {
+                    // No type column - just create as regular author
+                    $stmt = $db->prepare("INSERT INTO authors (name, slug) VALUES (?, ?)");
+                    $stmt->execute([$cleanPublisherName, $slug]);
+                }
                 $publisherId = $db->lastInsertId();
                 error_log("Created new publisher: '$cleanPublisherName' (ID: $publisherId)");
             }

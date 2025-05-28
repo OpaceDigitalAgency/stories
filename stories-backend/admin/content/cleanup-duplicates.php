@@ -4,6 +4,9 @@
  * This script identifies and merges duplicate entries
  */
 
+// Set content type to HTML
+header('Content-Type: text/html; charset=utf-8');
+
 // Include database connection
 require_once '../includes/db-connect.php';
 
@@ -61,37 +64,81 @@ set_time_limit(300);
 
         <?php
         $action = $_GET['action'] ?? 'analyze';
-        
+
         if ($action === 'analyze') {
             // Analyze duplicates without making changes
             echo '<h2>📊 Analysis Mode</h2>';
-            
+
             // Find duplicate publishers
             echo '<div class="card mb-4">';
             echo '<div class="card-header"><h3>Duplicate Publishers Analysis</h3></div>';
             echo '<div class="card-body">';
-            
+
             try {
-                $stmt = $db->query("
-                    SELECT name, COUNT(*) as count, GROUP_CONCAT(id) as ids
-                    FROM authors 
-                    WHERE type = 'publisher'
-                    GROUP BY LOWER(TRIM(name))
-                    HAVING count > 1
-                    ORDER BY count DESC, name
-                ");
+                // Check which column exists for publisher type
+                $hasTypeColumn = false;
+                $hasAuthorTypeColumn = false;
+
+                try {
+                    $stmt = $db->query("SHOW COLUMNS FROM authors LIKE 'type'");
+                    $hasTypeColumn = $stmt->fetch() !== false;
+                } catch (Exception $e) {}
+
+                try {
+                    $stmt = $db->query("SHOW COLUMNS FROM authors LIKE 'author_type'");
+                    $hasAuthorTypeColumn = $stmt->fetch() !== false;
+                } catch (Exception $e) {}
+
+                echo '<div class="alert alert-info">';
+                echo "Authors table analysis:<br>";
+                echo "- 'type' column exists: " . ($hasTypeColumn ? 'YES' : 'NO') . "<br>";
+                echo "- 'author_type' column exists: " . ($hasAuthorTypeColumn ? 'YES' : 'NO') . "<br>";
+                echo '</div>';
+
+                // Build query based on available columns
+                if ($hasTypeColumn) {
+                    $sql = "
+                        SELECT name, COUNT(*) as count, GROUP_CONCAT(id) as ids
+                        FROM authors
+                        WHERE type = 'publisher'
+                        GROUP BY LOWER(TRIM(name))
+                        HAVING count > 1
+                        ORDER BY count DESC, name
+                    ";
+                } elseif ($hasAuthorTypeColumn) {
+                    $sql = "
+                        SELECT name, COUNT(*) as count, GROUP_CONCAT(id) as ids
+                        FROM authors
+                        WHERE author_type = 'publisher'
+                        GROUP BY LOWER(TRIM(name))
+                        HAVING count > 1
+                        ORDER BY count DESC, name
+                    ";
+                } else {
+                    // No type column - analyze all authors for potential publishers
+                    $sql = "
+                        SELECT name, COUNT(*) as count, GROUP_CONCAT(id) as ids
+                        FROM authors
+                        GROUP BY LOWER(TRIM(name))
+                        HAVING count > 1
+                        ORDER BY count DESC, name
+                    ";
+                    echo '<div class="alert alert-warning">No publisher type column found. Analyzing all authors for duplicates.</div>';
+                }
+
+                $stmt = $db->query($sql);
                 $duplicatePublishers = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                
+
                 if (empty($duplicatePublishers)) {
                     echo '<div class="alert alert-success">✅ No exact duplicate publishers found</div>';
                 } else {
                     echo '<div class="alert alert-warning">Found ' . count($duplicatePublishers) . ' groups of duplicate publishers:</div>';
-                    
+
                     foreach ($duplicatePublishers as $group) {
                         echo '<div class="duplicate-group">';
                         echo '<strong>' . htmlspecialchars($group['name']) . '</strong> (' . $group['count'] . ' duplicates)<br>';
                         echo 'IDs: ' . $group['ids'] . '<br>';
-                        
+
                         // Show which books use these publishers
                         $ids = explode(',', $group['ids']);
                         foreach ($ids as $id) {
@@ -103,47 +150,47 @@ set_time_limit(300);
                         echo '</div>';
                     }
                 }
-                
+
                 // Find similar publishers (not exact duplicates)
                 echo '<h4>Similar Publishers (85%+ similarity)</h4>';
                 $stmt = $db->query("SELECT id, name FROM authors WHERE type = 'publisher' ORDER BY name");
                 $allPublishers = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                
+
                 $similarGroups = [];
                 $processed = [];
-                
+
                 foreach ($allPublishers as $pub1) {
                     if (in_array($pub1['id'], $processed)) continue;
-                    
+
                     $group = [$pub1];
                     $processed[] = $pub1['id'];
-                    
+
                     foreach ($allPublishers as $pub2) {
                         if ($pub1['id'] === $pub2['id'] || in_array($pub2['id'], $processed)) continue;
-                        
+
                         $similarity = 0;
                         similar_text(strtolower($pub1['name']), strtolower($pub2['name']), $similarity);
-                        
+
                         // Check for variations
                         $name1 = strtolower(str_replace([' ', "'", '"', '-'], '', $pub1['name']));
                         $name2 = strtolower(str_replace([' ', "'", '"', '-'], '', $pub2['name']));
-                        
+
                         if ($similarity >= 85 || strpos($name1, $name2) !== false || strpos($name2, $name1) !== false) {
                             $group[] = $pub2;
                             $processed[] = $pub2['id'];
                         }
                     }
-                    
+
                     if (count($group) > 1) {
                         $similarGroups[] = $group;
                     }
                 }
-                
+
                 if (empty($similarGroups)) {
                     echo '<div class="alert alert-success">✅ No similar publishers found</div>';
                 } else {
                     echo '<div class="alert alert-info">Found ' . count($similarGroups) . ' groups of similar publishers:</div>';
-                    
+
                     foreach ($similarGroups as $group) {
                         echo '<div class="duplicate-group">';
                         echo '<strong>Similar Group:</strong><br>';
@@ -156,29 +203,29 @@ set_time_limit(300);
                         echo '</div>';
                     }
                 }
-                
+
             } catch (Exception $e) {
                 echo '<div class="alert alert-danger">Error: ' . $e->getMessage() . '</div>';
             }
-            
+
             echo '</div></div>';
-            
+
             // Generate SQL for manual cleanup
             echo '<div class="card mb-4">';
             echo '<div class="card-header"><h3>📝 SQL Commands for Manual Cleanup</h3></div>';
             echo '<div class="card-body">';
             echo '<p>Copy and paste these SQL commands into phpMyAdmin to clean up duplicates:</p>';
-            
+
             echo '<div class="sql-output">';
             echo "-- SQL commands to clean up duplicate publishers\n";
             echo "-- Run these in phpMyAdmin after reviewing the analysis above\n\n";
-            
+
             if (!empty($duplicatePublishers)) {
                 foreach ($duplicatePublishers as $group) {
                     $ids = explode(',', $group['ids']);
                     $keepId = trim($ids[0]); // Keep the first one
                     $removeIds = array_slice($ids, 1);
-                    
+
                     echo "-- Merge duplicates for: " . $group['name'] . "\n";
                     foreach ($removeIds as $removeId) {
                         $removeId = trim($removeId);
@@ -188,7 +235,7 @@ set_time_limit(300);
                     echo "\n";
                 }
             }
-            
+
             if (!empty($similarGroups)) {
                 echo "-- Similar publishers (review manually before running)\n";
                 foreach ($similarGroups as $group) {
@@ -206,14 +253,14 @@ set_time_limit(300);
                 }
             }
             echo '</div>';
-            
+
             echo '</div></div>';
-            
+
         } elseif ($action === 'cleanup' && isset($_POST['confirm'])) {
             // Perform actual cleanup
             echo '<h2>🧹 Cleanup Mode</h2>';
             echo '<div class="alert alert-info">Performing cleanup operations...</div>';
-            
+
             // This would contain the actual cleanup logic
             // For safety, we'll just show what would be done
             echo '<div class="alert alert-warning">Cleanup functionality disabled for safety. Use the SQL commands above in phpMyAdmin.</div>';
@@ -232,7 +279,7 @@ set_time_limit(300);
                     <li>Run them in phpMyAdmin</li>
                     <li>Test the enrichment system again</li>
                 </ol>
-                
+
                 <p class="mt-3">
                     <a href="book-validation.php" class="btn btn-primary">← Back to Book Validation</a>
                     <a href="test-publisher-relationship.php" class="btn btn-secondary">Test Publisher Relationships</a>

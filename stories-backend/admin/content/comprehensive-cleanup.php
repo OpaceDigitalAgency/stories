@@ -1233,6 +1233,300 @@ function getTableInfo($table) {
             }
 
             echo '</div></div>';
+
+            // 8. COMPREHENSIVE DATABASE SANITY CHECK
+            echo '<div class="card mb-4">';
+            echo '<div class="card-header"><h3>🔍 Comprehensive Database Sanity Check</h3></div>';
+            echo '<div class="card-body">';
+
+            try {
+                $sanityIssues = [];
+                $sanityStats = [];
+
+                // Check directory_items table
+                echo '<h5>📁 Directory Items Analysis</h5>';
+
+                $stmt = $db->query("SELECT COUNT(*) FROM directory_items");
+                $totalItems = $stmt->fetchColumn();
+                $sanityStats['directory_items_total'] = $totalItems;
+
+                $stmt = $db->query("SELECT COUNT(*) FROM directory_items WHERE title IS NULL OR title = ''");
+                $nullTitles = $stmt->fetchColumn();
+                if ($nullTitles > 0) {
+                    $sanityIssues[] = "❌ $nullTitles directory items have NULL/empty titles";
+                }
+                $sanityStats['directory_items_null_titles'] = $nullTitles;
+
+                $stmt = $db->query("SELECT COUNT(*) FROM directory_items WHERE slug IS NULL OR slug = ''");
+                $nullSlugs = $stmt->fetchColumn();
+                if ($nullSlugs > 0) {
+                    $sanityIssues[] = "❌ $nullSlugs directory items have NULL/empty slugs";
+                }
+                $sanityStats['directory_items_null_slugs'] = $nullSlugs;
+
+                $stmt = $db->query("SELECT COUNT(*) FROM directory_items WHERE type IS NULL OR type = ''");
+                $nullTypes = $stmt->fetchColumn();
+                if ($nullTypes > 0) {
+                    $sanityIssues[] = "❌ $nullTypes directory items have NULL/empty types";
+                }
+                $sanityStats['directory_items_null_types'] = $nullTypes;
+
+                // Check for duplicate slugs
+                $stmt = $db->query("SELECT slug, COUNT(*) as count FROM directory_items WHERE slug IS NOT NULL GROUP BY slug HAVING COUNT(*) > 1");
+                $duplicateSlugs = $stmt->fetchAll();
+                if (!empty($duplicateSlugs)) {
+                    $sanityIssues[] = "❌ " . count($duplicateSlugs) . " duplicate slugs found in directory_items";
+                }
+                $sanityStats['directory_items_duplicate_slugs'] = count($duplicateSlugs);
+
+                echo '<div class="alert alert-light border">';
+                echo "<p><strong>Directory Items:</strong> $totalItems total, $nullTitles null titles, $nullSlugs null slugs, $nullTypes null types</p>";
+                if (!empty($duplicateSlugs)) {
+                    echo "<p><strong>Duplicate Slugs:</strong></p><ul>";
+                    foreach ($duplicateSlugs as $dup) {
+                        echo "<li>{$dup['slug']} ({$dup['count']} times)</li>";
+                    }
+                    echo "</ul>";
+                }
+                echo '</div>';
+
+                // Check books table
+                echo '<h5>📚 Books Table Analysis</h5>';
+
+                $stmt = $db->query("SELECT COUNT(*) FROM books");
+                $totalBooks = $stmt->fetchColumn();
+                $sanityStats['books_total'] = $totalBooks;
+
+                $stmt = $db->query("SELECT COUNT(*) FROM books WHERE directory_item_id IS NULL");
+                $booksNullDirId = $stmt->fetchColumn();
+                if ($booksNullDirId > 0) {
+                    $sanityIssues[] = "❌ $booksNullDirId books have NULL directory_item_id";
+                }
+                $sanityStats['books_null_directory_item_id'] = $booksNullDirId;
+
+                $stmt = $db->query("SELECT COUNT(*) FROM books WHERE title IS NULL OR title = ''");
+                $booksNullTitles = $stmt->fetchColumn();
+                if ($booksNullTitles > 0) {
+                    $sanityIssues[] = "❌ $booksNullTitles books have NULL/empty titles";
+                }
+                $sanityStats['books_null_titles'] = $booksNullTitles;
+
+                // Check for orphaned books (directory_item doesn't exist)
+                $stmt = $db->query("SELECT COUNT(*) FROM books b LEFT JOIN directory_items di ON b.directory_item_id = di.id WHERE di.id IS NULL AND b.directory_item_id IS NOT NULL");
+                $orphanedBooks = $stmt->fetchColumn();
+                if ($orphanedBooks > 0) {
+                    $sanityIssues[] = "❌ $orphanedBooks books reference non-existent directory items";
+                }
+                $sanityStats['books_orphaned'] = $orphanedBooks;
+
+                // Check for duplicate books
+                $stmt = $db->query("SELECT directory_item_id, COUNT(*) as count FROM books WHERE directory_item_id IS NOT NULL GROUP BY directory_item_id HAVING COUNT(*) > 1");
+                $duplicateBooks = $stmt->fetchAll();
+                if (!empty($duplicateBooks)) {
+                    $sanityIssues[] = "❌ " . count($duplicateBooks) . " directory items have multiple book records";
+                }
+                $sanityStats['books_duplicates'] = count($duplicateBooks);
+
+                echo '<div class="alert alert-light border">';
+                echo "<p><strong>Books:</strong> $totalBooks total, $booksNullDirId null dir_id, $booksNullTitles null titles, $orphanedBooks orphaned</p>";
+                if (!empty($duplicateBooks)) {
+                    echo "<p><strong>Duplicate Books:</strong></p><ul>";
+                    foreach (array_slice($duplicateBooks, 0, 5) as $dup) {
+                        echo "<li>Directory Item {$dup['directory_item_id']} has {$dup['count']} book records</li>";
+                    }
+                    if (count($duplicateBooks) > 5) {
+                        echo "<li>... and " . (count($duplicateBooks) - 5) . " more</li>";
+                    }
+                    echo "</ul>";
+                }
+                echo '</div>';
+
+                // Check authors table
+                echo '<h5>👤 Authors Table Analysis</h5>';
+
+                $stmt = $db->query("SELECT COUNT(*) FROM authors");
+                $totalAuthors = $stmt->fetchColumn();
+                $sanityStats['authors_total'] = $totalAuthors;
+
+                $stmt = $db->query("SELECT COUNT(*) FROM authors WHERE name IS NULL OR name = ''");
+                $authorsNullNames = $stmt->fetchColumn();
+                if ($authorsNullNames > 0) {
+                    $sanityIssues[] = "❌ $authorsNullNames authors have NULL/empty names";
+                }
+                $sanityStats['authors_null_names'] = $authorsNullNames;
+
+                $stmt = $db->query("SELECT COUNT(*) FROM authors WHERE slug IS NULL OR slug = ''");
+                $authorsNullSlugs = $stmt->fetchColumn();
+                if ($authorsNullSlugs > 0) {
+                    $sanityIssues[] = "❌ $authorsNullSlugs authors have NULL/empty slugs";
+                }
+                $sanityStats['authors_null_slugs'] = $authorsNullSlugs;
+
+                // Check for duplicate author names
+                $stmt = $db->query("SELECT name, COUNT(*) as count FROM authors WHERE name IS NOT NULL GROUP BY name HAVING COUNT(*) > 1");
+                $duplicateAuthors = $stmt->fetchAll();
+                if (!empty($duplicateAuthors)) {
+                    $sanityIssues[] = "❌ " . count($duplicateAuthors) . " duplicate author names found";
+                }
+                $sanityStats['authors_duplicates'] = count($duplicateAuthors);
+
+                echo '<div class="alert alert-light border">';
+                echo "<p><strong>Authors:</strong> $totalAuthors total, $authorsNullNames null names, $authorsNullSlugs null slugs</p>";
+                if (!empty($duplicateAuthors)) {
+                    echo "<p><strong>Duplicate Authors:</strong></p><ul>";
+                    foreach (array_slice($duplicateAuthors, 0, 5) as $dup) {
+                        echo "<li>{$dup['name']} ({$dup['count']} times)</li>";
+                    }
+                    if (count($duplicateAuthors) > 5) {
+                        echo "<li>... and " . (count($duplicateAuthors) - 5) . " more</li>";
+                    }
+                    echo "</ul>";
+                }
+                echo '</div>';
+
+                // Check tags table
+                echo '<h5>🏷️ Tags Table Analysis</h5>';
+
+                $stmt = $db->query("SELECT COUNT(*) FROM tags");
+                $totalTags = $stmt->fetchColumn();
+                $sanityStats['tags_total'] = $totalTags;
+
+                $stmt = $db->query("SELECT COUNT(*) FROM tags WHERE name IS NULL OR name = ''");
+                $tagsNullNames = $stmt->fetchColumn();
+                if ($tagsNullNames > 0) {
+                    $sanityIssues[] = "❌ $tagsNullNames tags have NULL/empty names";
+                }
+                $sanityStats['tags_null_names'] = $tagsNullNames;
+
+                $stmt = $db->query("SELECT COUNT(*) FROM tags WHERE slug IS NULL OR slug = ''");
+                $tagsNullSlugs = $stmt->fetchColumn();
+                if ($tagsNullSlugs > 0) {
+                    $sanityIssues[] = "❌ $tagsNullSlugs tags have NULL/empty slugs";
+                }
+                $sanityStats['tags_null_slugs'] = $tagsNullSlugs;
+
+                echo '<div class="alert alert-light border">';
+                echo "<p><strong>Tags:</strong> $totalTags total, $tagsNullNames null names, $tagsNullSlugs null slugs</p>";
+                echo '</div>';
+
+                // Check relationship tables
+                echo '<h5>🔗 Relationship Tables Analysis</h5>';
+
+                // Check directory_item_tags
+                $stmt = $db->query("SELECT COUNT(*) FROM directory_item_tags");
+                $totalDirTags = $stmt->fetchColumn();
+                $sanityStats['directory_item_tags_total'] = $totalDirTags;
+
+                $stmt = $db->query("SELECT COUNT(*) FROM directory_item_tags dit LEFT JOIN directory_items di ON dit.directory_item_id = di.id WHERE di.id IS NULL");
+                $orphanedDirTags = $stmt->fetchColumn();
+                if ($orphanedDirTags > 0) {
+                    $sanityIssues[] = "❌ $orphanedDirTags directory_item_tags reference non-existent directory items";
+                }
+                $sanityStats['directory_item_tags_orphaned_items'] = $orphanedDirTags;
+
+                $stmt = $db->query("SELECT COUNT(*) FROM directory_item_tags dit LEFT JOIN tags t ON dit.tag_id = t.id WHERE t.id IS NULL");
+                $orphanedTagRefs = $stmt->fetchColumn();
+                if ($orphanedTagRefs > 0) {
+                    $sanityIssues[] = "❌ $orphanedTagRefs directory_item_tags reference non-existent tags";
+                }
+                $sanityStats['directory_item_tags_orphaned_tags'] = $orphanedTagRefs;
+
+                // Check story_authors if it exists
+                $stmt = $db->query("SHOW TABLES LIKE 'story_authors'");
+                if ($stmt->fetch()) {
+                    $stmt = $db->query("SELECT COUNT(*) FROM story_authors");
+                    $totalStoryAuthors = $stmt->fetchColumn();
+                    $sanityStats['story_authors_total'] = $totalStoryAuthors;
+
+                    $stmt = $db->query("SELECT COUNT(*) FROM story_authors sa LEFT JOIN directory_items di ON sa.story_id = di.id WHERE di.id IS NULL");
+                    $orphanedStoryAuthors = $stmt->fetchColumn();
+                    if ($orphanedStoryAuthors > 0) {
+                        $sanityIssues[] = "❌ $orphanedStoryAuthors story_authors reference non-existent stories";
+                    }
+                    $sanityStats['story_authors_orphaned_stories'] = $orphanedStoryAuthors;
+
+                    $stmt = $db->query("SELECT COUNT(*) FROM story_authors sa LEFT JOIN authors a ON sa.author_id = a.id WHERE a.id IS NULL");
+                    $orphanedAuthorRefs = $stmt->fetchColumn();
+                    if ($orphanedAuthorRefs > 0) {
+                        $sanityIssues[] = "❌ $orphanedAuthorRefs story_authors reference non-existent authors";
+                    }
+                    $sanityStats['story_authors_orphaned_authors'] = $orphanedAuthorRefs;
+
+                    echo '<div class="alert alert-light border">';
+                    echo "<p><strong>Relationships:</strong> $totalDirTags dir-tag links, $totalStoryAuthors story-author links</p>";
+                    echo "<p><strong>Orphaned:</strong> $orphanedDirTags dir-tags, $orphanedTagRefs tag-refs, $orphanedStoryAuthors story-authors, $orphanedAuthorRefs author-refs</p>";
+                    echo '</div>';
+                } else {
+                    echo '<div class="alert alert-light border">';
+                    echo "<p><strong>Relationships:</strong> $totalDirTags dir-tag links</p>";
+                    echo "<p><strong>Orphaned:</strong> $orphanedDirTags dir-tags, $orphanedTagRefs tag-refs</p>";
+                    echo '</div>';
+                }
+
+                // Overall sanity summary
+                echo '<h5>📊 Overall Database Health</h5>';
+
+                if (empty($sanityIssues)) {
+                    echo '<div class="alert alert-success">';
+                    echo '<h6>🎉 Database is HEALTHY!</h6>';
+                    echo '<p>✅ No critical issues found</p>';
+                    echo '<p>✅ All relationships intact</p>';
+                    echo '<p>✅ No orphaned records</p>';
+                    echo '<p>✅ No NULL values in critical fields</p>';
+                    echo '</div>';
+                } else {
+                    echo '<div class="alert alert-warning">';
+                    echo '<h6>⚠️ Database Issues Found</h6>';
+                    echo '<ul>';
+                    foreach ($sanityIssues as $issue) {
+                        echo "<li>$issue</li>";
+                    }
+                    echo '</ul>';
+                    echo '<p><strong>Total Issues: ' . count($sanityIssues) . '</strong></p>';
+                    echo '</div>';
+                }
+
+                // Quick stats table
+                echo '<h6>📈 Database Statistics</h6>';
+                echo '<table class="table table-sm table-bordered">';
+                echo '<thead><tr><th>Table/Metric</th><th>Count</th><th>Status</th></tr></thead>';
+                echo '<tbody>';
+
+                $healthyColor = 'table-success';
+                $warningColor = 'table-warning';
+                $dangerColor = 'table-danger';
+
+                foreach ($sanityStats as $metric => $value) {
+                    $status = '✅ OK';
+                    $color = $healthyColor;
+
+                    if (strpos($metric, 'null') !== false && $value > 0) {
+                        $status = '⚠️ Issues';
+                        $color = $warningColor;
+                    }
+                    if (strpos($metric, 'orphaned') !== false && $value > 0) {
+                        $status = '❌ Critical';
+                        $color = $dangerColor;
+                    }
+                    if (strpos($metric, 'duplicate') !== false && $value > 0) {
+                        $status = '⚠️ Review';
+                        $color = $warningColor;
+                    }
+
+                    echo "<tr class='$color'>";
+                    echo "<td>" . str_replace('_', ' ', ucwords($metric, '_')) . "</td>";
+                    echo "<td>$value</td>";
+                    echo "<td>$status</td>";
+                    echo "</tr>";
+                }
+                echo '</tbody></table>';
+
+            } catch (Exception $e) {
+                echo '<div class="alert alert-danger">Error: ' . htmlspecialchars($e->getMessage()) . '</div>';
+            }
+
+            echo '</div></div>';
+
             ?>
     </div>
 

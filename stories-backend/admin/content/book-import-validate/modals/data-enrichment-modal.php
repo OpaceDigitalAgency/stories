@@ -41,7 +41,7 @@
                             <strong>ISBN-13:</strong> <span id="enrichment-isbn13">-</span> |
                             <strong>ISBN-10:</strong> <span id="enrichment-isbn10">-</span>
                             <br>
-                            <span class="text-muted" id="enrichment-isbn-converted" style="font-size: 0.85em;"></span>
+                            <strong>Verified:</strong> <span class="text-muted" id="enrichment-isbn-converted" style="font-size: 0.85em;">-</span>
                         </small>
                     </div>
                 </div>

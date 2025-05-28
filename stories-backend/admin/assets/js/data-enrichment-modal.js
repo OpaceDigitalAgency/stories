@@ -20,9 +20,8 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             currentISBNType: typeof window.currentBookISBN
         });
 
-        // Update modal header with book information
-        console.log('🚀 About to call updateModalHeader with:', { title, currentISBN });
-        updateModalHeader(title, currentISBN);
+        // Fetch and display ISBN values from database immediately
+        fetchBookISBNsFromDatabase(bookId, title);
 
         // Reset modal state
         $('#enrichment-loading').show();
@@ -241,6 +240,92 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         const checkDigit = (10 - (sum % 10)) % 10;
 
         return isbn13Base + checkDigit.toString();
+    }
+
+    // New function to fetch ISBN values from database immediately
+    function fetchBookISBNsFromDatabase(bookId, title) {
+        console.log('📖 Fetching ISBN data from database for book ID:', bookId);
+        
+        // Update modal header with book title immediately
+        $('#enrichment-book-title').text(title || 'Unknown Title');
+        
+        // Make AJAX call to get book data from database
+        $.ajax({
+            url: 'book-import-validate/ajax/data-enrichment-ajax.php',
+            method: 'POST',
+            data: {
+                action: 'get_book_isbns',
+                book_id: bookId
+            },
+            dataType: 'json',
+            success: function(response) {
+                console.log('📖 Database ISBN response:', response);
+                if (response.success) {
+                    // Extract ISBN values directly from response
+                    let isbn13 = response.isbn_13 || '-';
+                    let isbn10 = response.isbn_10 || '-';
+                    
+                    // Format ISBNs with dashes
+                    if (isbn13 !== '-') {
+                        isbn13 = formatISBN13(isbn13);
+                    }
+                    if (isbn10 !== '-') {
+                        isbn10 = formatISBN10(isbn10);
+                    }
+                    
+                    // Update display
+                    $('#enrichment-isbn13').text(isbn13);
+                    $('#enrichment-isbn10').text(isbn10);
+                    
+                    // Calculate verified conversion
+                    let verifiedText = '-';
+                    if (response.conversions && response.conversions.length > 0) {
+                        // Use conversion data from backend if available
+                        const conv = response.conversions;
+                        if (conv.isbn_10_to_13 && conv.isbn_13_to_10) {
+                            if (conv.isbn_10_to_13.matches_stored && conv.isbn_13_to_10.matches_stored) {
+                                verifiedText = `✓ Conversion verified (${formatISBN10(conv.isbn_13_to_10.converted)} ↔ ${formatISBN13(conv.isbn_10_to_13.converted)})`;
+                            } else {
+                                verifiedText = `⚠ Conversion mismatch detected`;
+                            }
+                        }
+                    } else if (isbn13 !== '-' && isbn10 !== '-') {
+                        // Fallback to client-side conversion verification
+                        const convertedISBN10 = convertISBN13ToISBN10(isbn13.replace(/[^0-9X]/gi, ''));
+                        const convertedISBN13 = convertISBN10ToISBN13(isbn10.replace(/[^0-9X]/gi, ''));
+                        
+                        if (convertedISBN10 && convertedISBN13) {
+                            verifiedText = `✓ Conversion verified (${formatISBN10(convertedISBN10)} ↔ ${formatISBN13(convertedISBN13)})`;
+                        }
+                    } else if (isbn13 !== '-') {
+                        const convertedISBN10 = convertISBN13ToISBN10(isbn13.replace(/[^0-9X]/gi, ''));
+                        if (convertedISBN10) {
+                            verifiedText = `Converted to ISBN-10: ${formatISBN10(convertedISBN10)}`;
+                        }
+                    } else if (isbn10 !== '-') {
+                        const convertedISBN13 = convertISBN10ToISBN13(isbn10.replace(/[^0-9X]/gi, ''));
+                        if (convertedISBN13) {
+                            verifiedText = `Converted to ISBN-13: ${formatISBN13(convertedISBN13)}`;
+                        }
+                    }
+                    
+                    $('#enrichment-isbn-converted').text(verifiedText);
+                    
+                    // Show the identifiers section
+                    $('#enrichment-book-identifiers').show();
+                    
+                    console.log('📖 Successfully updated ISBN display:', { isbn13, isbn10, verified: verifiedText });
+                } else {
+                    console.log('📖 No ISBN data found in database');
+                    $('#enrichment-book-identifiers').show();
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('📖 Error fetching ISBN data:', error);
+                // Still show the section even if there's an error
+                $('#enrichment-book-identifiers').show();
+            }
+        });
     }
 
     function fetchEnrichmentData(title, author, currentISBN) {
@@ -761,10 +846,24 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
 
                     // Update the visual display of the new value
                     const $readingFieldDiv = $(`.enrichment-field[data-field="reading_level"]`);
-                    const $newValueDiv = $readingFieldDiv.find('.new-value, .mt-1').last();
+                    let $newValueDiv = $readingFieldDiv.find('.new-value').first();
+                    
+                    // If no .new-value div found, look for other possible containers
+                    if ($newValueDiv.length === 0) {
+                        $newValueDiv = $readingFieldDiv.find('.mt-1, .mt-2, .field-new-value').first();
+                    }
+                    
+                    // If still no container found, create one
+                    if ($newValueDiv.length === 0) {
+                        $readingFieldDiv.append('<div class="new-value mt-1"></div>');
+                        $newValueDiv = $readingFieldDiv.find('.new-value').last();
+                    }
+                    
                     if ($newValueDiv.length > 0) {
                         $newValueDiv.html(`<span class="badge badge-info">${expectedReading}</span>`);
                         console.log('🔄 Updated reading level visual display');
+                    } else {
+                        console.log('🔄 Could not find or create visual display container for reading level');
                     }
                 }
             });
@@ -798,10 +897,24 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
 
                     // Update the visual display of the new value
                     const $ageFieldDiv = $(`.enrichment-field[data-field="age_range"]`);
-                    const $newValueDiv = $ageFieldDiv.find('.new-value, .mt-1').last();
+                    let $newValueDiv = $ageFieldDiv.find('.new-value').first();
+                    
+                    // If no .new-value div found, look for other possible containers
+                    if ($newValueDiv.length === 0) {
+                        $newValueDiv = $ageFieldDiv.find('.mt-1, .mt-2, .field-new-value').first();
+                    }
+                    
+                    // If still no container found, create one
+                    if ($newValueDiv.length === 0) {
+                        $ageFieldDiv.append('<div class="new-value mt-1"></div>');
+                        $newValueDiv = $ageFieldDiv.find('.new-value').last();
+                    }
+                    
                     if ($newValueDiv.length > 0) {
                         $newValueDiv.html(`<span class="badge badge-light">${expectedAge}</span>`);
                         console.log('🔄 Updated age range visual display');
+                    } else {
+                        console.log('🔄 Could not find or create visual display container for age range');
                     }
                 }
             });

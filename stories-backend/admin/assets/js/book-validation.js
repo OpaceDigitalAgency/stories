@@ -334,11 +334,17 @@ if (typeof window.bookValidationLoaded === 'undefined') {
                 const isValidFormat = (cleanISBN.length === 10 || cleanISBN.length === 13);
 
                 if (isValidFormat) {
-                    $statusElement.html('<span class="badge badge-success">Valid</span>');
-                    console.log(`📚 ✅ Instant validation: Valid ISBN format for ${isbn}`);
+                    // Only update if it's currently showing "Unknown" - don't overwrite "Valid" status
+                    if ($statusElement.hasClass('badge-secondary') || $statusElement.text().includes('Checking...')) {
+                        $statusElement.html('<span class="badge badge-success">Valid</span>');
+                        console.log(`📚 ✅ Instant validation: Valid ISBN format for ${isbn}`);
+                    }
                 } else {
-                    $statusElement.html('<span class="badge badge-warning">Unknown</span>');
-                    console.log(`📚 ⚠️ Instant validation: Invalid ISBN format for ${isbn}`);
+                    // Only update if it's currently showing "Checking..." - don't overwrite existing status
+                    if ($statusElement.text().includes('Checking...')) {
+                        $statusElement.html('<span class="badge badge-warning">Unknown</span>');
+                        console.log(`📚 ⚠️ Instant validation: Invalid ISBN format for ${isbn}`);
+                    }
                 }
             });
         }

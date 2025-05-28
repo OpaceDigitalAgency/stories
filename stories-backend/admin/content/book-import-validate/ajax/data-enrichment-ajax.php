@@ -1918,25 +1918,30 @@ function handleSynchronizeAgeRanges() {
 
             $db->exec($createTableSQL);
 
-            // Insert standard data
-            $insertSQL = "INSERT INTO `standard_reading_levels` (`age_group`, `school_year`, `reading_stage`, `lexile_range`, `typical_skills`, `sort_order`) VALUES
-                ('0-12 months', NULL, 'Pre-literacy (Sensory)', 'N/A', 'Listening to voices, looking at pictures', 1),
-                ('12-24 months', NULL, 'Pre-literacy (Naming)', 'N/A', 'Responding to stories, pointing at objects', 2),
-                ('2-3 years', NULL, 'Pre-literacy (Mimicry)', 'BR', 'Repeating phrases, reading from memory', 3),
-                ('3-4 years', NULL, 'Early Pre-reader', 'BR', 'Identifying letters, understanding sequences', 4),
-                ('4-5 years', 'Reception', 'Beginning Reader', 'BR-120L', 'Introduction to phonics, basic sentences', 5),
-                ('5-6 years', 'Year 1', 'Early Reader', '120L-220L', 'Simple books, building fluency', 6),
-                ('6-7 years', 'Year 2', 'Developing Reader', '220L-420L', 'Chapter books, independent reading', 7),
-                ('7-8 years', 'Year 3', 'Transitional Reader', '420L-620L', 'Longer books, complex stories', 8),
-                ('8-9 years', 'Year 4', 'Fluent Reader', '620L-820L', 'Advanced vocabulary, series books', 9),
-                ('9-10 years', 'Year 5', 'Fluent Reader', '820L-940L', 'Complex texts, critical thinking', 10),
-                ('10-11 years', 'Year 6', 'Fluent Reader', '940L-1000L+', 'Advanced comprehension', 11),
-                ('11-14 years', 'Years 7-9', 'Advanced Reader', '1000L-1100L+', 'Critical analysis, complex themes', 12),
-                ('14-16 years', 'Years 10-11', 'Advanced Reader', '1100L-1200L+', 'GCSE level, young adult content', 13),
-                ('16-18 years', 'Years 12-13', 'Advanced Reader', '1200L-1300L+', 'A-level, advanced literature', 14),
-                ('18+ years', 'Adult', 'Proficient Reader', '1300L-1600L+', 'Professional reading, all content levels', 15)";
+            // Insert standard data using individual INSERT statements to avoid MySQL limits
+            $standardData = [
+                ['0-12 months', NULL, 'Pre-literacy (Sensory)', 'N/A', 'Listening to voices, looking at pictures', 1],
+                ['12-24 months', NULL, 'Pre-literacy (Naming)', 'N/A', 'Responding to stories, pointing at objects', 2],
+                ['2-3 years', NULL, 'Pre-literacy (Mimicry)', 'BR', 'Repeating phrases, reading from memory', 3],
+                ['3-4 years', NULL, 'Early Pre-reader', 'BR', 'Identifying letters, understanding sequences', 4],
+                ['4-5 years', 'Reception', 'Beginning Reader', 'BR-120L', 'Introduction to phonics, basic sentences', 5],
+                ['5-6 years', 'Year 1', 'Early Reader', '120L-220L', 'Simple books, building fluency', 6],
+                ['6-7 years', 'Year 2', 'Developing Reader', '220L-420L', 'Chapter books, independent reading', 7],
+                ['7-8 years', 'Year 3', 'Transitional Reader', '420L-620L', 'Longer books, complex stories', 8],
+                ['8-9 years', 'Year 4', 'Fluent Reader', '620L-820L', 'Advanced vocabulary, series books', 9],
+                ['9-10 years', 'Year 5', 'Fluent Reader', '820L-940L', 'Complex texts, critical thinking', 10],
+                ['10-11 years', 'Year 6', 'Fluent Reader', '940L-1000L+', 'Advanced comprehension', 11],
+                ['11-14 years', 'Years 7-9', 'Advanced Reader', '1000L-1100L+', 'Critical analysis, complex themes', 12],
+                ['14-16 years', 'Years 10-11', 'Advanced Reader', '1100L-1200L+', 'GCSE level, young adult content', 13],
+                ['16-18 years', 'Years 12-13', 'Advanced Reader', '1200L-1300L+', 'A-level, advanced literature', 14],
+                ['18+ years', 'Adult', 'Proficient Reader', '1300L-1600L+', 'Professional reading, all content levels', 15]
+            ];
 
-            $db->exec($insertSQL);
+            $insertStmt = $db->prepare("INSERT INTO `standard_reading_levels` (`age_group`, `school_year`, `reading_stage`, `lexile_range`, `typical_skills`, `sort_order`) VALUES (?, ?, ?, ?, ?, ?)");
+
+            foreach ($standardData as $row) {
+                $insertStmt->execute($row);
+            }
         }
 
         // Get the standard age groups from reading levels

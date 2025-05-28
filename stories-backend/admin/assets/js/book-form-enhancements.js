@@ -504,15 +504,15 @@ function initPublisherDropdown() {
     // Common publisher options to add if they don't exist
     const publisherOptions = [
         'Penguin Random House',
-        'HarperCollins',
+        'HarperCollins Children\'s Books',
         'Simon & Schuster',
         'Hachette Book Group',
         'Macmillan Publishers',
         'Scholastic',
         'Oxford University Press',
         'Cambridge University Press',
-        'Bloomsbury',
-        'Usborne',
+        'Bloomsbury Publishing',
+        'Usborne Publishing',
         'Walker Books',
         'Nosy Crow',
         'Puffin Books',

@@ -1389,8 +1389,8 @@ if (isset($_SESSION['error'])) {
                             <div class="form-row">
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="form-label" for="age_range">Age Range</label>
-                                        <select id="age_range" name="book_age_range" class="form-control">
+                                        <label class="form-label" for="age_range">Age Range <small class="text-muted">(synced with reading level)</small></label>
+                                        <select id="age_range" name="book_age_range" class="form-control" onchange="syncReadingLevelFromAge()">
                                             <option value="">Select Age Range</option>
                                             <?php
                                             // Use ONLY database age ranges - no hard-coded values
@@ -1447,8 +1447,8 @@ if (isset($_SESSION['error'])) {
 
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="form-label" for="reading_level">Reading Level</label>
-                                        <select id="reading_level" name="book_reading_level" class="form-control">
+                                        <label class="form-label" for="reading_level">Reading Level <small class="text-muted">(synced with age range)</small></label>
+                                        <select id="reading_level" name="book_reading_level" class="form-control" onchange="syncAgeRangeFromReading()">
                                             <option value="">Select Reading Level</option>
                                             <?php
                                             // Use ONLY database reading levels - no hard-coded values
@@ -2309,6 +2309,94 @@ setTimeout(function() {
         }
     }
 }, 500);
+
+// Age Range and Reading Level Synchronization Functions
+function syncReadingLevelFromAge() {
+    const ageRangeSelect = document.getElementById('age_range');
+    const readingLevelSelect = document.getElementById('reading_level');
+
+    if (!ageRangeSelect || !readingLevelSelect) return;
+
+    const selectedAge = ageRangeSelect.value;
+    console.log('Age range changed to:', selectedAge);
+
+    // Mapping from age ranges to reading levels based on UK education system
+    const ageToReadingMapping = {
+        '0-12 months': 'Pre-literacy (Sensory)',
+        '12-24 months': 'Pre-literacy (Naming)',
+        '2-3 years': 'Pre-literacy (Mimicry)',
+        '3-4 years': 'Early Pre-reader',
+        '4-5 years': 'Beginning Reader',
+        '5-6 years': 'Early Reader',
+        '6-7 years': 'Developing Reader',
+        '7-8 years': 'Transitional Reader',
+        '8-9 years': 'Fluent Reader',
+        '9-10 years': 'Fluent Reader',
+        '10-11 years': 'Fluent Reader',
+        '11-14 years': 'Advanced Reader',
+        '14-16 years': 'Advanced Reader',
+        '16-18 years': 'Advanced Reader',
+        '18+ years': 'Proficient Reader'
+    };
+
+    const targetReading = ageToReadingMapping[selectedAge];
+    if (targetReading) {
+        // Try to find matching reading level option
+        for (let option of readingLevelSelect.options) {
+            if (option.text.includes(targetReading) || option.value.includes(targetReading)) {
+                option.selected = true;
+                console.log('Synchronized reading level to:', option.text);
+                break;
+            }
+        }
+    }
+}
+
+function syncAgeRangeFromReading() {
+    const ageRangeSelect = document.getElementById('age_range');
+    const readingLevelSelect = document.getElementById('reading_level');
+
+    if (!ageRangeSelect || !readingLevelSelect) return;
+
+    const selectedReading = readingLevelSelect.value;
+    console.log('Reading level changed to:', selectedReading);
+
+    // Mapping from reading levels to age ranges
+    const readingToAgeMapping = {
+        'Pre-literacy (Sensory)': '0-12 months',
+        'Pre-literacy (Naming)': '12-24 months',
+        'Pre-literacy (Mimicry)': '2-3 years',
+        'Early Pre-reader': '3-4 years',
+        'Beginning Reader': '4-5 years',
+        'Early Reader': '5-6 years',
+        'Developing Reader': '6-7 years',
+        'Transitional Reader': '7-8 years',
+        'Fluent Reader': '8-9 years', // Default to youngest fluent reader age
+        'Advanced Reader': '11-14 years', // Default to middle advanced age
+        'Proficient Reader': '18+ years'
+    };
+
+    // Extract the reading stage from the selected value
+    let readingStage = selectedReading;
+    for (let stage in readingToAgeMapping) {
+        if (selectedReading.includes(stage)) {
+            readingStage = stage;
+            break;
+        }
+    }
+
+    const targetAge = readingToAgeMapping[readingStage];
+    if (targetAge) {
+        // Try to find matching age range option
+        for (let option of ageRangeSelect.options) {
+            if (option.value === targetAge) {
+                option.selected = true;
+                console.log('Synchronized age range to:', option.text);
+                break;
+            }
+        }
+    }
+}
 </script>
 
 <style>

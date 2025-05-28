@@ -138,20 +138,25 @@ require_once '../includes/db-connect.php';
         echo '<div class="card-header"><h3>Test 3: Test Column Existence Function</h3></div>';
         echo '<div class="card-body">';
 
-        // Define the columnExists function for testing
+        // Define the FIXED columnExists function for testing
         function columnExists($table, $column) {
             global $db;
             try {
-                $stmt = $db->prepare("SHOW COLUMNS FROM `$table` LIKE ?");
-                $stmt->execute([$column]);
+                // MySQL doesn't support parameter binding for SHOW COLUMNS LIKE
+                // So we need to escape the values manually and use direct query
+                $table = $db->quote($table);
+                $column = $db->quote($column);
+
+                $sql = "SHOW COLUMNS FROM $table LIKE $column";
+                $stmt = $db->query($sql);
                 $result = $stmt->fetch();
-                echo "<div class='debug-output'>DEBUG columnExists('$table', '$column'):\n";
-                echo "SQL: SHOW COLUMNS FROM `$table` LIKE '$column'\n";
+                echo "<div class='debug-output'>DEBUG columnExists (FIXED VERSION):\n";
+                echo "SQL: $sql\n";
                 echo "Result: " . json_encode($result) . "\n";
                 echo "Return value: " . ($result !== false ? 'TRUE' : 'FALSE') . "\n</div>";
                 return $result !== false;
             } catch (Exception $e) {
-                echo "<div class='debug-output error'>Error in columnExists('$table', '$column'): " . $e->getMessage() . "</div>";
+                echo "<div class='debug-output error'>Error in columnExists: " . $e->getMessage() . "</div>";
                 error_log("Error checking column existence: " . $e->getMessage());
                 return false;
             }

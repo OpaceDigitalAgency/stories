@@ -649,8 +649,13 @@ function columnExists($table, $column) {
     global $db;
 
     try {
-        $stmt = $db->prepare("SHOW COLUMNS FROM `$table` LIKE ?");
-        $stmt->execute([$column]);
+        // MySQL doesn't support parameter binding for SHOW COLUMNS LIKE
+        // So we need to escape the values manually and use direct query
+        $table = $db->quote($table);
+        $column = $db->quote($column);
+
+        $sql = "SHOW COLUMNS FROM $table LIKE $column";
+        $stmt = $db->query($sql);
         return $stmt->fetch() !== false;
     } catch (Exception $e) {
         error_log("Error checking column existence: " . $e->getMessage());

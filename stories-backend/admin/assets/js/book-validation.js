@@ -16,11 +16,12 @@ if (typeof window.bookValidationLoaded === 'undefined') {
             autoValidateAllISBNs();
         }
 
-        // Enable manual Goodreads checking for debugging
+        // Enable instant ISBN validation and Goodreads checking
         setTimeout(function() {
-            console.log('📚 Starting manual Goodreads status check...');
+            console.log('📚 Starting instant validation checks...');
+            performInstantValidation();
             checkAllGoodreadsStatus();
-        }, 2000); // 2 second delay to allow auto-validation to create the elements
+        }, 1000); // 1 second delay to allow DOM to be ready
 
         // ISBN Validation Tab Handlers
         $('.select-all-checkbox').on('change', function() {
@@ -299,6 +300,42 @@ if (typeof window.bookValidationLoaded === 'undefined') {
                         }
                     });
                 }, index * 200); // 200ms delay between each request
+            });
+        }
+
+        // Function to perform instant validation for all books
+        function performInstantValidation() {
+            console.log('📚 performInstantValidation called');
+            const $statusElements = $('.goodreads-status');
+            console.log('📚 Found', $statusElements.length, 'status elements for instant validation');
+
+            $statusElements.each(function(index) {
+                const $statusElement = $(this);
+                const isbn = $statusElement.data('isbn');
+                const bookId = $statusElement.data('book-id');
+
+                console.log(`📚 Instant validation for element ${index}:`, {
+                    isbn: isbn,
+                    bookId: bookId
+                });
+
+                if (!isbn || isbn.trim() === '') {
+                    console.log('📚 No ISBN found for instant validation', index);
+                    $statusElement.html('<span class="badge badge-secondary">Unknown</span>');
+                    return;
+                }
+
+                // Perform instant ISBN validation (simple format check)
+                const cleanISBN = isbn.replace(/[^0-9X]/gi, '');
+                const isValidFormat = (cleanISBN.length === 10 || cleanISBN.length === 13);
+
+                if (isValidFormat) {
+                    $statusElement.html('<span class="badge badge-success">Valid</span>');
+                    console.log(`📚 ✅ Instant validation: Valid ISBN format for ${isbn}`);
+                } else {
+                    $statusElement.html('<span class="badge badge-warning">Unknown</span>');
+                    console.log(`📚 ⚠️ Instant validation: Invalid ISBN format for ${isbn}`);
+                }
             });
         }
 

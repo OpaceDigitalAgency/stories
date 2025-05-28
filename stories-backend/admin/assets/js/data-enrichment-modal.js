@@ -80,34 +80,48 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             console.log('📖 No valid ISBN provided, keeping as dashes');
         }
 
-        // Update ISBN displays with retry mechanism
-        setTimeout(() => {
-            const $isbn13Element = $('#enrichment-isbn13');
-            const $isbn10Element = $('#enrichment-isbn10');
+        // Update ISBN displays immediately
+        const $isbn13Element = $('#enrichment-isbn13');
+        const $isbn10Element = $('#enrichment-isbn10');
+        const $isbn10VerifiedElement = $('#enrichment-isbn10-verified');
 
-            console.log('📖 Setting ISBN displays - ISBN-13:', isbn13, 'ISBN-10:', isbn10);
-            console.log('📖 ISBN elements found:', {
-                isbn13Element: $isbn13Element.length,
-                isbn10Element: $isbn10Element.length
-            });
+        console.log('📖 Setting ISBN displays - ISBN-13:', isbn13, 'ISBN-10:', isbn10);
+        console.log('📖 ISBN elements found:', {
+            isbn13Element: $isbn13Element.length,
+            isbn10Element: $isbn10Element.length,
+            isbn10VerifiedElement: $isbn10VerifiedElement.length
+        });
 
-            if ($isbn13Element.length > 0) {
-                $isbn13Element.text(isbn13);
-                console.log('📖 Successfully set ISBN-13 display');
-            } else {
-                console.error('📖 ISBN-13 element not found!');
+        if ($isbn13Element.length > 0) {
+            $isbn13Element.text(isbn13);
+            console.log('📖 Successfully set ISBN-13 display');
+        } else {
+            console.error('📖 ISBN-13 element not found!');
+        }
+
+        if ($isbn10Element.length > 0) {
+            $isbn10Element.text(isbn10);
+            console.log('📖 Successfully set ISBN-10 display');
+        } else {
+            console.error('📖 ISBN-10 element not found!');
+        }
+
+        // Calculate and display verified ISBN-10 value
+        if ($isbn10VerifiedElement.length > 0) {
+            let verifiedISBN10 = '-';
+            if (isbn13 !== '-' && isbn13.length === 13) {
+                // Convert ISBN-13 to ISBN-10 for verification
+                const convertedISBN10 = convertISBN13ToISBN10(isbn13.replace(/[^0-9X]/gi, ''));
+                if (convertedISBN10) {
+                    verifiedISBN10 = convertedISBN10;
+                }
             }
+            $isbn10VerifiedElement.text(verifiedISBN10);
+            console.log('📖 Successfully set ISBN-10 verified value:', verifiedISBN10);
+        }
 
-            if ($isbn10Element.length > 0) {
-                $isbn10Element.text(isbn10);
-                console.log('📖 Successfully set ISBN-10 display');
-            } else {
-                console.error('📖 ISBN-10 element not found!');
-            }
-
-            // Show the identifiers section
-            $('#enrichment-book-identifiers').show();
-        }, 100);
+        // Show the identifiers section
+        $('#enrichment-book-identifiers').show();
 
         // Add conversion verification using backend functions
         if (isbn13 !== '-' && isbn10 !== '-') {
@@ -151,6 +165,44 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             return `${isbn.substring(0, 1)}-${isbn.substring(1, 3)}-${isbn.substring(3, 9)}-${isbn.substring(9)}`;
         }
         return isbn;
+    }
+
+    // Helper function to convert ISBN-13 to ISBN-10
+    function convertISBN13ToISBN10(isbn13) {
+        if (!isbn13 || isbn13.length !== 13) return null;
+
+        // Remove the 978 prefix and check digit
+        const isbn10Base = isbn13.substring(3, 12);
+
+        // Calculate check digit
+        let sum = 0;
+        for (let i = 0; i < 9; i++) {
+            sum += parseInt(isbn10Base[i]) * (10 - i);
+        }
+
+        const checkDigit = (11 - (sum % 11)) % 11;
+        const checkChar = checkDigit === 10 ? 'X' : checkDigit.toString();
+
+        return isbn10Base + checkChar;
+    }
+
+    // Helper function to convert ISBN-10 to ISBN-13
+    function convertISBN10ToISBN13(isbn10) {
+        if (!isbn10 || isbn10.length !== 10) return null;
+
+        // Add 978 prefix and remove old check digit
+        const isbn13Base = '978' + isbn10.substring(0, 9);
+
+        // Calculate new check digit
+        let sum = 0;
+        for (let i = 0; i < 12; i++) {
+            const digit = parseInt(isbn13Base[i]);
+            sum += (i % 2 === 0) ? digit : digit * 3;
+        }
+
+        const checkDigit = (10 - (sum % 10)) % 10;
+
+        return isbn13Base + checkDigit.toString();
     }
 
     function fetchEnrichmentData(title, author, currentISBN) {

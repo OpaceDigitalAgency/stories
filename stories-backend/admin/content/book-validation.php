@@ -422,7 +422,7 @@ if (!$bookValidationScriptLoaded) {
 <!-- Data Enrichment Modal Structure (scripts loaded dynamically) -->
 <style>
 /* Data Enrichment Modal Styles */
-.enrichment-field { margin-bottom: 15px; border: 1px solid #ddd; border-radius: 5px; padding: 15px; }
+.enrichment-field { margin-bottom: 15px; border: 2px solid #ddd; border-radius: 5px; padding: 15px; }
 .enrichment-field.selected { border-color: #007bff; background-color: #f8f9ff; }
 .enrichment-field input[type="checkbox"] { margin-right: 8px; }
 .enrichment-field label { font-weight: bold; margin-bottom: 5px; display: block; }
@@ -438,6 +438,28 @@ if (!$bookValidationScriptLoaded) {
 #confidence-score.badge-success { background-color: #28a745; }
 #confidence-score.badge-warning { background-color: #ffc107; }
 #confidence-score.badge-danger { background-color: #dc3545; }
+
+/* Enhanced disabled field styling */
+.enrichment-field.disabled-field {
+    background-color: #f5f5f5 !important;
+    border-color: #ccc !important;
+    opacity: 0.6;
+}
+.enrichment-field.disabled-field label {
+    color: #999 !important;
+}
+.enrichment-field.disabled-field .current-value,
+.enrichment-field.disabled-field .new-value {
+    background-color: #e9e9e9 !important;
+    color: #666 !important;
+}
+.enrichment-field.disabled-field input[type="checkbox"]:disabled {
+    opacity: 0.5;
+}
+.enrichment-field.disabled-field .badge {
+    background-color: #ccc !important;
+    color: #666 !important;
+}
 
 /* Modal header styling */
 .modal-title-container {
@@ -492,6 +514,8 @@ if (!$bookValidationScriptLoaded) {
                         <small>
                             <strong>ISBN-13:</strong> <span id="enrichment-isbn13">-</span> |
                             <strong>ISBN-10:</strong> <span id="enrichment-isbn10">-</span>
+                            <br>
+                            <strong>ISBN-10 Verified Value:</strong> <span id="enrichment-isbn10-verified" class="text-warning">-</span>
                             <br>
                             <span class="text-muted" id="enrichment-isbn-converted" style="font-size: 0.85em;"></span>
                         </small>

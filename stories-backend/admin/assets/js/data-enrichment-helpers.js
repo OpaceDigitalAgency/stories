@@ -54,6 +54,24 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
             }
         });
 
+        // Add database recommendation option for publisher field
+        if (fieldName === 'publisher') {
+            // Add a preselected option that encourages using existing database publishers
+            optionsHtml += `
+                <div class="form-check mt-3 p-2 bg-success-light border border-success rounded">
+                    <input class="form-check-input" type="radio" name="field_${fieldName}_option" id="field_${fieldName}_database" value="database_match" checked>
+                    <label class="form-check-label font-weight-bold text-success" for="field_${fieldName}_database">
+                        <span class="badge badge-success">Database Match</span>
+                        <span class="badge badge-success ml-1">(Recommended)</span>
+                        <div class="mt-1">
+                            <i class="fas fa-database"></i> Use existing publisher from database
+                            <br><small class="text-muted">Prevents duplicates and maintains data consistency</small>
+                        </div>
+                    </label>
+                </div>
+            `;
+        }
+
         // Check if any option exactly matches current value
         const hasExactMatch = options.some(option => {
             const currentVal = normalizeValue(field.current_value);

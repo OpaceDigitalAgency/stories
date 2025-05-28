@@ -672,6 +672,15 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
 
         // Set up age range and reading level synchronization
         setupAgeRangeReadingLevelSync();
+
+        // Debug: Show what fields are actually available
+        setTimeout(() => {
+            console.log('🔍 DEBUG: All enrichment fields available:', Object.keys(window.currentEnrichmentData?.fields || {}));
+            console.log('🔍 DEBUG: Age range field structure:', window.currentEnrichmentData?.fields?.age_range);
+            console.log('🔍 DEBUG: Reading level field structure:', window.currentEnrichmentData?.fields?.reading_level);
+            console.log('🔍 DEBUG: All age range inputs in DOM:', $('input[name*="age_range"]').length);
+            console.log('🔍 DEBUG: All reading level inputs in DOM:', $('input[name*="reading_level"]').length);
+        }, 1000);
     }
 
     // Set up synchronization between age range and reading level fields
@@ -718,7 +727,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             'All Ages': '5-6 years'
         };
 
-        // Listen for changes in age range selections
+        // Listen for changes in age range selections - enhanced debugging
         $(document).on('change', 'input[name="field_age_range_option"], input[name="field_age_range"]', function() {
             console.log('🔄 Age range field changed:', $(this).attr('name'), $(this).val(), $(this).is(':checked'));
             console.log('🔄 Element details:', {
@@ -726,8 +735,20 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 name: $(this).attr('name'),
                 value: $(this).val(),
                 checked: $(this).is(':checked'),
-                type: $(this).attr('type')
+                type: $(this).attr('type'),
+                id: $(this).attr('id'),
+                class: $(this).attr('class')
             });
+
+            // Debug: Show all age range related inputs
+            console.log('🔄 All age range inputs found:', $('input[name*="age_range"]').map(function() {
+                return {
+                    name: $(this).attr('name'),
+                    value: $(this).val(),
+                    checked: $(this).is(':checked'),
+                    type: $(this).attr('type')
+                };
+            }).get());
 
             if ($(this).is(':checked')) {
                 const selectedAgeRange = getSelectedFieldValue('age_range');
@@ -741,6 +762,14 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 } else {
                     console.log('🔄 No mapping found for age range:', selectedAgeRange);
                     console.log('🔄 Exact match check:', ageToReadingMap[selectedAgeRange]);
+                    console.log('🔄 Trying partial matches...');
+
+                    // Try partial matching for common variations
+                    Object.keys(ageToReadingMap).forEach(key => {
+                        if (selectedAgeRange && selectedAgeRange.includes(key) || key.includes(selectedAgeRange)) {
+                            console.log('🔄 Partial match found:', key, '→', ageToReadingMap[key]);
+                        }
+                    });
                 }
             }
         });

@@ -56,12 +56,16 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
 
         // Add database recommendation option for publisher field
         if (fieldName === 'publisher') {
+            console.log('🏢 Processing publisher field options:', options);
+
             // Check if any option has a database recommendation
             const hasRecommendation = options.some(option => option.recommended);
+            console.log('🏢 Has recommendation:', hasRecommendation);
 
             if (hasRecommendation) {
                 // Show the specific database recommendation
                 const recommendedOption = options.find(option => option.recommended);
+                console.log('🏢 Recommended option:', recommendedOption);
                 optionsHtml += `
                     <div class="form-check mt-3 p-2 bg-light border border-success rounded">
                         <input class="form-check-input" type="radio" name="field_${fieldName}_option" id="field_${fieldName}_database" value="database_match" checked>
@@ -75,6 +79,7 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
                     </div>
                 `;
             } else {
+                console.log('🏢 No specific recommendation found, showing generic database option');
                 // Generic database recommendation when no specific match found
                 optionsHtml += `
                     <div class="form-check mt-3 p-2 bg-light border border-info rounded">

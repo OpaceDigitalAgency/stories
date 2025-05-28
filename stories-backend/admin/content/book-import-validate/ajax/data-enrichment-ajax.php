@@ -225,6 +225,10 @@ try {
             handleStandardizeReadingLevel();
             break;
 
+        case 'fix_age_range_sync':
+            handleFixAgeRangeSync();
+            break;
+
         default:
             echo json_encode(['success' => false, 'message' => 'Invalid action: ' . $action]);
             break;
@@ -2291,5 +2295,172 @@ function synchronizeAgeAndReadingLevel($bookId) {
     } catch (Exception $e) {
         error_log("Error synchronizing age/reading level for book $bookId: " . $e->getMessage());
         return false;
+    }
+}
+
+/**
+ * Handle comprehensive age range synchronization fix
+ * This addresses the specific issues with 12+ values and whitespace
+ */
+function handleFixAgeRangeSync() {
+    global $db;
+
+    try {
+        $db->beginTransaction();
+
+        // 1. First, let's see what we're working with (including whitespace issues)
+        $currentAgeRanges = $db->query("
+            SELECT age_range, COUNT(*) as count
+            FROM books
+            WHERE age_range IS NOT NULL AND age_range != ''
+            GROUP BY age_range
+            ORDER BY count DESC
+        ")->fetchAll();
+
+        error_log("=== FIX AGE RANGE SYNC DEBUG ===");
+        error_log("Current age ranges found:");
+        foreach ($currentAgeRanges as $range) {
+            $trimmed = trim($range['age_range']);
+            $length = strlen($range['age_range']);
+            error_log("  '{$range['age_range']}' (length: $length, trimmed: '$trimmed') - {$range['count']} books");
+        }
+
+        // 2. Define comprehensive mappings that handle whitespace and exact matches
+        $ageRangeMapping = [
+            // Handle exact matches (including potential whitespace)
+            '12+' => '11-14 years',
+            ' 12+' => '11-14 years',
+            '12+ ' => '11-14 years',
+            ' 12+ ' => '11-14 years',
+            '13+' => '11-14 years',
+            '14+' => '14-16 years',
+            '15+' => '14-16 years',
+            '16+' => '16-18 years',
+            '17+' => '16-18 years',
+            '18+' => '18+ years',
+
+            // Other legacy values
+            'Teen' => '14-16 years',
+            'Young Adult' => '14-16 years',
+            'Adult' => '18+ years',
+            'All Ages' => '5-6 years'
+        ];
+
+        // 3. Reading level mappings
+        $readingLevelMapping = [
+            'Transitional Reader (7-8 years)' => 'Transitional Reader',
+            'Fluent Reader (8-11 years)' => 'Fluent Reader',
+            'Advanced Reader (11-14 years)' => 'Advanced Reader',
+            'Beginning Reader (4-5 years)' => 'Beginning Reader',
+            'Early Reader (5-6 years)' => 'Early Reader',
+            'Developing Reader (6-7 years)' => 'Developing Reader',
+            'Pre-literacy (Sensory)' => 'Pre-literacy (Sensory)',
+            'Pre-literacy (Naming)' => 'Pre-literacy (Naming)',
+            'Pre-literacy (Mimicry)' => 'Pre-literacy (Mimicry)',
+            'Early Pre-reader' => 'Early Pre-reader',
+            'Proficient Reader' => 'Proficient Reader'
+        ];
+
+        // 4. Apply age range mappings (including trimming whitespace)
+        $totalAgeUpdates = 0;
+
+        // First, trim all whitespace from age_range values
+        $trimStmt = $db->prepare("UPDATE books SET age_range = TRIM(age_range) WHERE age_range IS NOT NULL AND age_range != ''");
+        $trimStmt->execute();
+        $trimmedCount = $trimStmt->rowCount();
+        error_log("Trimmed whitespace from $trimmedCount age range values");
+
+        foreach ($ageRangeMapping as $oldRange => $newRange) {
+            // Check for exact match (after trimming)
+            $stmt = $db->prepare("SELECT COUNT(*) FROM books WHERE TRIM(age_range) = ?");
+            $stmt->execute([trim($oldRange)]);
+            $count = $stmt->fetchColumn();
+
+            if ($count > 0) {
+                $updateStmt = $db->prepare("UPDATE books SET age_range = ? WHERE TRIM(age_range) = ?");
+                $updateStmt->execute([$newRange, trim($oldRange)]);
+                $updated = $updateStmt->rowCount();
+                $totalAgeUpdates += $updated;
+
+                error_log("✅ Updated age range: '$oldRange' → '$newRange' ($updated books)");
+            }
+        }
+
+        // 5. Apply reading level mappings
+        $totalReadingUpdates = 0;
+
+        foreach ($readingLevelMapping as $oldLevel => $newLevel) {
+            $stmt = $db->prepare("SELECT COUNT(*) FROM books WHERE reading_level = ?");
+            $stmt->execute([$oldLevel]);
+            $count = $stmt->fetchColumn();
+
+            if ($count > 0) {
+                $updateStmt = $db->prepare("UPDATE books SET reading_level = ? WHERE reading_level = ?");
+                $updateStmt->execute([$newLevel, $oldLevel]);
+                $updated = $updateStmt->rowCount();
+                $totalReadingUpdates += $updated;
+
+                error_log("✅ Updated reading level: '$oldLevel' → '$newLevel' ($updated books)");
+            }
+        }
+
+        // 6. Synchronize age ranges with reading levels
+        $ageToReadingMap = [
+            '0-12 months' => 'Pre-literacy (Sensory)',
+            '12-24 months' => 'Pre-literacy (Naming)',
+            '2-3 years' => 'Pre-literacy (Mimicry)',
+            '3-4 years' => 'Early Pre-reader',
+            '4-5 years' => 'Beginning Reader',
+            '5-6 years' => 'Early Reader',
+            '6-7 years' => 'Developing Reader',
+            '7-8 years' => 'Transitional Reader',
+            '8-9 years' => 'Fluent Reader',
+            '9-10 years' => 'Fluent Reader',
+            '10-11 years' => 'Fluent Reader',
+            '11-14 years' => 'Advanced Reader',
+            '14-16 years' => 'Advanced Reader',
+            '16-18 years' => 'Advanced Reader',
+            '18+ years' => 'Proficient Reader'
+        ];
+
+        $syncUpdates = 0;
+        foreach ($ageToReadingMap as $ageRange => $expectedReading) {
+            $stmt = $db->prepare("
+                UPDATE books
+                SET reading_level = ?
+                WHERE age_range = ?
+                AND (reading_level IS NULL OR reading_level = '' OR reading_level != ?)
+            ");
+            $stmt->execute([$expectedReading, $ageRange, $expectedReading]);
+            $updated = $stmt->rowCount();
+            $syncUpdates += $updated;
+
+            if ($updated > 0) {
+                error_log("🔗 Synced $updated books with age range '$ageRange' to reading level '$expectedReading'");
+            }
+        }
+
+        $db->commit();
+
+        $totalChanges = $totalAgeUpdates + $totalReadingUpdates + $syncUpdates;
+        error_log("=== FIX AGE RANGE SYNC COMPLETE ===");
+        error_log("Age range updates: $totalAgeUpdates");
+        error_log("Reading level updates: $totalReadingUpdates");
+        error_log("Sync updates: $syncUpdates");
+        error_log("Total changes: $totalChanges");
+
+        echo json_encode([
+            'success' => true,
+            'message' => "Age range sync issues fixed successfully",
+            'age_updates' => $totalAgeUpdates,
+            'reading_updates' => $totalReadingUpdates,
+            'sync_updates' => $syncUpdates,
+            'total_changes' => $totalChanges
+        ]);
+
+    } catch (Exception $e) {
+        $db->rollBack();
+        error_log("Error fixing age range sync: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
     }
 }

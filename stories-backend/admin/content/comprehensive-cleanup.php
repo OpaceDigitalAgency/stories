@@ -1031,6 +1031,7 @@ function getTableInfo($table) {
                         echo '<p><strong>📚 Create Standard Reading Levels System:</strong> Creates lookup tables with UK education system standards (Reception to A-levels) with synchronized age ranges and Lexile mappings.</p>';
                         echo '<p><strong>🔄 Migrate All to Standards:</strong> Automatically converts all existing reading level values to the standardized system and updates corresponding age ranges to maintain synchronization.</p>';
                         echo '<p><strong>🔗 Synchronize Age Ranges:</strong> Maps all existing age range values in books to match the standard reading level age groups, ensuring consistency between reading levels and age ranges.</p>';
+                        echo '<button onclick="fixAgeRangeSync()" class="btn btn-warning me-2">🔧 Fix Age Range Sync Issues</button>';
                         echo '</div>';
                         echo '<button onclick="createStandardReadingLevels()" class="btn btn-primary">📚 Create Standard Reading Levels System</button>';
                         echo '<button onclick="migrateAllReadingLevels()" class="btn btn-warning ms-2">🔄 Migrate All to Standards</button>';
@@ -1885,6 +1886,45 @@ function getTableInfo($table) {
                 alert('✅ Age ranges synchronized successfully!\n' +
                       'Books updated: ' + (data.books_updated || 0) + '\n' +
                       'Standard age groups: ' + (data.standard_groups ? data.standard_groups.length : 0));
+                location.reload();
+            } else {
+                alert('❌ Error: ' + (data.message || 'Unknown error'));
+                button.textContent = originalText;
+                button.disabled = false;
+            }
+        })
+        .catch(error => {
+            alert('❌ Network error: ' + error.message);
+            button.textContent = originalText;
+            button.disabled = false;
+        });
+    }
+
+    function fixAgeRangeSync() {
+        if (!confirm('Fix ALL age range synchronization issues?\nThis will:\n- Convert 12+ to 11-14 years\n- Standardize all reading levels\n- Synchronize age ranges with reading levels\n- Handle whitespace and formatting issues')) {
+            return;
+        }
+
+        const button = event.target;
+        const originalText = button.textContent;
+        button.textContent = 'Fixing...';
+        button.disabled = true;
+
+        fetch('book-import-validate/ajax/data-enrichment-ajax.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'action=fix_age_range_sync'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ Age range sync issues fixed successfully!\n' +
+                      'Age range updates: ' + (data.age_updates || 0) + '\n' +
+                      'Reading level updates: ' + (data.reading_updates || 0) + '\n' +
+                      'Sync updates: ' + (data.sync_updates || 0) + '\n' +
+                      'Total changes: ' + (data.total_changes || 0));
                 location.reload();
             } else {
                 alert('❌ Error: ' + (data.message || 'Unknown error'));

@@ -24,25 +24,33 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             dataType: 'json',
             success: function(response) {
                 console.log('📚 ISBN fetch response:', response);
-                
-                if (response.success && response.data) {
-                    const data = response.data;
-                    
+
+                if (response.success) {
+                    // Update modal header with actual ISBN values and book title
+                    const isbn13 = response.isbn_13 || '-';
+                    const isbn10 = response.isbn_10 || '-';
+                    const title = response.title || 'Unknown Title';
+
+                    // Update book title in modal header
+                    $('#enrichment-book-title').text(title);
+                    console.log('📚 Updated book title to:', title);
+
                     // Update ISBN display in modal header
-                    $('#enrichment-isbn13').text(data.isbn13 || '-');
-                    $('#enrichment-isbn10').text(data.isbn10 || '-');
-                    
-                    // Show conversion info if available
-                    if (data.converted_info) {
-                        $('#enrichment-isbn-converted').text(data.converted_info);
+                    $('#enrichment-isbn13').text(isbn13);
+                    $('#enrichment-isbn10').text(isbn10);
+
+                    // Calculate and display verified ISBN-10 value using conversion
+                    if (isbn13 !== '-' && isbn13.length === 13) {
+                        const verifiedISBN10 = convertISBN13ToISBN10(isbn13.replace(/[^0-9X]/gi, ''));
+                        $('#enrichment-isbn10-verified').text(verifiedISBN10 || '-');
                     } else {
-                        $('#enrichment-isbn-converted').text('-');
+                        $('#enrichment-isbn10-verified').text('-');
                     }
-                    
+
                     // Show the identifiers section
                     $('#enrichment-book-identifiers').show();
-                    
-                    console.log('📚 ✅ ISBN data updated in modal header');
+
+                    console.log('📚 ✅ ISBN data and title updated in modal header');
                 } else {
                     console.log('📚 ⚠️ No ISBN data found or error:', response.message);
                     // Still show the section but with dashes
@@ -824,18 +832,18 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     // Update the visual display of the new value
                     const $readingFieldDiv = $(`.enrichment-field[data-field="reading_level"]`);
                     let $newValueDiv = $readingFieldDiv.find('.new-value').first();
-                    
+
                     // If no .new-value div found, look for other possible containers
                     if ($newValueDiv.length === 0) {
                         $newValueDiv = $readingFieldDiv.find('.mt-1, .mt-2, .field-new-value').first();
                     }
-                    
+
                     // If still no container found, create one
                     if ($newValueDiv.length === 0) {
                         $readingFieldDiv.append('<div class="new-value mt-1"></div>');
                         $newValueDiv = $readingFieldDiv.find('.new-value').last();
                     }
-                    
+
                     if ($newValueDiv.length > 0) {
                         $newValueDiv.html(`<span class="badge badge-info">${expectedReading}</span>`);
                         console.log('🔄 Updated reading level visual display');
@@ -875,18 +883,18 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     // Update the visual display of the new value
                     const $ageFieldDiv = $(`.enrichment-field[data-field="age_range"]`);
                     let $newValueDiv = $ageFieldDiv.find('.new-value').first();
-                    
+
                     // If no .new-value div found, look for other possible containers
                     if ($newValueDiv.length === 0) {
                         $newValueDiv = $ageFieldDiv.find('.mt-1, .mt-2, .field-new-value').first();
                     }
-                    
+
                     // If still no container found, create one
                     if ($newValueDiv.length === 0) {
                         $ageFieldDiv.append('<div class="new-value mt-1"></div>');
                         $newValueDiv = $ageFieldDiv.find('.new-value').last();
                     }
-                    
+
                     if ($newValueDiv.length > 0) {
                         $newValueDiv.html(`<span class="badge badge-light">${expectedAge}</span>`);
                         console.log('🔄 Updated age range visual display');

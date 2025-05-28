@@ -2623,8 +2623,8 @@ function handleGetBookISBNs() {
     }
 
     try {
-        // Get ISBN data from the books table
-        $stmt = $db->prepare("SELECT isbn_10, isbn_13 FROM books WHERE directory_item_id = ?");
+        // Get ISBN data from the books table (correct column names: isbn for ISBN-10, isbn13 for ISBN-13)
+        $stmt = $db->prepare("SELECT isbn, isbn13, title FROM books b JOIN directory_items di ON b.directory_item_id = di.id WHERE b.directory_item_id = ?");
         $stmt->execute([$bookId]);
         $book = $stmt->fetch();
 
@@ -2636,27 +2636,28 @@ function handleGetBookISBNs() {
         // Format the response with ISBN conversion verification
         $response = [
             'success' => true,
-            'isbn_10' => $book['isbn_10'] ?? '',
-            'isbn_13' => $book['isbn_13'] ?? '',
+            'title' => $book['title'] ?? '',
+            'isbn_10' => $book['isbn'] ?? '',
+            'isbn_13' => $book['isbn13'] ?? '',
             'conversions' => []
         ];
 
         // Add conversion verification if we have ISBNs
-        if (!empty($book['isbn_10']) && !empty($book['isbn_13'])) {
+        if (!empty($book['isbn']) && !empty($book['isbn13'])) {
             // Verify the conversion is correct
-            $convertedTo13 = convertISBN10to13($book['isbn_10']);
-            $convertedTo10 = convertISBN13to10($book['isbn_13']);
-            
+            $convertedTo13 = convertISBN10to13($book['isbn']);
+            $convertedTo10 = convertISBN13to10($book['isbn13']);
+
             $response['conversions'] = [
                 'isbn_10_to_13' => [
-                    'original' => $book['isbn_10'],
+                    'original' => $book['isbn'],
                     'converted' => $convertedTo13,
-                    'matches_stored' => ($convertedTo13 === $book['isbn_13'])
+                    'matches_stored' => ($convertedTo13 === $book['isbn13'])
                 ],
                 'isbn_13_to_10' => [
-                    'original' => $book['isbn_13'],
+                    'original' => $book['isbn13'],
                     'converted' => $convertedTo10,
-                    'matches_stored' => ($convertedTo10 === $book['isbn_10'])
+                    'matches_stored' => ($convertedTo10 === $book['isbn'])
                 ]
             ];
         }
@@ -2674,23 +2675,23 @@ function handleGetBookISBNs() {
  */
 function convertISBN10to13($isbn10) {
     if (empty($isbn10)) return '';
-    
+
     // Remove any hyphens or spaces
     $isbn10 = preg_replace('/[^0-9X]/', '', $isbn10);
-    
+
     if (strlen($isbn10) !== 10) return '';
-    
+
     // Add 978 prefix and remove check digit
     $isbn13_base = '978' . substr($isbn10, 0, 9);
-    
+
     // Calculate check digit
     $sum = 0;
     for ($i = 0; $i < 12; $i++) {
         $sum += intval($isbn13_base[$i]) * (($i % 2 === 0) ? 1 : 3);
     }
-    
+
     $checkDigit = (10 - ($sum % 10)) % 10;
-    
+
     return $isbn13_base . $checkDigit;
 }
 
@@ -2699,29 +2700,29 @@ function convertISBN10to13($isbn10) {
  */
 function convertISBN13to10($isbn13) {
     if (empty($isbn13)) return '';
-    
+
     // Remove any hyphens or spaces
     $isbn13 = preg_replace('/[^0-9]/', '', $isbn13);
-    
+
     if (strlen($isbn13) !== 13) return '';
-    
+
     // Only convert if it starts with 978
     if (substr($isbn13, 0, 3) !== '978') return '';
-    
+
     // Extract the middle 9 digits
     $isbn10_base = substr($isbn13, 3, 9);
-    
+
     // Calculate check digit
     $sum = 0;
     for ($i = 0; $i < 9; $i++) {
         $sum += intval($isbn10_base[$i]) * (10 - $i);
     }
-    
+
     $checkDigit = (11 - ($sum % 11)) % 11;
-    
+
     if ($checkDigit === 10) {
         $checkDigit = 'X';
     }
-    
+
     return $isbn10_base . $checkDigit;
 }

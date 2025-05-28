@@ -735,7 +735,7 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
         $enhancedTableScriptLoaded = true;
         // Determine the correct path based on current directory
         $isContentDir = strpos($_SERVER['SCRIPT_FILENAME'], '/content/') !== false;
-        $scriptPath = $isContentDir ? '../../admin/assets/js/enhanced-table.js' : 'assets/js/enhanced-table.js';
+        $scriptPath = $isContentDir ? '../assets/js/enhanced-table.js' : 'assets/js/enhanced-table.js';
         echo '<script src="' . $scriptPath . '"></script>';
     }
     ?>

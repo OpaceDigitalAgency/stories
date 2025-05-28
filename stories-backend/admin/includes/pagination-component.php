@@ -229,7 +229,7 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
                     $paginationScriptLoaded = true;
                     // Determine the correct path based on current directory
                     $isContentDir = strpos($_SERVER['SCRIPT_FILENAME'], '/content/') !== false;
-                    $scriptPath = $isContentDir ? '../../admin/assets/js/pagination.js' : 'assets/js/pagination.js';
+                    $scriptPath = $isContentDir ? '../assets/js/pagination.js' : 'assets/js/pagination.js';
                     echo '<script src="' . $scriptPath . '"></script>';
                 }
                 ?>

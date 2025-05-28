@@ -415,7 +415,7 @@ require_once '../includes/header.php';
 static $bookValidationScriptLoaded = false;
 if (!$bookValidationScriptLoaded) {
     $bookValidationScriptLoaded = true;
-    echo '<script src="../../admin/assets/js/book-validation.js"></script>';
+    echo '<script src="../assets/js/book-validation.js"></script>';
 }
 ?>
 

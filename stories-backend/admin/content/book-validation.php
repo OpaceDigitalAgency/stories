@@ -415,7 +415,8 @@ require_once '../includes/header.php';
 static $bookValidationScriptLoaded = false;
 if (!$bookValidationScriptLoaded) {
     $bookValidationScriptLoaded = true;
-    echo '<script src="../assets/js/book-validation.js"></script>';
+    $cacheBuster = '?v=' . time();
+    echo '<script src="../assets/js/book-validation.js' . $cacheBuster . '"></script>';
 }
 ?>
 

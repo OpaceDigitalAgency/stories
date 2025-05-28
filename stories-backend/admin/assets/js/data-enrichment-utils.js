@@ -23,10 +23,18 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
             },
             dataType: 'json',
             success: function(response) {
-                const badge = response.success && response.exists ?
-                    '<span class="badge" style="background-color: #28a745; color: white; border: none;"><i class="fas fa-book"></i> Goodreads</span>' :
-                    '<span class="badge" style="background-color: #dc3545; color: white; border: none;"><i class="fas fa-times"></i> Not on Goodreads</span>';
-                $('#goodreads-status-badge').html(badge);
+                const $badge = $('#goodreads-status-badge');
+                if (response.success && response.exists) {
+                    $badge.removeClass('badge-secondary badge-warning badge-danger badge-info')
+                          .addClass('badge-success')
+                          .css({'background-color': '#28a745', 'color': 'white', 'border': 'none'})
+                          .text('Goodreads');
+                } else {
+                    $badge.removeClass('badge-secondary badge-warning badge-success badge-info')
+                          .addClass('badge-danger')
+                          .css({'background-color': '#dc3545', 'color': 'white', 'border': 'none'})
+                          .text('Not on Goodreads');
+                }
             },
             error: function() {
                 $('#goodreads-status-badge').html('<span class="badge badge-danger">Error</span>');

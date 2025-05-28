@@ -409,15 +409,15 @@ if (typeof window.bookValidationLoaded === 'undefined') {
                             console.log('📚 Goodreads response for ISBN ' + isbnString + ':', response);
                             if (response.success && response.exists) {
                                 $statusElement.removeClass('badge-secondary badge-warning badge-danger').addClass('badge-success')
-                                    .html('<i class="fas fa-book"></i> Goodreads');
+                                    .text('Goodreads');
                                 console.log('📚 ✅ Updated Goodreads status to: Found on Goodreads');
                             } else if (response.success) {
                                 $statusElement.removeClass('badge-secondary badge-warning badge-success').addClass('badge-danger')
-                                    .html('<i class="fas fa-times"></i> Not on Goodreads');
+                                    .text('Not on Goodreads');
                                 console.log('📚 ❌ Updated Goodreads status to: Not on Goodreads');
                             } else {
                                 $statusElement.removeClass('badge-secondary badge-success badge-danger').addClass('badge-warning')
-                                    .html('<i class="fas fa-exclamation-triangle"></i> Error');
+                                    .text('Error');
                                 console.error('📚 Goodreads validation error:', response.message);
                             }
                         },

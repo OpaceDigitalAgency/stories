@@ -1561,9 +1561,10 @@ function handleFixAllPublisherRelationships() {
                 $stmt->execute([$existingPublisher['id'], $book['directory_item_id']]);
                 $fixed++;
             } else {
-                // Create new publisher
-                $stmt = $db->prepare("INSERT INTO authors (name) VALUES (?)");
-                $stmt->execute([$publisherName]);
+                // Create new publisher with slug
+                $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $publisherName)));
+                $stmt = $db->prepare("INSERT INTO authors (name, slug) VALUES (?, ?)");
+                $stmt->execute([$publisherName, $slug]);
                 $newPublisherId = $db->lastInsertId();
 
                 // Update relationship
@@ -1903,9 +1904,10 @@ function handleBulkFixSelected() {
                 $stmt->execute([$existingPublisher['id'], $bookId]);
                 $fixed++;
             } else {
-                // Create new publisher
-                $stmt = $db->prepare("INSERT INTO authors (name) VALUES (?)");
-                $stmt->execute([$publisherName]);
+                // Create new publisher with slug
+                $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $publisherName)));
+                $stmt = $db->prepare("INSERT INTO authors (name, slug) VALUES (?, ?)");
+                $stmt->execute([$publisherName, $slug]);
                 $newPublisherId = $db->lastInsertId();
 
                 // Update relationship

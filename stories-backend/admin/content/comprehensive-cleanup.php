@@ -195,9 +195,10 @@ function getTableInfo($table) {
                             // Use existing author ID
                             $publisherId = $existingAuthor['id'];
                         } else {
-                            // Create new author record for this publisher
-                            $stmt = $db->prepare("INSERT INTO authors (name) VALUES (?)");
-                            $stmt->execute([$cleanName]);
+                            // Create new author record for this publisher with slug
+                            $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $cleanName)));
+                            $stmt = $db->prepare("INSERT INTO authors (name, slug) VALUES (?, ?)");
+                            $stmt->execute([$cleanName, $slug]);
                             $publisherId = $db->lastInsertId();
                         }
 

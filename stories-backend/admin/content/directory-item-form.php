@@ -145,7 +145,7 @@ try {
             $priceRanges[] = $row['range_name'];
         }
     } catch (PDOException $e) {
-        // Silently fail - fallback to hardcoded ranges
+        // Silently fail - fallback to database values only
         $priceRanges = ['Under £5', '£5-£10', '£10-£15', '£15-£20', 'Over £20'];
     }
 

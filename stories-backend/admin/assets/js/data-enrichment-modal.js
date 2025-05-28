@@ -36,7 +36,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         // Process ISBN information
         let isbn13 = '-', isbn10 = '-';
 
-        if (isbn) {
+        if (isbn && typeof isbn === 'string') {
             const cleanISBN = isbn.replace(/[^0-9X]/gi, '');
             if (cleanISBN.length === 13) {
                 isbn13 = cleanISBN;
@@ -66,6 +66,33 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         // Update ISBN displays
         $('#enrichment-isbn13').text(isbn13);
         $('#enrichment-isbn10').text(isbn10);
+
+        // Add conversion verification using backend functions
+        if (isbn13 !== '-' && isbn10 !== '-') {
+            // Call backend to verify conversions
+            $.post('book-import-validate/ajax/data-enrichment-ajax.php', {
+                action: 'verify_isbn_conversion',
+                isbn13: isbn13,
+                isbn10: isbn10
+            }, function(response) {
+                if (response.success) {
+                    let verificationText = '';
+                    if (response.isbn13_converted && response.isbn13_converted !== isbn13) {
+                        verificationText += `Converted from ISBN-10: ${response.isbn13_converted} `;
+                    }
+                    if (response.isbn10_converted && response.isbn10_converted !== isbn10) {
+                        verificationText += `Converted from ISBN-13: ${response.isbn10_converted}`;
+                    }
+                    if (verificationText) {
+                        $('#enrichment-isbn-converted').text(`Verification: ${verificationText}`);
+                    } else {
+                        $('#enrichment-isbn-converted').text('✓ Conversion verified');
+                    }
+                }
+            }, 'json').fail(function() {
+                $('#enrichment-isbn-converted').text('Conversion verification unavailable');
+            });
+        }
 
         // Show the identifiers section
         $('#enrichment-book-identifiers').show();
@@ -530,6 +557,15 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                              source === 'open_library' ? 'OpenLibrary' :
                              source.replace('_', ' ');
 
+        // Check if new value exactly matches current value
+        const hasExactMatch = !isUnknown && !isPendingAmazon &&
+                             normalizeValue(field.current_value) === normalizeValue(newData.value) &&
+                             normalizeValue(field.current_value) !== '' &&
+                             normalizeValue(field.current_value) !== null;
+
+        // Apply exact match styling if found
+        const exactMatchClass = hasExactMatch ? ' exact-match' : '';
+
         // Determine benefit level for color coding
         const benefitLevel = isPendingAmazon ? 'questionable' : determineBenefitLevel(field.current_value, newData.value, isUnknown);
         const benefitClass = getBenefitColorClass(benefitLevel);
@@ -537,7 +573,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
 
         return `
             <div class="col-md-6 mb-3">
-                <div class="enrichment-field ${benefitBorder}" data-field="${fieldName}">
+                <div class="enrichment-field ${benefitBorder}${exactMatchClass}" data-field="${fieldName}">
                     <div class="form-check">
                         <input class="form-check-input field-checkbox" type="checkbox"
                                id="field_${fieldName}" name="fields[]" value="${fieldName}" ${isUnknown || isPendingAmazon || benefitLevel === 'not_beneficial' ? 'disabled' : ''}>

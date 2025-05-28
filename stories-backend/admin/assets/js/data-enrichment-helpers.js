@@ -54,9 +54,19 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
             }
         });
 
+        // Check if any option exactly matches current value
+        const hasExactMatch = options.some(option => {
+            const currentVal = normalizeValue(field.current_value);
+            const newVal = normalizeValue(option.value);
+            return currentVal === newVal && currentVal !== '' && currentVal !== null;
+        });
+
+        // Apply exact match styling if found
+        const exactMatchClass = hasExactMatch ? ' exact-match' : '';
+
         return `
             <div class="col-md-6 mb-3">
-                <div class="enrichment-field ${benefitBorder}" data-field="${fieldName}">
+                <div class="enrichment-field ${benefitBorder}${exactMatchClass}" data-field="${fieldName}">
                     <div class="form-check">
                         <input class="form-check-input field-checkbox" type="checkbox"
                                id="field_${fieldName}" name="fields[]" value="${fieldName}" ${bestBenefitLevel === 'not_beneficial' ? 'disabled' : ''}>
@@ -160,6 +170,12 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
         return value;
     }
 
+    function normalizeValue(value) {
+        if (value === null || value === undefined) return '';
+        if (Array.isArray(value)) return value.join(',').toLowerCase().trim();
+        return String(value).toLowerCase().trim();
+    }
+
     function formatFieldValue(fieldName, value) {
         if (!value || value === null || value === 'null' || value === 'Unknown') {
             return '<span class="text-muted">Unknown</span>';
@@ -239,4 +255,5 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
     window.createCurrentOnlyField = createCurrentOnlyField;
     window.formatCurrentValue = formatCurrentValue;
     window.formatFieldValue = formatFieldValue;
+    window.normalizeValue = normalizeValue;
 }

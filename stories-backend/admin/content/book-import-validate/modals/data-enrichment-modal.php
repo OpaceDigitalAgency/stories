@@ -40,6 +40,8 @@
                         <small>
                             <strong>ISBN-13:</strong> <span id="enrichment-isbn13">-</span> |
                             <strong>ISBN-10:</strong> <span id="enrichment-isbn10">-</span>
+                            <br>
+                            <span class="text-muted" id="enrichment-isbn-converted" style="font-size: 0.85em;"></span>
                         </small>
                     </div>
                 </div>
@@ -196,6 +198,42 @@
 #confidence-score.badge-success { background-color: #28a745; }
 #confidence-score.badge-warning { background-color: #ffc107; }
 #confidence-score.badge-danger { background-color: #dc3545; }
+
+/* Styling for fields where database values match suggestions exactly */
+.enrichment-field.exact-match {
+    background-color: #f8f9fa !important;
+    opacity: 0.6;
+    border-color: #dee2e6 !important;
+}
+
+.enrichment-field.exact-match .field-checkbox {
+    opacity: 0.5;
+}
+
+.enrichment-field.exact-match .form-check-label {
+    color: #6c757d !important;
+}
+
+.enrichment-field.exact-match .current-value,
+.enrichment-field.exact-match .new-value {
+    background-color: #e9ecef !important;
+    border-color: #ced4da !important;
+    color: #6c757d !important;
+}
+
+.enrichment-field.exact-match::before {
+    content: "✓ Matches Database";
+    position: absolute;
+    top: 5px;
+    right: 10px;
+    font-size: 0.75rem;
+    color: #28a745;
+    font-weight: bold;
+    background: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid #28a745;
+}
 </style>
 
 <?php

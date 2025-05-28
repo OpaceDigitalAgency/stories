@@ -229,6 +229,10 @@ try {
             handleFixAgeRangeSync();
             break;
 
+        case 'verify_isbn_conversion':
+            handleVerifyIsbnConversion();
+            break;
+
         default:
             echo json_encode(['success' => false, 'message' => 'Invalid action: ' . $action]);
             break;
@@ -240,6 +244,137 @@ try {
 
 // Exit to prevent any further output
 exit;
+
+/**
+ * Handle ISBN conversion verification
+ */
+function handleVerifyIsbnConversion() {
+    $isbn13 = $_POST['isbn13'] ?? '';
+    $isbn10 = $_POST['isbn10'] ?? '';
+
+    $response = [
+        'success' => true,
+        'isbn13_converted' => null,
+        'isbn10_converted' => null
+    ];
+
+    // Convert ISBN-10 to ISBN-13 for verification
+    if ($isbn10 && $isbn10 !== '-') {
+        $response['isbn13_converted'] = convertToISBN13($isbn10);
+    }
+
+    // Convert ISBN-13 to ISBN-10 for verification
+    if ($isbn13 && $isbn13 !== '-') {
+        $response['isbn10_converted'] = convertISBN13ToISBN10($isbn13);
+    }
+
+    echo json_encode($response);
+}
+
+/**
+ * Advanced tag filtering and deduplication with complex tag cleaning
+ */
+function filterAndDeduplicateTagsAdvanced($newTags, $currentTagNames) {
+    $cleanedTags = [];
+
+    foreach ($newTags as $tag) {
+        if (empty($tag)) continue;
+
+        $cleanTag = trim($tag);
+        $lowerTag = strtolower($cleanTag);
+
+        // Skip age-related terms
+        if (preg_match('/^\d+-\d+$/', $lowerTag) ||
+            preg_match('/^\d+\+$/', $lowerTag) ||
+            strpos($lowerTag, 'years') !== false ||
+            strpos($lowerTag, 'age') !== false ||
+            $lowerTag === 'teen' ||
+            $lowerTag === 'young adult' ||
+            $lowerTag === 'adult' ||
+            $lowerTag === 'coming of age' ||
+            in_array($lowerTag, ['12+', '13+', '14+', '16+', '18+'])) {
+            continue;
+        }
+
+        // Skip award-related tags
+        if (strpos($lowerTag, 'award') !== false ||
+            strpos($lowerTag, 'winner') !== false ||
+            strpos($lowerTag, 'medal') !== false ||
+            strpos($lowerTag, 'prize') !== false) {
+            continue;
+        }
+
+        // Clean complex tags like "World War (1939-1945) Fast (ocolc)fst01180924"
+        $cleanedTag = cleanComplexTag($cleanTag);
+
+        if (empty($cleanedTag) || strlen($cleanedTag) <= 2 || strlen($cleanedTag) > 100) {
+            continue;
+        }
+
+        // Check if we already have this tag or a similar one
+        $isDuplicate = false;
+        foreach ($currentTagNames as $existingTag) {
+            if (strtolower($existingTag) === strtolower($cleanedTag)) {
+                $isDuplicate = true;
+                break;
+            }
+        }
+
+        // Check against already processed tags
+        foreach ($cleanedTags as $processedTag) {
+            if (strtolower($processedTag) === strtolower($cleanedTag)) {
+                $isDuplicate = true;
+                break;
+            }
+        }
+
+        if (!$isDuplicate) {
+            $cleanedTags[] = $cleanedTag;
+        }
+    }
+
+    return $cleanedTags;
+}
+
+/**
+ * Clean complex tags with nonsense suffixes and catalog codes
+ */
+function cleanComplexTag($tag) {
+    // Remove catalog codes like "Fast (ocolc)fst01180924", "LCSH", etc.
+    $patterns = [
+        '/\s+Fast\s+\(ocolc\)[a-z0-9]+$/i',  // Remove OCLC Fast codes
+        '/\s+\(ocolc\)[a-z0-9]+$/i',         // Remove general OCLC codes
+        '/\s+LCSH$/i',                        // Remove LCSH suffix
+        '/\s+\(lcsh\)$/i',                    // Remove (lcsh) suffix
+        '/\s+\(fast\)$/i',                    // Remove (fast) suffix
+        '/\s+\(mesh\)$/i',                    // Remove (mesh) suffix
+        '/\s+\(bisac\)$/i',                   // Remove (bisac) suffix
+        '/\s+\(genre\)$/i',                   // Remove (genre) suffix
+        '/\s+\(form\)$/i',                    // Remove (form) suffix
+        '/\s+\(topical\)$/i',                 // Remove (topical) suffix
+        '/\s+\(geographic\)$/i',              // Remove (geographic) suffix
+        '/\s+\(temporal\)$/i',                // Remove (temporal) suffix
+        '/\s+\([a-z]{2,10}\)[a-z0-9]*$/i',   // Remove other catalog codes
+    ];
+
+    $cleaned = $tag;
+    foreach ($patterns as $pattern) {
+        $cleaned = preg_replace($pattern, '', $cleaned);
+    }
+
+    // Clean up extra whitespace
+    $cleaned = preg_replace('/\s+/', ' ', trim($cleaned));
+
+    // If the tag becomes too short after cleaning, reject it
+    if (strlen($cleaned) <= 2) {
+        return '';
+    }
+
+    // Normalize capitalization
+    $cleaned = ucwords(strtolower($cleaned));
+
+    return $cleaned;
+}
 
 /**
  * Handle getting enrichment data for a book
@@ -968,8 +1103,8 @@ function processTagsRelationships($bookId, $tagsToProcess) {
                 $newTags = array_map('trim', explode(',', $value));
             }
 
-            // Use the enhanced filtering function
-            $filteredTags = filterAndDeduplicateTags($newTags);
+            // Use the enhanced filtering function with complex tag cleaning
+            $filteredTags = filterAndDeduplicateTagsAdvanced($newTags, $currentTagNames);
 
             // Merge with existing tags (avoid duplicates)
             $allTagNames = array_merge($currentTagNames, $filteredTags);

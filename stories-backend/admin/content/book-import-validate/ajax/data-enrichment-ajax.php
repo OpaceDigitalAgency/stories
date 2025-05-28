@@ -402,8 +402,9 @@ function handleGetEnrichmentData() {
         // Get current book data from database
         $currentBookData = getCurrentBookData($bookId);
 
-        // Get enriched data from APIs
-        $enrichedData = getEnrichedBookData($title, $author, $currentISBN);
+        // Get enriched data from APIs with current publisher for better matching
+        $currentPublisher = $currentBookData['publisher'] ?? null;
+        $enrichedData = getEnrichedBookData($title, $author, $currentISBN, $currentPublisher);
 
         // Filter and combine with current data
         $enrichedData['fields'] = filterRelevantFields($enrichedData['fields'], $currentBookData);

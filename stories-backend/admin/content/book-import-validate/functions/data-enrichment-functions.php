@@ -41,9 +41,10 @@ function fixDuplicateLocation($location) {
  * @param string $title Book title
  * @param string $author Book author
  * @param string $currentISBN Current ISBN (if any) for validation
+ * @param string $currentPublisher Current publisher (if any) for database matching
  * @return array Enriched book data with confidence scores
  */
-function getEnrichedBookData($title, $author, $currentISBN = '') {
+function getEnrichedBookData($title, $author, $currentISBN = '', $currentPublisher = null) {
     $enrichedData = [
         'sources_checked' => [],
         'confidence_score' => 0,
@@ -82,7 +83,7 @@ function getEnrichedBookData($title, $author, $currentISBN = '') {
     }
 
     // Combine and analyze results from both sources
-    $combinedData = combineMultiSourceData($googleResults, $openLibraryResults, $title, $author, $currentISBN);
+    $combinedData = combineMultiSourceData($googleResults, $openLibraryResults, $title, $author, $currentISBN, $currentPublisher);
 
     if (!empty($combinedData)) {
         $enrichedData['fields'] = $combinedData['fields'];
@@ -96,7 +97,7 @@ function getEnrichedBookData($title, $author, $currentISBN = '') {
 /**
  * Combine data from multiple sources intelligently
  */
-function combineMultiSourceData($googleResults, $openLibraryResults, $title, $author, $currentISBN) {
+function combineMultiSourceData($googleResults, $openLibraryResults, $title, $author, $currentISBN, $currentPublisher = null) {
     // Define fields that match actual database structure with enhanced mapping
     $allFields = [
         'isbn' => ['confidence' => 95, 'label' => 'ISBN-10'],
@@ -222,7 +223,7 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
                             error_log("Looking for publisher match for: " . $option['value']);
                             $bestMatch = findBestPublisherMatch($option['value']);
                             error_log("Publisher match result: " . json_encode($bestMatch));
-                            if ($bestMatch && $bestMatch['confidence'] > 85) {
+                            if ($bestMatch && $bestMatch['confidence'] > 75) { // Lowered threshold to catch more matches
                                 $option['recommended'] = $bestMatch['name'];
                                 $option['recommendation_confidence'] = $bestMatch['confidence'];
                                 $option['match_type'] = $bestMatch['match_type'];
@@ -263,6 +264,40 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
         // Track maximum confidence
         if (isset($combinedFields[$fieldName]['confidence'])) {
             $maxConfidence = max($maxConfidence, $combinedFields[$fieldName]['confidence']);
+        }
+    }
+
+    // Special handling for publisher field - check current value against database even if no new data
+    if (!isset($combinedFields['publisher']) && !empty($currentPublisher)) {
+        error_log("No new publisher data found, checking current publisher against database: $currentPublisher");
+        $currentPublisherMatch = findBestPublisherMatch($currentPublisher);
+
+        if ($currentPublisherMatch) {
+            if ($currentPublisherMatch['match_type'] === 'exact' && $currentPublisherMatch['confidence'] === 100) {
+                // Current value exactly matches database - show as confirmed
+                $combinedFields['publisher'] = [
+                    'value' => $currentPublisher,
+                    'source' => 'database_confirmed',
+                    'confidence' => 100,
+                    'label' => 'Publisher',
+                    'database_match' => $currentPublisherMatch
+                ];
+                error_log("Current publisher exactly matches database: " . $currentPublisherMatch['name']);
+            } elseif ($currentPublisherMatch['confidence'] > 75) {
+                // Current value has a good match - offer recommendation
+                $combinedFields['publisher'] = [
+                    'current_value' => $currentPublisher,
+                    'new_data' => [
+                        'value' => $currentPublisherMatch['name'],
+                        'source' => 'database_recommendation',
+                        'confidence' => $currentPublisherMatch['confidence'],
+                        'label' => 'Publisher',
+                        'match_type' => $currentPublisherMatch['match_type'],
+                        'recommendation_reason' => "Better match found in database"
+                    ]
+                ];
+                error_log("Recommending database publisher: " . $currentPublisherMatch['name'] . " (confidence: " . $currentPublisherMatch['confidence'] . "%)");
+            }
         }
     }
 
@@ -1618,11 +1653,11 @@ function normalizePublisherName($publisherName) {
     // Clean up common publisher name variations
     $publisherName = trim($publisherName);
 
-    // Remove common suffixes that create duplicates
+    // Remove common suffixes that create duplicates - but be more conservative
+    // Don't remove important distinguishing parts like "Children's Books"
     $suffixesToRemove = [
         ', an imprint of Random House Children\'s Books',
         ', an imprint of Random House',
-        ' Children\'s Books',
         ' Publishing',
         ' Publishers',
         ' Ltd',

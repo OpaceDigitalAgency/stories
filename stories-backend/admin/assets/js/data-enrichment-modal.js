@@ -892,8 +892,8 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             readingField.new_data.value = expectedReading;
             console.log('🔄 Updated reading level data to:', expectedReading);
 
-            // Enable the field and check it
-            $(`input[name="field_reading_level"]`).prop('checked', true).prop('disabled', false);
+            // Enable the field but DON'T auto-check it - let user decide
+            $(`input[name="field_reading_level"]`).prop('disabled', false);
 
             // Update the visual display
             const $readingFieldDiv = $(`.enrichment-field[data-field="reading_level"]`);
@@ -976,8 +976,8 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             ageField.new_data.value = expectedAge;
             console.log('🔄 Updated age range data to:', expectedAge);
 
-            // Enable the field and check it
-            $(`input[name="field_age_range"]`).prop('checked', true).prop('disabled', false);
+            // Enable the field but DON'T auto-check it - let user decide
+            $(`input[name="field_age_range"]`).prop('disabled', false);
 
             // Update the visual display
             const $ageFieldDiv = $(`.enrichment-field[data-field="age_range"]`);
@@ -1025,12 +1025,13 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         }
 
         const confidenceClass = confidence >= 80 ? 'success' : confidence >= 60 ? 'warning' : confidence >= 30 ? 'info' : 'secondary';
-        const sourceClass = source.includes('+') ? 'primary' : source === 'google_books' ? 'success' : source === 'open_library' ? 'info' : source === 'amazon_derived' ? 'warning' : 'secondary';
+        const sourceClass = source.includes('+') ? 'primary' : source === 'google_books' ? 'success' : source === 'open_library' ? 'info' : source === 'amazon_derived' ? 'warning' : source === 'database_recommendation' ? 'success' : 'secondary';
 
         // Display friendly source names
         const displaySource = source === 'amazon_derived' ? 'Amazon' :
                              source === 'google_books' ? 'Google Books' :
                              source === 'open_library' ? 'OpenLibrary' :
+                             source === 'database_recommendation' ? 'Database Match' :
                              source.replace('_', ' ');
 
         // Check if new value exactly matches current value
@@ -1051,6 +1052,22 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         const disabledClass = (isUnknown || isPendingAmazon || benefitLevel === 'not_beneficial') ? ' disabled-field' : '';
         const labelClass = (isUnknown || isPendingAmazon || benefitLevel === 'not_beneficial') ? ' text-muted' : '';
 
+        // Special handling for publisher database recommendations
+        let databaseMatchHtml = '';
+        if (fieldName === 'publisher' && source === 'database_recommendation' && newData.match_type) {
+            databaseMatchHtml = `
+                <div class="mt-2 p-2 bg-light border border-success rounded">
+                    <div class="text-success">
+                        <i class="fas fa-database"></i> <strong>Database Match (Recommended)</strong>
+                        <span class="badge badge-success ml-1">${confidence}%</span>
+                    </div>
+                    <small class="text-muted">
+                        ${newData.match_type} match - prevents duplicates and maintains data consistency
+                    </small>
+                </div>
+            `;
+        }
+
         return `
             <div class="col-md-6 mb-3">
                 <div class="enrichment-field ${benefitBorder}${exactMatchClass}${disabledClass}" data-field="${fieldName}">
@@ -1070,6 +1087,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                         </div>
                         <strong>New Value:</strong> ${displayValue}
                     </div>
+                    ${databaseMatchHtml}
                 </div>
             </div>
         `;

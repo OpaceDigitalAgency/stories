@@ -1989,7 +1989,7 @@ function handleSynchronizeAgeRanges() {
             // Additional mappings to catch remaining inconsistencies
             'All Ages' => '5-6 years',
             'Adult' => '18+ years',
-            'Unknown' => null, // Keep as null for unknown
+            'Unknown' => 'Unknown', // Keep Unknown as is (don't skip)
 
             // Additional mappings for common variations
             '0-3' => '2-3 years',
@@ -2010,12 +2010,35 @@ function handleSynchronizeAgeRanges() {
             '18+' => '18+ years'
         ];
 
+        // First, let's see what age ranges actually exist in the database
+        $existingRangesStmt = $db->query("SELECT age_range, COUNT(*) as count FROM books WHERE age_range IS NOT NULL AND age_range != '' GROUP BY age_range ORDER BY count DESC");
+        $existingRanges = $existingRangesStmt->fetchAll();
+
+        error_log("=== AGE RANGE SYNCHRONIZATION DEBUG ===");
+        error_log("Existing age ranges in database:");
+        foreach ($existingRanges as $range) {
+            error_log("  '{$range['age_range']}' ({$range['count']} books)");
+        }
+
         $booksUpdated = 0;
         foreach ($ageRangeMapping as $oldRange => $newRange) {
             if ($newRange === null) {
-                // Skip null mappings (like Unknown)
+                // Skip null mappings
+                error_log("Skipping null mapping for: '$oldRange'");
                 continue;
             }
+
+            // Check if this old range actually exists in the database
+            $checkStmt = $db->prepare("SELECT COUNT(*) FROM books WHERE age_range = ?");
+            $checkStmt->execute([$oldRange]);
+            $existingCount = $checkStmt->fetchColumn();
+
+            if ($existingCount == 0) {
+                // Skip if no books have this age range
+                continue;
+            }
+
+            error_log("Processing mapping: '$oldRange' → '$newRange' ($existingCount books)");
 
             $stmt = $db->prepare("UPDATE books SET age_range = ? WHERE age_range = ?");
             $stmt->execute([$newRange, $oldRange]);
@@ -2023,9 +2046,14 @@ function handleSynchronizeAgeRanges() {
             $booksUpdated += $updated;
 
             if ($updated > 0) {
-                error_log("Synchronized age range: '$oldRange' → '$newRange' ($updated books)");
+                error_log("✅ Synchronized age range: '$oldRange' → '$newRange' ($updated books)");
+            } else {
+                error_log("⚠️ No books updated for mapping: '$oldRange' → '$newRange'");
             }
         }
+
+        error_log("Total books updated: $booksUpdated");
+        error_log("=== END AGE RANGE SYNCHRONIZATION DEBUG ===");
 
         $db->commit();
 

@@ -1715,6 +1715,12 @@ function findBestPublisherMatch($publisherName) {
 
         error_log("Found " . count($existingPublishers) . " publishers in database");
 
+        // Log first few publishers for debugging
+        if (count($existingPublishers) > 0) {
+            $samplePublishers = array_slice($existingPublishers, 0, 5);
+            error_log("Sample publishers: " . json_encode(array_column($samplePublishers, 'name')));
+        }
+
         $bestMatch = null;
         $bestScore = 0;
 
@@ -1725,7 +1731,7 @@ function findBestPublisherMatch($publisherName) {
                 error_log("Publisher similarity: '$publisherName' vs '{$publisher['name']}' = $similarity%");
             }
 
-            if ($similarity > $bestScore && $similarity >= 60) { // Lowered threshold to catch more matches
+            if ($similarity > $bestScore && $similarity >= 30) { // Much lower threshold for debugging
                 $bestMatch = [
                     'id' => $publisher['id'],
                     'name' => $publisher['name'],
@@ -1737,8 +1743,8 @@ function findBestPublisherMatch($publisherName) {
             }
         }
 
-        // Only return matches with confidence >= 60%
-        $result = ($bestScore >= 60) ? $bestMatch : null;
+        // Only return matches with confidence >= 30% (lowered for debugging)
+        $result = ($bestScore >= 30) ? $bestMatch : null;
         error_log("Final result for '$publisherName': " . json_encode($result));
         return $result;
 

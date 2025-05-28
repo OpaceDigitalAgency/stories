@@ -274,36 +274,47 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
         }
     }
 
-    // Special handling for publisher field - check current value against database even if no new data
-    if (!isset($combinedFields['publisher']) && !empty($currentPublisher)) {
-        error_log("No new publisher data found, checking current publisher against database: $currentPublisher");
+    // Special handling for publisher field - ALWAYS check current value against database for recommendations
+    if (!empty($currentPublisher)) {
+        error_log("Checking current publisher against database: $currentPublisher");
         $currentPublisherMatch = findBestPublisherMatch($currentPublisher);
 
         if ($currentPublisherMatch) {
             if ($currentPublisherMatch['match_type'] === 'exact' && $currentPublisherMatch['confidence'] === 100) {
                 // Current value exactly matches database - show as confirmed
-                $combinedFields['publisher'] = [
-                    'value' => $currentPublisher,
-                    'source' => 'database_confirmed',
-                    'confidence' => 100,
-                    'label' => 'Publisher',
-                    'database_match' => $currentPublisherMatch
-                ];
+                if (!isset($combinedFields['publisher'])) {
+                    $combinedFields['publisher'] = [
+                        'value' => $currentPublisher,
+                        'source' => 'database_confirmed',
+                        'confidence' => 100,
+                        'label' => 'Publisher',
+                        'database_match' => $currentPublisherMatch
+                    ];
+                }
                 error_log("Current publisher exactly matches database: " . $currentPublisherMatch['name']);
             } elseif ($currentPublisherMatch['confidence'] >= 30) {
                 // Current value has a good match - offer recommendation
-                $combinedFields['publisher'] = [
-                    'current_value' => $currentPublisher,
-                    'new_data' => [
-                        'value' => $currentPublisherMatch['name'],
-                        'source' => 'database_recommendation',
-                        'confidence' => $currentPublisherMatch['confidence'],
-                        'label' => 'Publisher',
-                        'match_type' => $currentPublisherMatch['match_type'],
-                        'recommendation_reason' => "Better match found in database"
-                    ]
-                ];
-                error_log("Recommending database publisher: " . $currentPublisherMatch['name'] . " (confidence: " . $currentPublisherMatch['confidence'] . "%)");
+                if (!isset($combinedFields['publisher'])) {
+                    // No new data, create field with database recommendation
+                    $combinedFields['publisher'] = [
+                        'current_value' => $currentPublisher,
+                        'new_data' => [
+                            'value' => $currentPublisherMatch['name'],
+                            'source' => 'database_recommendation',
+                            'confidence' => $currentPublisherMatch['confidence'],
+                            'label' => 'Publisher',
+                            'match_type' => $currentPublisherMatch['match_type'],
+                            'recommendation_reason' => "Better match found in database"
+                        ]
+                    ];
+                } else {
+                    // New data exists, add database recommendation to existing field
+                    if (!isset($combinedFields['publisher']['database_match'])) {
+                        $combinedFields['publisher']['database_match'] = $currentPublisherMatch;
+                        error_log("Added database recommendation to existing publisher field: " . $currentPublisherMatch['name'] . " (confidence: " . $currentPublisherMatch['confidence'] . "%)");
+                    }
+                }
+                error_log("Found database publisher match: " . $currentPublisherMatch['name'] . " (confidence: " . $currentPublisherMatch['confidence'] . "%)");
             }
         }
     }

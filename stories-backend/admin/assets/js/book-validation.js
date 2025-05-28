@@ -261,7 +261,13 @@ if (typeof window.bookValidationLoaded === 'undefined') {
                                     $actionsCell.html(detailsButton + enrichButton);
                                 }
                             } else {
-                                $statusCell.html('<span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>');
+                                // Preserve existing structure on error, just update ISBN status
+                                const existingGoodreadsStatus = $statusCell.find('.goodreads-status');
+                                let goodreadsHtml = '';
+                                if (existingGoodreadsStatus.length > 0) {
+                                    goodreadsHtml = '<br>' + existingGoodreadsStatus[0].outerHTML;
+                                }
+                                $statusCell.html('<span class="isbn-status badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>' + goodreadsHtml);
                             }
 
                             // Update progress
@@ -283,7 +289,13 @@ if (typeof window.bookValidationLoaded === 'undefined') {
                             }
                         },
                         error: function() {
-                            $statusCell.html('<span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>');
+                            // Preserve existing structure on error, just update ISBN status
+                            const existingGoodreadsStatus = $statusCell.find('.goodreads-status');
+                            let goodreadsHtml = '';
+                            if (existingGoodreadsStatus.length > 0) {
+                                goodreadsHtml = '<br>' + existingGoodreadsStatus[0].outerHTML;
+                            }
+                            $statusCell.html('<span class="isbn-status badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>' + goodreadsHtml);
 
                             // Update progress even on error
                             completedBooks++;

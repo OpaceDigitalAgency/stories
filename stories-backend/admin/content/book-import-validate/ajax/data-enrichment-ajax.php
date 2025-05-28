@@ -149,6 +149,18 @@ try {
             }
             break;
 
+        case 'update_publisher_relationship':
+            handleUpdatePublisherRelationship();
+            break;
+
+        case 'create_publisher':
+            handleCreatePublisher();
+            break;
+
+        case 'fix_publisher_relationship':
+            handleFixPublisherRelationship();
+            break;
+
         default:
             echo json_encode(['success' => false, 'message' => 'Invalid action: ' . $action]);
             break;
@@ -1106,4 +1118,153 @@ function createSlug($string) {
     $slug = preg_replace('/-+/', '-', $slug);
     $slug = trim($slug, '-');
     return $slug;
+}
+
+/**
+ * Handle updating publisher relationship for a book
+ */
+function handleUpdatePublisherRelationship() {
+    global $db;
+
+    $bookId = $_POST['book_id'] ?? '';
+    $publisherId = $_POST['publisher_id'] ?? '';
+
+    if (empty($bookId) || empty($publisherId)) {
+        echo json_encode(['success' => false, 'message' => 'Book ID and Publisher ID are required']);
+        return;
+    }
+
+    try {
+        $stmt = $db->prepare("UPDATE books SET publisher_id = ? WHERE directory_item_id = ?");
+        if ($stmt->execute([$publisherId, $bookId])) {
+            echo json_encode([
+                'success' => true,
+                'message' => "Publisher relationship updated successfully",
+                'book_id' => $bookId,
+                'publisher_id' => $publisherId
+            ]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Failed to update publisher relationship']);
+        }
+    } catch (Exception $e) {
+        error_log("Error updating publisher relationship: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+    }
+}
+
+/**
+ * Handle creating a new publisher and linking to book
+ */
+function handleCreatePublisher() {
+    global $db;
+
+    $publisherName = $_POST['publisher_name'] ?? '';
+    $bookId = $_POST['book_id'] ?? '';
+
+    if (empty($publisherName) || empty($bookId)) {
+        echo json_encode(['success' => false, 'message' => 'Publisher name and Book ID are required']);
+        return;
+    }
+
+    try {
+        // Check which column exists for publisher type
+        $hasTypeColumn = false;
+        $hasAuthorTypeColumn = false;
+
+        try {
+            $stmt = $db->query("SHOW COLUMNS FROM authors LIKE 'type'");
+            $hasTypeColumn = $stmt->fetch() !== false;
+        } catch (Exception $e) {}
+
+        try {
+            $stmt = $db->query("SHOW COLUMNS FROM authors LIKE 'author_type'");
+            $hasAuthorTypeColumn = $stmt->fetch() !== false;
+        } catch (Exception $e) {}
+
+        // Create slug
+        $slug = createSlug($publisherName);
+
+        // Create publisher
+        if ($hasTypeColumn) {
+            $stmt = $db->prepare("INSERT INTO authors (name, type, slug) VALUES (?, 'publisher', ?)");
+            $stmt->execute([$publisherName, $slug]);
+        } elseif ($hasAuthorTypeColumn) {
+            $stmt = $db->prepare("INSERT INTO authors (name, author_type, slug) VALUES (?, 'publisher', ?)");
+            $stmt->execute([$publisherName, $slug]);
+        } else {
+            $stmt = $db->prepare("INSERT INTO authors (name, slug) VALUES (?, ?)");
+            $stmt->execute([$publisherName, $slug]);
+        }
+
+        $publisherId = $db->lastInsertId();
+
+        // Link to book
+        $stmt = $db->prepare("UPDATE books SET publisher_id = ?, publisher = ? WHERE directory_item_id = ?");
+        $stmt->execute([$publisherId, $publisherName, $bookId]);
+
+        echo json_encode([
+            'success' => true,
+            'message' => "Publisher created and linked successfully",
+            'publisher_id' => $publisherId,
+            'publisher_name' => $publisherName,
+            'book_id' => $bookId
+        ]);
+
+    } catch (Exception $e) {
+        error_log("Error creating publisher: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+    }
+}
+
+/**
+ * Handle automatically fixing publisher relationship for a book
+ */
+function handleFixPublisherRelationship() {
+    global $db;
+
+    $bookId = $_POST['book_id'] ?? '';
+
+    if (empty($bookId)) {
+        echo json_encode(['success' => false, 'message' => 'Book ID is required']);
+        return;
+    }
+
+    try {
+        // Get book's publisher name
+        $stmt = $db->prepare("SELECT publisher FROM books WHERE directory_item_id = ?");
+        $stmt->execute([$bookId]);
+        $book = $stmt->fetch();
+
+        if (!$book || empty($book['publisher'])) {
+            echo json_encode(['success' => false, 'message' => 'Book has no publisher name to match']);
+            return;
+        }
+
+        $publisherName = trim($book['publisher']);
+
+        // Try to find existing publisher
+        $stmt = $db->prepare("SELECT id, name FROM authors WHERE name = ?");
+        $stmt->execute([$publisherName]);
+        $existingPublisher = $stmt->fetch();
+
+        if ($existingPublisher) {
+            // Update relationship
+            $stmt = $db->prepare("UPDATE books SET publisher_id = ? WHERE directory_item_id = ?");
+            $stmt->execute([$existingPublisher['id'], $bookId]);
+
+            echo json_encode([
+                'success' => true,
+                'message' => "Linked to existing publisher: {$existingPublisher['name']} (ID: {$existingPublisher['id']})",
+                'publisher_id' => $existingPublisher['id']
+            ]);
+        } else {
+            // Create new publisher using the existing create function logic
+            $_POST['publisher_name'] = $publisherName;
+            handleCreatePublisher();
+        }
+
+    } catch (Exception $e) {
+        error_log("Error fixing publisher relationship: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+    }
 }

@@ -534,6 +534,127 @@ function getTableInfo($table) {
 
             echo '</div></div>';
 
+            // 8. PUBLISHER RELATIONSHIPS TEST
+            echo '<div class="card mb-4">';
+            echo '<div class="card-header"><h3>🔗 Publisher Relationships Test</h3></div>';
+            echo '<div class="card-body">';
+
+            try {
+                // Test a specific book (Demon Dentist)
+                $testBookId = 2105;
+                $stmt = $db->prepare("
+                    SELECT b.*, di.title as item_title
+                    FROM books b
+                    JOIN directory_items di ON b.directory_item_id = di.id
+                    WHERE b.directory_item_id = ?
+                ");
+                $stmt->execute([$testBookId]);
+                $testBook = $stmt->fetch();
+
+                if ($testBook) {
+                    echo '<h5>Test Case: ' . htmlspecialchars($testBook['item_title']) . ' (ID: ' . $testBookId . ')</h5>';
+                    echo '<div class="debug-output">';
+                    echo "Publisher Field: " . ($testBook['publisher'] ?: 'NULL') . "\n";
+                    echo "Publisher ID: " . ($testBook['publisher_id'] ?: 'NULL') . "\n";
+                    echo '</div>';
+
+                    // Check if publisher exists in authors table
+                    if ($testBook['publisher']) {
+                        $publisherName = trim($testBook['publisher']);
+
+                        // Check for exact match
+                        if ($hasAuthorTypeColumn) {
+                            $stmt = $db->prepare("SELECT id, name, author_type FROM authors WHERE name = ?");
+                        } else {
+                            $stmt = $db->prepare("SELECT id, name FROM authors WHERE name = ?");
+                        }
+                        $stmt->execute([$publisherName]);
+                        $exactMatch = $stmt->fetch();
+
+                        if ($exactMatch) {
+                            echo '<div class="alert alert-success">';
+                            echo "✅ Exact publisher match found: {$exactMatch['name']} (ID: {$exactMatch['id']})";
+                            if (isset($exactMatch['author_type'])) {
+                                echo " - Type: {$exactMatch['author_type']}";
+                            }
+                            echo '</div>';
+
+                            // Check if relationship needs updating
+                            if ($testBook['publisher_id'] != $exactMatch['id']) {
+                                echo '<div class="alert alert-warning">';
+                                echo "⚠️ Publisher relationship needs updating: Current ID ({$testBook['publisher_id']}) → Should be ({$exactMatch['id']})";
+                                echo '<br><button onclick="updatePublisherRelationship(' . $testBookId . ', ' . $exactMatch['id'] . ')" class="btn btn-sm btn-primary mt-2">Fix Relationship</button>';
+                                echo '</div>';
+                            } else {
+                                echo '<div class="alert alert-success">✅ Publisher relationship is correct</div>';
+                            }
+                        } else {
+                            // Check for similar matches
+                            $stmt = $db->prepare("SELECT id, name FROM authors WHERE name LIKE ?");
+                            $stmt->execute(['%' . $publisherName . '%']);
+                            $similarMatches = $stmt->fetchAll();
+
+                            if (!empty($similarMatches)) {
+                                echo '<div class="alert alert-info">';
+                                echo "🔍 Similar publisher matches found:";
+                                echo '<ul>';
+                                foreach ($similarMatches as $match) {
+                                    echo '<li>' . htmlspecialchars($match['name']) . ' (ID: ' . $match['id'] . ')';
+                                    echo ' <button onclick="updatePublisherRelationship(' . $testBookId . ', ' . $match['id'] . ')" class="btn btn-xs btn-outline-primary">Use This</button></li>';
+                                }
+                                echo '</ul>';
+                                echo '</div>';
+                            } else {
+                                echo '<div class="alert alert-warning">';
+                                echo "⚠️ No publisher match found for: " . htmlspecialchars($publisherName);
+                                echo '<br><button onclick="createPublisher(\'' . htmlspecialchars($publisherName) . '\', ' . $testBookId . ')" class="btn btn-sm btn-success mt-2">Create Publisher</button>';
+                                echo '</div>';
+                            }
+                        }
+                    }
+
+                    // Show books with missing publisher relationships
+                    echo '<h5>Books with Missing Publisher Relationships:</h5>';
+                    $stmt = $db->query("
+                        SELECT b.directory_item_id, di.title, b.publisher
+                        FROM books b
+                        JOIN directory_items di ON b.directory_item_id = di.id
+                        WHERE b.publisher IS NOT NULL
+                        AND b.publisher != ''
+                        AND b.publisher_id IS NULL
+                        LIMIT 10
+                    ");
+                    $missingRelationships = $stmt->fetchAll();
+
+                    if (empty($missingRelationships)) {
+                        echo '<div class="alert alert-success">✅ All books with publishers have relationships set</div>';
+                    } else {
+                        echo '<div class="alert alert-warning">⚠️ Found ' . count($missingRelationships) . ' books with missing publisher relationships (showing first 10):</div>';
+                        echo '<div class="table-responsive">';
+                        echo '<table class="table table-sm">';
+                        echo '<thead><tr><th>Book</th><th>Publisher</th><th>Action</th></tr></thead>';
+                        echo '<tbody>';
+                        foreach ($missingRelationships as $book) {
+                            echo '<tr>';
+                            echo '<td>' . htmlspecialchars($book['title']) . '</td>';
+                            echo '<td>' . htmlspecialchars($book['publisher']) . '</td>';
+                            echo '<td><button onclick="fixPublisherRelationship(' . $book['directory_item_id'] . ')" class="btn btn-xs btn-primary">Fix</button></td>';
+                            echo '</tr>';
+                        }
+                        echo '</tbody></table>';
+                        echo '</div>';
+                    }
+
+                } else {
+                    echo '<div class="alert alert-warning">Test book (ID: ' . $testBookId . ') not found</div>';
+                }
+
+            } catch (Exception $e) {
+                echo '<div class="alert alert-danger">Error: ' . htmlspecialchars($e->getMessage()) . '</div>';
+            }
+
+            echo '</div></div>';
+
         elseif ($stage === 'reassign'):
         ?>
             <div class="row">
@@ -557,5 +678,111 @@ function getTableInfo($table) {
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    function updatePublisherRelationship(bookId, publisherId) {
+        if (!confirm('Update publisher relationship for book ID ' + bookId + ' to publisher ID ' + publisherId + '?')) {
+            return;
+        }
+
+        const button = event.target;
+        const originalText = button.textContent;
+        button.textContent = 'Updating...';
+        button.disabled = true;
+
+        fetch('book-import-validate/ajax/data-enrichment-ajax.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'action=update_publisher_relationship&book_id=' + bookId + '&publisher_id=' + publisherId
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ Publisher relationship updated successfully!');
+                location.reload();
+            } else {
+                alert('❌ Error: ' + (data.message || 'Unknown error'));
+                button.textContent = originalText;
+                button.disabled = false;
+            }
+        })
+        .catch(error => {
+            alert('❌ Network error: ' + error.message);
+            button.textContent = originalText;
+            button.disabled = false;
+        });
+    }
+
+    function createPublisher(publisherName, bookId) {
+        if (!confirm('Create new publisher "' + publisherName + '" and link to book ID ' + bookId + '?')) {
+            return;
+        }
+
+        const button = event.target;
+        const originalText = button.textContent;
+        button.textContent = 'Creating...';
+        button.disabled = true;
+
+        fetch('book-import-validate/ajax/data-enrichment-ajax.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'action=create_publisher&publisher_name=' + encodeURIComponent(publisherName) + '&book_id=' + bookId
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ Publisher created and linked successfully!\nPublisher ID: ' + data.publisher_id);
+                location.reload();
+            } else {
+                alert('❌ Error: ' + (data.message || 'Unknown error'));
+                button.textContent = originalText;
+                button.disabled = false;
+            }
+        })
+        .catch(error => {
+            alert('❌ Network error: ' + error.message);
+            button.textContent = originalText;
+            button.disabled = false;
+        });
+    }
+
+    function fixPublisherRelationship(bookId) {
+        if (!confirm('Automatically fix publisher relationship for book ID ' + bookId + '?')) {
+            return;
+        }
+
+        const button = event.target;
+        const originalText = button.textContent;
+        button.textContent = 'Fixing...';
+        button.disabled = true;
+
+        fetch('book-import-validate/ajax/data-enrichment-ajax.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'action=fix_publisher_relationship&book_id=' + bookId
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ Publisher relationship fixed!\n' + (data.message || ''));
+                location.reload();
+            } else {
+                alert('❌ Error: ' + (data.message || 'Unknown error'));
+                button.textContent = originalText;
+                button.disabled = false;
+            }
+        })
+        .catch(error => {
+            alert('❌ Network error: ' + error.message);
+            button.textContent = originalText;
+            button.disabled = false;
+        });
+    }
+    </script>
 </body>
 </html>

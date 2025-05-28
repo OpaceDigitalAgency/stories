@@ -91,11 +91,25 @@ require_once '../includes/db-connect.php';
                 echo "- 'author_type' column exists: " . ($hasAuthorTypeColumn ? 'YES' : 'NO') . "\n";
                 echo '</div>';
 
+                // First, let's see what author_type values actually exist
+                if ($hasAuthorTypeColumn) {
+                    $stmt = $db->query("SELECT DISTINCT author_type, COUNT(*) as count FROM authors GROUP BY author_type ORDER BY count DESC");
+                    $authorTypes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                    echo '<div class="debug-output">';
+                    echo "Existing author_type values:\n";
+                    foreach ($authorTypes as $type) {
+                        echo "- '{$type['author_type']}': {$type['count']} records\n";
+                    }
+                    echo '</div>';
+                }
+
                 // Query based on available columns
                 if ($hasTypeColumn) {
                     $stmt = $db->prepare("SELECT id, name FROM authors WHERE type = 'publisher' AND name LIKE '%Harper%' ORDER BY name");
                 } elseif ($hasAuthorTypeColumn) {
-                    $stmt = $db->prepare("SELECT id, name FROM authors WHERE author_type = 'publisher' AND name LIKE '%Harper%' ORDER BY name");
+                    // Try multiple possible values for publisher type
+                    $stmt = $db->prepare("SELECT id, name FROM authors WHERE (author_type = 'publisher' OR author_type = 'retail') AND name LIKE '%Harper%' ORDER BY name");
                 } else {
                     // No type column - just get all authors with Harper in name
                     $stmt = $db->prepare("SELECT id, name FROM authors WHERE name LIKE '%Harper%' ORDER BY name");
@@ -183,6 +197,7 @@ require_once '../includes/db-connect.php';
                 <p class="mt-3">
                     <a href="book-validation.php" class="btn btn-primary">← Back to Book Validation</a>
                     <a href="directory-item-form.php?id=<?php echo $testBookId; ?>" class="btn btn-secondary">View Book Form</a>
+                    <button onclick="processPublisherRelationship()" class="btn btn-primary">Process Publisher Relationship</button>
                     <button onclick="location.reload()" class="btn btn-info">🔄 Refresh Test</button>
                 </p>
             </div>
@@ -190,5 +205,47 @@ require_once '../includes/db-connect.php';
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    function processPublisherRelationship() {
+        const testBookId = <?php echo $testBookId; ?>;
+
+        // Show loading state
+        const button = event.target;
+        const originalText = button.textContent;
+        button.textContent = 'Processing...';
+        button.disabled = true;
+
+        // Call the data enrichment function to process publisher
+        fetch('book-import-validate/ajax/data-enrichment-ajax.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'action=process_publisher&book_id=' + testBookId + '&publisher_name=Harper Collins'
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Publisher processing result:', data);
+
+            // Show result
+            if (data.success) {
+                alert('✅ Publisher relationship processed successfully!\n\nPublisher ID: ' + (data.publisher_id || 'Not set') + '\nMessage: ' + (data.message || 'No message'));
+            } else {
+                alert('❌ Error processing publisher relationship:\n\n' + (data.message || 'Unknown error'));
+            }
+
+            // Refresh the page to show updated results
+            location.reload();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('❌ Network error: ' + error.message);
+
+            // Reset button
+            button.textContent = originalText;
+            button.disabled = false;
+        });
+    }
+    </script>
 </body>
 </html>

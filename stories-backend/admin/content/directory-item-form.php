@@ -1,9 +1,14 @@
 <?php
 /**
  * Directory Item Form Page
- *
+ * UPDATED: 2024-12-19 15:30 - Complete age range & reading level standardization
  * This page displays a form for adding or editing a directory item.
  */
+
+// Force no caching to ensure latest changes are served
+header("Cache-Control: no-cache, no-store, must-revalidate");
+header("Pragma: no-cache");
+header("Expires: 0");
 
 // Include auth check
 require_once '../includes/auth-check.php';
@@ -1406,7 +1411,7 @@ if (isset($_SESSION['error'])) {
                                         <select id="age_range" name="book_age_range" class="form-control" onchange="syncReadingLevelFromAge()">
                                             <option value="">Select Age Range</option>
                                             <?php
-                                            // Use standard age ranges - ALWAYS show complete list
+                                            // UPDATED 2024-12-19 15:30: Use standard age ranges - ALWAYS show complete list
                                             foreach ($ageRangeList as $ageRange) {
                                                 $selected = (isset($bookData['age_range']) && $bookData['age_range'] == $ageRange) ? 'selected' : '';
                                                 echo "<option value=\"" . htmlspecialchars($ageRange) . "\" $selected>" . htmlspecialchars($ageRange) . "</option>";
@@ -2273,6 +2278,100 @@ setTimeout(function() {
         }
     }
 }, 500);
+
+// Initialize age range and reading level synchronization on page load
+setTimeout(function() {
+    console.log('Initializing age range and reading level synchronization...');
+    initializeAgeReadingSync();
+}, 1000);
+
+// Function to initialize synchronization on page load
+function initializeAgeReadingSync() {
+    const ageRangeSelect = document.getElementById('age_range');
+    const readingLevelSelect = document.getElementById('reading_level');
+
+    if (!ageRangeSelect || !readingLevelSelect) {
+        console.log('Age range or reading level selects not found, skipping sync initialization');
+        return;
+    }
+
+    const currentAge = ageRangeSelect.value;
+    const currentReading = readingLevelSelect.value;
+
+    console.log('Current age range:', currentAge);
+    console.log('Current reading level:', currentReading);
+
+    // If both have values, check if they're synchronized
+    if (currentAge && currentReading) {
+        // Check if they match according to our mapping
+        const expectedReading = getExpectedReadingLevel(currentAge);
+        const expectedAge = getExpectedAgeRange(currentReading);
+
+        console.log('Expected reading level for age "' + currentAge + '":', expectedReading);
+        console.log('Expected age range for reading "' + currentReading + '":', expectedAge);
+
+        // If they don't match, sync reading level to match age range (age takes priority)
+        if (expectedReading && !currentReading.includes(expectedReading)) {
+            console.log('Syncing reading level to match age range...');
+            syncReadingLevelFromAge();
+        }
+    } else if (currentAge && !currentReading) {
+        // If only age is set, sync reading level
+        console.log('Only age range is set, syncing reading level...');
+        syncReadingLevelFromAge();
+    } else if (currentReading && !currentAge) {
+        // If only reading level is set, sync age range
+        console.log('Only reading level is set, syncing age range...');
+        syncAgeRangeFromReading();
+    }
+}
+
+// Helper function to get expected reading level for an age range
+function getExpectedReadingLevel(ageRange) {
+    const ageToReadingMapping = {
+        '0-12 months': 'Pre-literacy (Sensory)',
+        '12-24 months': 'Pre-literacy (Naming)',
+        '2-3 years': 'Pre-literacy (Mimicry)',
+        '3-4 years': 'Early Pre-reader',
+        '4-5 years': 'Beginning Reader',
+        '5-6 years': 'Early Reader',
+        '6-7 years': 'Developing Reader',
+        '7-8 years': 'Transitional Reader',
+        '8-9 years': 'Fluent Reader',
+        '9-10 years': 'Fluent Reader',
+        '10-11 years': 'Fluent Reader',
+        '11-14 years': 'Advanced Reader',
+        '14-16 years': 'Advanced Reader',
+        '16-18 years': 'Advanced Reader',
+        '18+ years': 'Proficient Reader'
+    };
+    return ageToReadingMapping[ageRange] || null;
+}
+
+// Helper function to get expected age range for a reading level
+function getExpectedAgeRange(readingLevel) {
+    const readingToAgeMapping = {
+        'Pre-literacy (Sensory)': '0-12 months',
+        'Pre-literacy (Naming)': '12-24 months',
+        'Pre-literacy (Mimicry)': '2-3 years',
+        'Early Pre-reader': '3-4 years',
+        'Beginning Reader': '4-5 years',
+        'Early Reader': '5-6 years',
+        'Developing Reader': '6-7 years',
+        'Transitional Reader': '7-8 years',
+        'Fluent Reader': '8-9 years', // Default to youngest fluent reader age
+        'Advanced Reader': '11-14 years', // Default to middle advanced age
+        'Proficient Reader': '18+ years'
+    };
+
+    // Extract the reading stage from the selected value
+    for (let stage in readingToAgeMapping) {
+        if (readingLevel.includes(stage)) {
+            return readingToAgeMapping[stage];
+        }
+    }
+    return null;
+}
 
 // Age Range and Reading Level Synchronization Functions
 function syncReadingLevelFromAge() {

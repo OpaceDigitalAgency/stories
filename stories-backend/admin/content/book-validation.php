@@ -438,16 +438,66 @@ if (!$bookValidationScriptLoaded) {
 #confidence-score.badge-success { background-color: #28a745; }
 #confidence-score.badge-warning { background-color: #ffc107; }
 #confidence-score.badge-danger { background-color: #dc3545; }
+
+/* Modal header styling */
+.modal-title-container {
+    flex: 1;
+}
+
+.book-identifiers {
+    margin-top: 5px;
+    font-size: 0.9em;
+}
+
+/* Enrichment field styling */
+.enrichment-field {
+    position: relative;
+    margin-bottom: 15px;
+    padding: 15px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    background: #f8f9fa;
+}
+
+.enrichment-field.exact-match {
+    background-color: #f8f9fa;
+    border-color: #28a745;
+    opacity: 0.7;
+}
+
+.enrichment-field.exact-match::before {
+    content: "✓ Matches Database";
+    position: absolute;
+    top: 5px;
+    right: 10px;
+    font-size: 0.75rem;
+    color: #28a745;
+    font-weight: bold;
+    background: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid #28a745;
+}
 </style>
 
 <div class="modal fade" id="dataEnrichmentModal" tabindex="-1" role="dialog" aria-labelledby="dataEnrichmentModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="dataEnrichmentModalLabel">
-                    <i class="fas fa-database"></i> Enrich Book Data
-                </h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <div class="modal-header bg-primary text-white">
+                <div class="modal-title-container">
+                    <h4 class="modal-title mb-1" id="dataEnrichmentModalLabel">
+                        <i class="fas fa-database"></i> <span id="enrichment-book-title">Enrich Book Data</span>
+                    </h4>
+                    <div class="book-identifiers text-light" id="enrichment-book-identifiers" style="display: none;">
+                        <small>
+                            <strong>ISBN-13:</strong> <span id="enrichment-isbn13">-</span> |
+                            <strong>ISBN-10:</strong> <span id="enrichment-isbn10">-</span>
+                            <br>
+                            <span class="text-muted" id="enrichment-isbn-converted" style="font-size: 0.85em;"></span>
+                        </small>
+                    </div>
+                </div>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
@@ -457,17 +507,51 @@ if (!$bookValidationScriptLoaded) {
                     <div class="spinner-border text-primary" role="status">
                         <span class="sr-only">Searching for book data...</span>
                     </div>
-                    <p class="mt-3">Searching for enrichment data...</p>
-                </div>
-
-                <!-- Error State -->
-                <div id="enrichment-error" class="alert alert-danger" style="display: none;">
-                    <h6><i class="fas fa-exclamation-triangle"></i> Error</h6>
-                    <p id="error-message"></p>
+                    <p class="mt-2">Searching Google Books and OpenLibrary...</p>
                 </div>
 
                 <!-- Results -->
                 <div id="enrichment-results" style="display: none;">
+                    <!-- Source Status Cards -->
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <div class="card border-info">
+                                <div class="card-body text-center py-2">
+                                    <h6 class="card-title mb-1">
+                                        <i class="fab fa-google"></i> Google Books
+                                    </h6>
+                                    <div id="google-books-status-badge">
+                                        <span class="badge badge-secondary">Checking...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card border-warning">
+                                <div class="card-body text-center py-2">
+                                    <h6 class="card-title mb-1">
+                                        <i class="fas fa-book-open"></i> OpenLibrary
+                                    </h6>
+                                    <div id="openlibrary-status-badge">
+                                        <span class="badge badge-secondary">Checking...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card border-success">
+                                <div class="card-body text-center py-2">
+                                    <h6 class="card-title mb-1">
+                                        <i class="fab fa-goodreads"></i> Goodreads
+                                    </h6>
+                                    <div id="goodreads-status-badge">
+                                        <span class="badge badge-secondary">Checking...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Enrichment Fields -->
                     <div class="card">
                         <div class="card-header">
@@ -495,10 +579,18 @@ if (!$bookValidationScriptLoaded) {
                         </div>
                     </div>
                 </div>
+
+                <!-- Error State -->
+                <div id="enrichment-error" style="display: none;" class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <strong>Error occurred while searching for data.</strong>
+                    <p class="mb-0" id="error-message"></p>
+                </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                    <i class="fas fa-times"></i> Cancel
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="fix-all-btn">
+                    <i class="fas fa-magic"></i> Fix All
                 </button>
                 <button type="button" class="btn btn-primary" id="apply-enrichment-btn" disabled>
                     <i class="fas fa-save"></i> Apply Selected Changes

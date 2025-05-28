@@ -1409,20 +1409,33 @@ function handleMergeGroupIntoMaster() {
         $stmt->execute($allIds);
         $publishers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        // Get master publisher name
+        $masterPublisher = null;
+        foreach ($publishers as $pub) {
+            if ($pub['id'] == $masterId) {
+                $masterPublisher = $pub;
+                break;
+            }
+        }
+
+        if (!$masterPublisher) {
+            throw new Exception("Master publisher not found");
+        }
+
         $publisherNames = array_column($publishers, 'name');
 
-        // Update books that match by publisher name (text field) to use master publisher_id
+        // Update books that match by publisher name (text field) to use master publisher_id AND master publisher name
         $namePlaceholders = str_repeat('?,', count($publisherNames) - 1) . '?';
-        $stmt = $db->prepare("UPDATE books SET publisher_id = ? WHERE publisher IN ($namePlaceholders)");
-        $nameParams = array_merge([$masterId], $publisherNames);
+        $stmt = $db->prepare("UPDATE books SET publisher_id = ?, publisher = ? WHERE publisher IN ($namePlaceholders)");
+        $nameParams = array_merge([$masterId, $masterPublisher['name']], $publisherNames);
         $stmt->execute($nameParams);
         $booksUpdatedByName = $stmt->rowCount();
 
         // Update books that already have publisher_id set to other IDs
         if (!empty($otherIdsArray)) {
             $idPlaceholders = str_repeat('?,', count($otherIdsArray) - 1) . '?';
-            $stmt = $db->prepare("UPDATE books SET publisher_id = ? WHERE publisher_id IN ($idPlaceholders)");
-            $idParams = array_merge([$masterId], $otherIdsArray);
+            $stmt = $db->prepare("UPDATE books SET publisher_id = ?, publisher = ? WHERE publisher_id IN ($idPlaceholders)");
+            $idParams = array_merge([$masterId, $masterPublisher['name']], $otherIdsArray);
             $stmt->execute($idParams);
             $booksUpdatedById = $stmt->rowCount();
         } else {
@@ -1530,26 +1543,32 @@ function handleMergeIntoMaster() {
         $publishers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         $sourcePublisher = null;
+        $masterPublisher = null;
         foreach ($publishers as $pub) {
             if ($pub['id'] == $sourceId) {
                 $sourcePublisher = $pub;
-                break;
+            } elseif ($pub['id'] == $masterId) {
+                $masterPublisher = $pub;
             }
         }
 
-        // Update books that match by publisher name (text field) to use master publisher_id
-        if ($sourcePublisher) {
-            $stmt = $db->prepare("UPDATE books SET publisher_id = ? WHERE publisher = ?");
-            $stmt->execute([$masterId, $sourcePublisher['name']]);
+        // Update books that match by publisher name (text field) to use master publisher_id AND master publisher name
+        if ($sourcePublisher && $masterPublisher) {
+            $stmt = $db->prepare("UPDATE books SET publisher_id = ?, publisher = ? WHERE publisher = ?");
+            $stmt->execute([$masterId, $masterPublisher['name'], $sourcePublisher['name']]);
             $booksUpdatedByName = $stmt->rowCount();
         } else {
             $booksUpdatedByName = 0;
         }
 
         // Update books that already have publisher_id set to source ID
-        $stmt = $db->prepare("UPDATE books SET publisher_id = ? WHERE publisher_id = ?");
-        $stmt->execute([$masterId, $sourceId]);
-        $booksUpdatedById = $stmt->rowCount();
+        if ($masterPublisher) {
+            $stmt = $db->prepare("UPDATE books SET publisher_id = ?, publisher = ? WHERE publisher_id = ?");
+            $stmt->execute([$masterId, $masterPublisher['name'], $sourceId]);
+            $booksUpdatedById = $stmt->rowCount();
+        } else {
+            $booksUpdatedById = 0;
+        }
 
         $totalBooksUpdated = $booksUpdatedByName + $booksUpdatedById;
 
@@ -1880,11 +1899,44 @@ function handleSynchronizeAgeRanges() {
     try {
         $db->beginTransaction();
 
-        // Check if standard_reading_levels table exists
+        // Check if standard_reading_levels table exists, create if not
         $stmt = $db->query("SHOW TABLES LIKE 'standard_reading_levels'");
         if ($stmt->rowCount() === 0) {
-            echo json_encode(['success' => false, 'message' => 'Standard reading levels table not found. Please create it first.']);
-            return;
+            // Create the standard_reading_levels table
+            $createTableSQL = "CREATE TABLE `standard_reading_levels` (
+                `id` int(11) NOT NULL AUTO_INCREMENT,
+                `age_group` varchar(20) NOT NULL,
+                `school_year` varchar(20) DEFAULT NULL,
+                `reading_stage` varchar(50) NOT NULL,
+                `lexile_range` varchar(20) DEFAULT NULL,
+                `typical_skills` text,
+                `sort_order` int(11) NOT NULL,
+                `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                UNIQUE KEY `age_group` (`age_group`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+
+            $db->exec($createTableSQL);
+
+            // Insert standard data
+            $insertSQL = "INSERT INTO `standard_reading_levels` (`age_group`, `school_year`, `reading_stage`, `lexile_range`, `typical_skills`, `sort_order`) VALUES
+                ('0-12 months', NULL, 'Pre-literacy (Sensory)', 'N/A', 'Listening to voices, looking at pictures', 1),
+                ('12-24 months', NULL, 'Pre-literacy (Naming)', 'N/A', 'Responding to stories, pointing at objects', 2),
+                ('2-3 years', NULL, 'Pre-literacy (Mimicry)', 'BR', 'Repeating phrases, reading from memory', 3),
+                ('3-4 years', NULL, 'Early Pre-reader', 'BR', 'Identifying letters, understanding sequences', 4),
+                ('4-5 years', 'Reception', 'Beginning Reader', 'BR-120L', 'Introduction to phonics, basic sentences', 5),
+                ('5-6 years', 'Year 1', 'Early Reader', '120L-220L', 'Simple books, building fluency', 6),
+                ('6-7 years', 'Year 2', 'Developing Reader', '220L-420L', 'Chapter books, independent reading', 7),
+                ('7-8 years', 'Year 3', 'Transitional Reader', '420L-620L', 'Longer books, complex stories', 8),
+                ('8-9 years', 'Year 4', 'Fluent Reader', '620L-820L', 'Advanced vocabulary, series books', 9),
+                ('9-10 years', 'Year 5', 'Fluent Reader', '820L-940L', 'Complex texts, critical thinking', 10),
+                ('10-11 years', 'Year 6', 'Fluent Reader', '940L-1000L+', 'Advanced comprehension', 11),
+                ('11-14 years', 'Years 7-9', 'Advanced Reader', '1000L-1100L+', 'Critical analysis, complex themes', 12),
+                ('14-16 years', 'Years 10-11', 'Advanced Reader', '1100L-1200L+', 'GCSE level, young adult content', 13),
+                ('16-18 years', 'Years 12-13', 'Advanced Reader', '1200L-1300L+', 'A-level, advanced literature', 14),
+                ('18+ years', 'Adult', 'Proficient Reader', '1300L-1600L+', 'Professional reading, all content levels', 15)";
+
+            $db->exec($insertSQL);
         }
 
         // Get the standard age groups from reading levels

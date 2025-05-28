@@ -45,6 +45,9 @@ function fixDuplicateLocation($location) {
  * @return array Enriched book data with confidence scores
  */
 function getEnrichedBookData($title, $author, $currentISBN = '', $currentPublisher = null) {
+    // CACHE BUSTER TEST - This should appear in console if changes are working
+    error_log("CACHE_BUSTER_TEST: getEnrichedBookData called with title='$title', currentPublisher='$currentPublisher'");
+
     $enrichedData = [
         'sources_checked' => [],
         'confidence_score' => 0,

@@ -142,15 +142,21 @@ require_once '../includes/db-connect.php';
         function columnExists($table, $column) {
             global $db;
             try {
-                // MySQL doesn't support parameter binding for SHOW COLUMNS LIKE
-                // So we need to escape the values manually and use direct query
-                $table = $db->quote($table);
-                $column = $db->quote($column);
+                // For SHOW COLUMNS, we need to sanitize inputs manually since prepared statements don't work
+                // Only allow alphanumeric characters and underscores for security
+                $table = preg_replace('/[^a-zA-Z0-9_]/', '', $table);
+                $column = preg_replace('/[^a-zA-Z0-9_]/', '', $column);
 
-                $sql = "SHOW COLUMNS FROM $table LIKE $column";
+                if (empty($table) || empty($column)) {
+                    return false;
+                }
+
+                $sql = "SHOW COLUMNS FROM `$table` LIKE '$column'";
                 $stmt = $db->query($sql);
                 $result = $stmt->fetch();
-                echo "<div class='debug-output'>DEBUG columnExists (FIXED VERSION):\n";
+                echo "<div class='debug-output'>DEBUG columnExists (FIXED VERSION v2):\n";
+                echo "Table (sanitized): $table\n";
+                echo "Column (sanitized): $column\n";
                 echo "SQL: $sql\n";
                 echo "Result: " . json_encode($result) . "\n";
                 echo "Return value: " . ($result !== false ? 'TRUE' : 'FALSE') . "\n</div>";

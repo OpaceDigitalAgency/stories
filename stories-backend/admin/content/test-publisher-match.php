@@ -4,11 +4,10 @@ ini_set('display_errors', 1);
 
 // Include authentication
 session_start();
-require_once '../../auth.php';
+require_once '../includes/auth.php';
 
 try {
-    require_once '../../db-connect.php';
-    echo '<p>✅ Database connection loaded</p>';
+    require_once '../includes/db-connect.php';
 } catch (Exception $e) {
     echo '<p style="color: red;">❌ Database connection failed: ' . $e->getMessage() . '</p>';
     exit;

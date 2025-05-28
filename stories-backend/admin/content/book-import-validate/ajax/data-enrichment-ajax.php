@@ -161,6 +161,30 @@ try {
             handleFixPublisherRelationship();
             break;
 
+        case 'preview_merge_changes':
+            handlePreviewMergeChanges();
+            break;
+
+        case 'merge_group_into_master':
+            handleMergeGroupIntoMaster();
+            break;
+
+        case 'consolidate_authors':
+            handleConsolidateAuthors();
+            break;
+
+        case 'merge_into_master':
+            handleMergeIntoMaster();
+            break;
+
+        case 'merge_all_in_group':
+            handleMergeAllInGroup();
+            break;
+
+        case 'fix_all_publisher_relationships':
+            handleFixAllPublisherRelationships();
+            break;
+
         default:
             echo json_encode(['success' => false, 'message' => 'Invalid action: ' . $action]);
             break;
@@ -1265,6 +1289,266 @@ function handleFixPublisherRelationship() {
 
     } catch (Exception $e) {
         error_log("Error fixing publisher relationship: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+    }
+}
+
+/**
+ * Handle previewing merge changes
+ */
+function handlePreviewMergeChanges() {
+    global $db;
+
+    $masterId = $_POST['master_id'] ?? '';
+    $otherIds = $_POST['other_ids'] ?? '';
+
+    if (empty($masterId) || empty($otherIds)) {
+        echo json_encode(['success' => false, 'message' => 'Master ID and other IDs are required']);
+        return;
+    }
+
+    try {
+        $otherIdsArray = explode(',', $otherIds);
+        $otherIdsArray = array_map('trim', $otherIdsArray);
+
+        // Count books that will be updated
+        $placeholders = str_repeat('?,', count($otherIdsArray) - 1) . '?';
+        $stmt = $db->prepare("SELECT COUNT(*) as count FROM books WHERE publisher_id IN ($placeholders)");
+        $stmt->execute($otherIdsArray);
+        $booksToUpdate = $stmt->fetchColumn();
+
+        // Get sample affected books
+        $stmt = $db->prepare("
+            SELECT di.title
+            FROM books b
+            JOIN directory_items di ON b.directory_item_id = di.id
+            WHERE b.publisher_id IN ($placeholders)
+            LIMIT 10
+        ");
+        $stmt->execute($otherIdsArray);
+        $affectedBooks = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            'success' => true,
+            'books_to_update' => $booksToUpdate,
+            'publishers_to_remove' => count($otherIdsArray),
+            'affected_books' => $affectedBooks
+        ]);
+
+    } catch (Exception $e) {
+        error_log("Error previewing merge changes: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+    }
+}
+
+/**
+ * Handle merging a group into master
+ */
+function handleMergeGroupIntoMaster() {
+    global $db;
+
+    $masterId = $_POST['master_id'] ?? '';
+    $otherIds = $_POST['other_ids'] ?? '';
+    $masterName = $_POST['master_name'] ?? '';
+
+    if (empty($masterId) || empty($otherIds)) {
+        echo json_encode(['success' => false, 'message' => 'Master ID and other IDs are required']);
+        return;
+    }
+
+    try {
+        $db->beginTransaction();
+
+        $otherIdsArray = explode(',', $otherIds);
+        $otherIdsArray = array_map('trim', $otherIdsArray);
+
+        // Update all books to use master publisher
+        $placeholders = str_repeat('?,', count($otherIdsArray) - 1) . '?';
+        $stmt = $db->prepare("UPDATE books SET publisher_id = ? WHERE publisher_id IN ($placeholders)");
+        $params = array_merge([$masterId], $otherIdsArray);
+        $stmt->execute($params);
+        $booksUpdated = $stmt->rowCount();
+
+        // Delete the other publisher records
+        $stmt = $db->prepare("DELETE FROM authors WHERE id IN ($placeholders)");
+        $stmt->execute($otherIdsArray);
+        $publishersRemoved = $stmt->rowCount();
+
+        $db->commit();
+
+        echo json_encode([
+            'success' => true,
+            'books_updated' => $booksUpdated,
+            'publishers_removed' => $publishersRemoved,
+            'master_name' => $masterName
+        ]);
+
+    } catch (Exception $e) {
+        $db->rollBack();
+        error_log("Error merging group into master: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+    }
+}
+
+/**
+ * Handle consolidating duplicate authors
+ */
+function handleConsolidateAuthors() {
+    global $db;
+
+    $ids = $_POST['ids'] ?? '';
+    $name = $_POST['name'] ?? '';
+
+    if (empty($ids) || empty($name)) {
+        echo json_encode(['success' => false, 'message' => 'IDs and name are required']);
+        return;
+    }
+
+    try {
+        $db->beginTransaction();
+
+        $idsArray = explode(',', $ids);
+        $idsArray = array_map('trim', $idsArray);
+
+        // Keep the first ID as master
+        $masterId = $idsArray[0];
+        $otherIds = array_slice($idsArray, 1);
+
+        if (!empty($otherIds)) {
+            // Update books to use master ID
+            $placeholders = str_repeat('?,', count($otherIds) - 1) . '?';
+            $stmt = $db->prepare("UPDATE books SET publisher_id = ? WHERE publisher_id IN ($placeholders)");
+            $params = array_merge([$masterId], $otherIds);
+            $stmt->execute($params);
+
+            // Delete duplicate records
+            $stmt = $db->prepare("DELETE FROM authors WHERE id IN ($placeholders)");
+            $stmt->execute($otherIds);
+        }
+
+        $db->commit();
+
+        echo json_encode([
+            'success' => true,
+            'message' => "Consolidated duplicates for: $name",
+            'master_id' => $masterId
+        ]);
+
+    } catch (Exception $e) {
+        $db->rollBack();
+        error_log("Error consolidating authors: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+    }
+}
+
+/**
+ * Handle merging into master (legacy function)
+ */
+function handleMergeIntoMaster() {
+    global $db;
+
+    $sourceId = $_POST['source_id'] ?? '';
+    $masterId = $_POST['master_id'] ?? '';
+
+    if (empty($sourceId) || empty($masterId)) {
+        echo json_encode(['success' => false, 'message' => 'Source ID and master ID are required']);
+        return;
+    }
+
+    try {
+        $db->beginTransaction();
+
+        // Update books to use master publisher
+        $stmt = $db->prepare("UPDATE books SET publisher_id = ? WHERE publisher_id = ?");
+        $stmt->execute([$masterId, $sourceId]);
+        $booksUpdated = $stmt->rowCount();
+
+        // Delete source publisher
+        $stmt = $db->prepare("DELETE FROM authors WHERE id = ?");
+        $stmt->execute([$sourceId]);
+
+        $db->commit();
+
+        echo json_encode([
+            'success' => true,
+            'books_updated' => $booksUpdated
+        ]);
+
+    } catch (Exception $e) {
+        $db->rollBack();
+        error_log("Error merging into master: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+    }
+}
+
+/**
+ * Handle merging all in group (legacy function)
+ */
+function handleMergeAllInGroup() {
+    // Redirect to the new function
+    handleMergeGroupIntoMaster();
+}
+
+/**
+ * Handle fixing all publisher relationships
+ */
+function handleFixAllPublisherRelationships() {
+    global $db;
+
+    try {
+        $db->beginTransaction();
+
+        // Get all books with missing publisher relationships
+        $stmt = $db->query("
+            SELECT directory_item_id, publisher
+            FROM books
+            WHERE publisher IS NOT NULL
+            AND publisher != ''
+            AND publisher_id IS NULL
+        ");
+        $books = $stmt->fetchAll();
+
+        $fixed = 0;
+        $created = 0;
+
+        foreach ($books as $book) {
+            $publisherName = trim($book['publisher']);
+
+            // Try to find existing publisher
+            $stmt = $db->prepare("SELECT id FROM authors WHERE name = ?");
+            $stmt->execute([$publisherName]);
+            $existingPublisher = $stmt->fetch();
+
+            if ($existingPublisher) {
+                // Update relationship
+                $stmt = $db->prepare("UPDATE books SET publisher_id = ? WHERE directory_item_id = ?");
+                $stmt->execute([$existingPublisher['id'], $book['directory_item_id']]);
+                $fixed++;
+            } else {
+                // Create new publisher
+                $stmt = $db->prepare("INSERT INTO authors (name) VALUES (?)");
+                $stmt->execute([$publisherName]);
+                $newPublisherId = $db->lastInsertId();
+
+                // Update relationship
+                $stmt = $db->prepare("UPDATE books SET publisher_id = ? WHERE directory_item_id = ?");
+                $stmt->execute([$newPublisherId, $book['directory_item_id']]);
+                $created++;
+            }
+        }
+
+        $db->commit();
+
+        echo json_encode([
+            'success' => true,
+            'message' => "Fixed $fixed relationships, created $created new publishers",
+            'fixed' => $fixed,
+            'created' => $created
+        ]);
+
+    } catch (Exception $e) {
+        $db->rollBack();
+        error_log("Error fixing all publisher relationships: " . $e->getMessage());
         echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
     }
 }

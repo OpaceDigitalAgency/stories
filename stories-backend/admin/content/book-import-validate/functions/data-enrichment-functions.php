@@ -191,8 +191,11 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
                 error_log("Created Amazon field: $fieldName with pending_amazon_data status");
             } elseif (!empty($googleValue) && !empty($openLibraryValue)) {
                 // Both sources have data - check if they match
+                error_log("DEBUG: Field '$fieldName' has both Google and OpenLibrary values: Google='$googleValue', OpenLibrary='$openLibraryValue'");
+
                 if (normalizeForComparison($googleValue) === normalizeForComparison($openLibraryValue)) {
                     // Values match - use combined source
+                    error_log("DEBUG: Field '$fieldName' values match after normalization");
                     $combinedFields[$fieldName] = [
                         'value' => preferEnglishVersion($googleValue, $openLibraryValue),
                         'source' => 'google_books + open_library',
@@ -201,6 +204,7 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
                     ];
                 } else {
                     // Values differ - offer both options with enhanced publisher matching
+                    error_log("DEBUG: Field '$fieldName' values differ, creating options");
                     $options = [
                         [
                             'value' => $googleValue,

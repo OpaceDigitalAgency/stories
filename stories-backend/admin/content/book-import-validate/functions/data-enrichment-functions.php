@@ -191,11 +191,11 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
                 error_log("Created Amazon field: $fieldName with pending_amazon_data status");
             } elseif (!empty($googleValue) && !empty($openLibraryValue)) {
                 // Both sources have data - check if they match
-                error_log("DEBUG: Field '$fieldName' has both Google and OpenLibrary values: Google='$googleValue', OpenLibrary='$openLibraryValue'");
+                error_log("PUBLISHER_TEST: Field '$fieldName' has both Google and OpenLibrary values: Google='$googleValue', OpenLibrary='$openLibraryValue'");
 
                 if (normalizeForComparison($googleValue) === normalizeForComparison($openLibraryValue)) {
                     // Values match - use combined source
-                    error_log("DEBUG: Field '$fieldName' values match after normalization");
+                    error_log("PUBLISHER_TEST: Field '$fieldName' values match after normalization");
                     $combinedFields[$fieldName] = [
                         'value' => preferEnglishVersion($googleValue, $openLibraryValue),
                         'source' => 'google_books + open_library',
@@ -204,7 +204,7 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
                     ];
                 } else {
                     // Values differ - offer both options with enhanced publisher matching
-                    error_log("DEBUG: Field '$fieldName' values differ, creating options");
+                    error_log("PUBLISHER_TEST: Field '$fieldName' values differ, creating options");
                     $options = [
                         [
                             'value' => $googleValue,
@@ -222,28 +222,28 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
 
                     // For publisher field, add recommended matches from existing database
                     if ($fieldName === 'publisher') {
-                        error_log("Processing publisher field with options: " . json_encode($options));
-                        error_log("Options count: " . count($options));
+                        error_log("PUBLISHER_TEST: Processing publisher field with options: " . json_encode($options));
+                        error_log("PUBLISHER_TEST: Options count: " . count($options));
                         foreach ($options as $index => &$option) {
-                            error_log("Option $index structure: " . json_encode($option));
+                            error_log("PUBLISHER_TEST: Option $index structure: " . json_encode($option));
                             if (isset($option['value']) && !empty($option['value'])) {
-                                error_log("Looking for publisher match for: " . $option['value']);
+                                error_log("PUBLISHER_TEST: Looking for publisher match for: " . $option['value']);
                                 $bestMatch = findBestPublisherMatch($option['value']);
-                                error_log("Publisher match result: " . json_encode($bestMatch));
+                                error_log("PUBLISHER_TEST: Publisher match result: " . json_encode($bestMatch));
                                 if ($bestMatch && $bestMatch['confidence'] >= 30) { // Lowered threshold for debugging
                                     $option['recommended'] = $bestMatch['name'];
                                     $option['recommendation_confidence'] = $bestMatch['confidence'];
                                     $option['match_type'] = $bestMatch['match_type'];
-                                    error_log("Added recommendation: " . $bestMatch['name'] . " with confidence " . $bestMatch['confidence']);
+                                    error_log("PUBLISHER_TEST: Added recommendation: " . $bestMatch['name'] . " with confidence " . $bestMatch['confidence']);
                                 } else {
-                                    error_log("No suitable match found (confidence too low or no match)");
+                                    error_log("PUBLISHER_TEST: No suitable match found (confidence too low or no match)");
                                 }
                             } else {
-                                error_log("Option $index has no value or empty value: " . json_encode($option));
+                                error_log("PUBLISHER_TEST: Option $index has no value or empty value: " . json_encode($option));
                             }
                         }
                         unset($option); // Break the reference to avoid issues
-                        error_log("Final publisher options with recommendations: " . json_encode($options));
+                        error_log("PUBLISHER_TEST: Final publisher options with recommendations: " . json_encode($options));
                     }
 
                     $combinedFields[$fieldName] = ['options' => $options];
@@ -280,7 +280,7 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
 
     // Special handling for publisher field - ALWAYS check current value against database for recommendations
     if (!empty($currentPublisher)) {
-        error_log("Checking current publisher against database: $currentPublisher");
+        error_log("PUBLISHER_TEST: Checking current publisher against database: $currentPublisher");
         $currentPublisherMatch = findBestPublisherMatch($currentPublisher);
 
         if ($currentPublisherMatch) {
@@ -295,7 +295,7 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
                         'database_match' => $currentPublisherMatch
                     ];
                 }
-                error_log("Current publisher exactly matches database: " . $currentPublisherMatch['name']);
+                error_log("PUBLISHER_TEST: Current publisher exactly matches database: " . $currentPublisherMatch['name']);
             } elseif ($currentPublisherMatch['confidence'] >= 30) {
                 // Current value has a good match - offer recommendation
                 if (!isset($combinedFields['publisher'])) {
@@ -315,10 +315,10 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
                     // New data exists, add database recommendation to existing field
                     if (!isset($combinedFields['publisher']['database_match'])) {
                         $combinedFields['publisher']['database_match'] = $currentPublisherMatch;
-                        error_log("Added database recommendation to existing publisher field: " . $currentPublisherMatch['name'] . " (confidence: " . $currentPublisherMatch['confidence'] . "%)");
+                        error_log("PUBLISHER_TEST: Added database recommendation to existing publisher field: " . $currentPublisherMatch['name'] . " (confidence: " . $currentPublisherMatch['confidence'] . "%)");
                     }
                 }
-                error_log("Found database publisher match: " . $currentPublisherMatch['name'] . " (confidence: " . $currentPublisherMatch['confidence'] . "%)");
+                error_log("PUBLISHER_TEST: Found database publisher match: " . $currentPublisherMatch['name'] . " (confidence: " . $currentPublisherMatch['confidence'] . "%)");
             }
         }
     }
@@ -1708,19 +1708,19 @@ function normalizePublisherName($publisherName) {
 function findBestPublisherMatch($publisherName) {
     global $db;
 
-    error_log("findBestPublisherMatch called with: '$publisherName'");
+    error_log("PUBLISHER_TEST: findBestPublisherMatch called with: '$publisherName'");
 
     // Debug: Check if $db is available
     if (!isset($db) || !$db) {
-        error_log("ERROR: \$db is not available in findBestPublisherMatch function!");
-        error_log("Global variables available: " . implode(', ', array_keys($GLOBALS)));
+        error_log("PUBLISHER_TEST: ERROR: \$db is not available in findBestPublisherMatch function!");
+        error_log("PUBLISHER_TEST: Global variables available: " . implode(', ', array_keys($GLOBALS)));
         return null;
     }
 
-    error_log("SUCCESS: \$db is available, type: " . get_class($db));
+    error_log("PUBLISHER_TEST: SUCCESS: \$db is available, type: " . get_class($db));
 
     if (empty($publisherName)) {
-        error_log("Publisher name is empty, returning null");
+        error_log("PUBLISHER_TEST: Publisher name is empty, returning null");
         return null;
     }
 
@@ -1737,12 +1737,12 @@ function findBestPublisherMatch($publisherName) {
         $stmt->execute();
         $existingPublishers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        error_log("Found " . count($existingPublishers) . " publishers in database");
+        error_log("PUBLISHER_TEST: Found " . count($existingPublishers) . " publishers in database");
 
         // Log first few publishers for debugging
         if (count($existingPublishers) > 0) {
             $samplePublishers = array_slice($existingPublishers, 0, 5);
-            error_log("Sample publishers: " . json_encode(array_column($samplePublishers, 'name')));
+            error_log("PUBLISHER_TEST: Sample publishers: " . json_encode(array_column($samplePublishers, 'name')));
         }
 
         $bestMatch = null;
@@ -1752,7 +1752,7 @@ function findBestPublisherMatch($publisherName) {
             $similarity = calculateEnhancedPublisherSimilarity($publisherName, $publisher['name']);
 
             if ($similarity > 50) { // Log any decent matches
-                error_log("Publisher similarity: '$publisherName' vs '{$publisher['name']}' = $similarity%");
+                error_log("PUBLISHER_TEST: Publisher similarity: '$publisherName' vs '{$publisher['name']}' = $similarity%");
             }
 
             if ($similarity > $bestScore && $similarity >= 30) { // Much lower threshold for debugging
@@ -1763,17 +1763,17 @@ function findBestPublisherMatch($publisherName) {
                     'match_type' => $similarity >= 90 ? 'exact' : ($similarity >= 80 ? 'partial' : 'fuzzy')
                 ];
                 $bestScore = $similarity;
-                error_log("New best match: " . json_encode($bestMatch));
+                error_log("PUBLISHER_TEST: New best match: " . json_encode($bestMatch));
             }
         }
 
         // Only return matches with confidence >= 30% (lowered for debugging)
         $result = ($bestScore >= 30) ? $bestMatch : null;
-        error_log("Final result for '$publisherName': " . json_encode($result));
+        error_log("PUBLISHER_TEST: Final result for '$publisherName': " . json_encode($result));
         return $result;
 
     } catch (Exception $e) {
-        error_log("Error finding publisher match: " . $e->getMessage());
+        error_log("PUBLISHER_TEST: Error finding publisher match: " . $e->getMessage());
         return null;
     }
 }

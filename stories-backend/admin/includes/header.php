@@ -141,60 +141,72 @@ $siteName = get_config('site.name', 'Stories From The Web');
     <link rel="stylesheet" href="<?php echo $adminFixesCssPath; ?>">
 
     <!-- JavaScript Libraries -->
+    <?php
+    // Use static variables to prevent multiple script loading
+    static $coreScriptsLoaded = false;
+    if (!$coreScriptsLoaded) {
+        $coreScriptsLoaded = true;
+    ?>
     <!-- Add jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <!-- Add Popper.js -->
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
     <!-- Add Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.min.js"></script>
+    <?php } ?>
 
     <!-- Admin JavaScript Files -->
     <?php
-    if ($isPublicDir) {
-        $enhancedAdminJsPath = '../admin/assets/js/enhanced-admin.js';
-        $liveSearchJsPath = '../admin/assets/js/live-search.js';
-        $inlineEditingJsPath = '../admin/assets/js/inline-editing.js';
+    static $adminScriptsLoaded = false;
+    if (!$adminScriptsLoaded) {
+        $adminScriptsLoaded = true;
 
-        // Preview JS files
-        $storyPreviewJsPath = '../admin/assets/js/story-preview.js';
-        $authorPreviewJsPath = '../admin/assets/js/author-preview.js';
-        $contactPreviewJsPath = '../admin/assets/js/contact-preview.js';
-        $gamePreviewJsPath = '../admin/assets/js/game-preview.js';
-        $directoryItemPreviewJsPath = '../admin/assets/js/directory-item-preview.js';
-        $aiToolPreviewJsPath = '../admin/assets/js/ai-tool-preview.js';
-        $postPreviewJsPath = '../admin/assets/js/post-preview.js';
-    } else {
-        $enhancedAdminJsPath = $isContentDir ? '../assets/js/enhanced-admin.js' : 'assets/js/enhanced-admin.js';
-        $liveSearchJsPath = $isContentDir ? '../assets/js/live-search.js' : 'assets/js/live-search.js';
-        $inlineEditingJsPath = $isContentDir ? '../assets/js/inline-editing.js' : 'assets/js/inline-editing.js';
+        if ($isPublicDir) {
+            $enhancedAdminJsPath = '../admin/assets/js/enhanced-admin.js';
+            $liveSearchJsPath = '../admin/assets/js/live-search.js';
+            $inlineEditingJsPath = '../admin/assets/js/inline-editing.js';
 
-        // Preview JS files
-        $storyPreviewJsPath = $isContentDir ? '../assets/js/story-preview.js' : 'assets/js/story-preview.js';
-        $authorPreviewJsPath = $isContentDir ? '../assets/js/author-preview.js' : 'assets/js/author-preview.js';
-        $contactPreviewJsPath = $isContentDir ? '../assets/js/contact-preview.js' : 'assets/js/contact-preview.js';
-        $gamePreviewJsPath = $isContentDir ? '../assets/js/game-preview.js' : 'assets/js/game-preview.js';
-        $directoryItemPreviewJsPath = $isContentDir ? '../assets/js/directory-item-preview.js' : 'assets/js/directory-item-preview.js';
-        $aiToolPreviewJsPath = $isContentDir ? '../assets/js/ai-tool-preview.js' : 'assets/js/ai-tool-preview.js';
-        $postPreviewJsPath = $isContentDir ? '../assets/js/post-preview.js' : 'assets/js/post-preview.js';
-    }
+            // Preview JS files
+            $storyPreviewJsPath = '../admin/assets/js/story-preview.js';
+            $authorPreviewJsPath = '../admin/assets/js/author-preview.js';
+            $contactPreviewJsPath = '../admin/assets/js/contact-preview.js';
+            $gamePreviewJsPath = '../admin/assets/js/game-preview.js';
+            $directoryItemPreviewJsPath = '../admin/assets/js/directory-item-preview.js';
+            $aiToolPreviewJsPath = '../admin/assets/js/ai-tool-preview.js';
+            $postPreviewJsPath = '../admin/assets/js/post-preview.js';
+        } else {
+            $enhancedAdminJsPath = $isContentDir ? '../assets/js/enhanced-admin.js' : 'assets/js/enhanced-admin.js';
+            $liveSearchJsPath = $isContentDir ? '../assets/js/live-search.js' : 'assets/js/live-search.js';
+            $inlineEditingJsPath = $isContentDir ? '../assets/js/inline-editing.js' : 'assets/js/inline-editing.js';
+
+            // Preview JS files
+            $storyPreviewJsPath = $isContentDir ? '../assets/js/story-preview.js' : 'assets/js/story-preview.js';
+            $authorPreviewJsPath = $isContentDir ? '../assets/js/author-preview.js' : 'assets/js/author-preview.js';
+            $contactPreviewJsPath = $isContentDir ? '../assets/js/contact-preview.js' : 'assets/js/contact-preview.js';
+            $gamePreviewJsPath = $isContentDir ? '../assets/js/game-preview.js' : 'assets/js/game-preview.js';
+            $directoryItemPreviewJsPath = $isContentDir ? '../assets/js/directory-item-preview.js' : 'assets/js/directory-item-preview.js';
+            $aiToolPreviewJsPath = $isContentDir ? '../assets/js/ai-tool-preview.js' : 'assets/js/ai-tool-preview.js';
+            $postPreviewJsPath = $isContentDir ? '../assets/js/post-preview.js' : 'assets/js/post-preview.js';
+        }
     ?>
     <script src="<?php echo $enhancedAdminJsPath; ?>"></script>
     <script src="<?php echo $liveSearchJsPath; ?>"></script>
     <script src="<?php echo $inlineEditingJsPath; ?>"></script>
-    
+
     <?php
-    // Tab state handler path
-    $tabStateHandlerJsPath = $isContentDir ? '../js/tab-state-handler.js' : 'js/tab-state-handler.js';
+        // Tab state handler path
+        $tabStateHandlerJsPath = $isContentDir ? '../js/tab-state-handler.js' : 'js/tab-state-handler.js';
     ?>
     <!-- Include tab state handler for pagination -->
     <script src="<?php echo $tabStateHandlerJsPath; ?>"></script>
 
     <?php
-    // Scrape reviews script path
-    $scrapeReviewsJsPath = $isContentDir ? '../assets/js/scrape-reviews.js' : 'assets/js/scrape-reviews.js';
+        // Scrape reviews script path
+        $scrapeReviewsJsPath = $isContentDir ? '../assets/js/scrape-reviews.js' : 'assets/js/scrape-reviews.js';
     ?>
     <!-- Include scrape reviews handler -->
     <script src="<?php echo $scrapeReviewsJsPath; ?>"></script>
+    <?php } ?>
 
     <!-- Load preview scripts based on current page -->
     <?php if ($currentPage === 'stories'): ?>

@@ -142,17 +142,28 @@ $siteName = get_config('site.name', 'Stories From The Web');
 
     <!-- JavaScript Libraries -->
     <?php
-    // Use static variables to prevent multiple script loading
-    static $coreScriptsLoaded = false;
-    if (!$coreScriptsLoaded) {
-        $coreScriptsLoaded = true;
+    // Use session-based tracking to prevent multiple script loading across all pages
+    if (!isset($_SESSION['core_scripts_loaded'])) {
+        $_SESSION['core_scripts_loaded'] = true;
     ?>
     <!-- Add jQuery -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+    if (typeof jQuery === 'undefined') {
+        document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>');
+    }
+    </script>
     <!-- Add Popper.js -->
-    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <script>
+    if (typeof Popper === 'undefined') {
+        document.write('<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"><\/script>');
+    }
+    </script>
     <!-- Add Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.min.js"></script>
+    <script>
+    if (typeof bootstrap === 'undefined' && typeof $.fn.modal === 'undefined') {
+        document.write('<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.min.js"><\/script>');
+    }
+    </script>
     <?php } ?>
 
     <!-- Admin JavaScript Files -->

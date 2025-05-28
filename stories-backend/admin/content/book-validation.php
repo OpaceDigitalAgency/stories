@@ -420,6 +420,26 @@ if (!$bookValidationScriptLoaded) {
 ?>
 
 <!-- Data Enrichment Modal Structure (scripts loaded dynamically) -->
+<style>
+/* Data Enrichment Modal Styles */
+.enrichment-field { margin-bottom: 15px; border: 1px solid #ddd; border-radius: 5px; padding: 15px; }
+.enrichment-field.selected { border-color: #007bff; background-color: #f8f9ff; }
+.enrichment-field input[type="checkbox"] { margin-right: 8px; }
+.enrichment-field label { font-weight: bold; margin-bottom: 5px; display: block; }
+.enrichment-field .current-value { background-color: #f8f9fa; padding: 8px; border-radius: 3px; margin-bottom: 8px; }
+.enrichment-field .new-value { background-color: #e8f5e8; padding: 8px; border-radius: 3px; }
+.benefit-indicator { font-size: 12px; margin-left: 5px; }
+.benefit-beneficial { color: #28a745; }
+.benefit-questionable { color: #ffc107; }
+.benefit-not-beneficial { color: #6c757d; }
+.border-beneficial { border-color: #28a745 !important; }
+.border-questionable { border-color: #ffc107 !important; }
+.border-not-beneficial { border-color: #6c757d !important; }
+#confidence-score.badge-success { background-color: #28a745; }
+#confidence-score.badge-warning { background-color: #ffc107; }
+#confidence-score.badge-danger { background-color: #dc3545; }
+</style>
+
 <div class="modal fade" id="dataEnrichmentModal" tabindex="-1" role="dialog" aria-labelledby="dataEnrichmentModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content">
@@ -488,50 +508,26 @@ if (!$bookValidationScriptLoaded) {
     </div>
 </div>
 
-<script>
-// Load data enrichment scripts dynamically when needed
-function loadDataEnrichmentScripts() {
-    if (window.dataEnrichmentScriptsLoaded) {
-        return Promise.resolve();
-    }
-
-    return new Promise((resolve, reject) => {
-        const scripts = [
-            '/admin/assets/js/data-enrichment-modal.js',
-            '/admin/assets/js/data-enrichment-helpers.js',
-            '/admin/assets/js/data-enrichment-utils.js'
-        ];
-
-        let loadedCount = 0;
-
-        scripts.forEach(src => {
-            const script = document.createElement('script');
-            script.src = src;
-            script.onload = () => {
-                loadedCount++;
-                if (loadedCount === scripts.length) {
-                    window.dataEnrichmentScriptsLoaded = true;
-                    resolve();
-                }
-            };
-            script.onerror = () => reject(new Error(`Failed to load ${src}`));
-            document.head.appendChild(script);
-        });
-    });
+<!-- Data Enrichment Scripts -->
+<?php
+// Only include the data enrichment scripts once per page load
+static $dataEnrichmentScriptsLoaded = false;
+if (!$dataEnrichmentScriptsLoaded) {
+    $dataEnrichmentScriptsLoaded = true;
+    echo '<script src="../assets/js/data-enrichment-modal.js"></script>';
+    echo '<script src="../assets/js/data-enrichment-helpers.js"></script>';
+    echo '<script src="../assets/js/data-enrichment-utils.js"></script>';
 }
+?>
 
-// Override the openDataEnrichmentModal function to load scripts first
-window.openDataEnrichmentModal = function(bookId, title, author, currentISBN) {
-    loadDataEnrichmentScripts().then(() => {
-        // Call the actual function from the loaded script
-        if (window.openDataEnrichmentModal !== arguments.callee) {
-            window.openDataEnrichmentModal(bookId, title, author, currentISBN);
-        }
-    }).catch(error => {
-        console.error('Failed to load data enrichment scripts:', error);
-        alert('Error loading data enrichment functionality. Please refresh the page and try again.');
-    });
-};
+<script>
+// Data enrichment scripts are now loaded - ensure modal is available
+$(document).ready(function() {
+    // Ensure data enrichment modal is available
+    if ($('#dataEnrichmentModal').length === 0) {
+        console.warn('Data enrichment modal not found. Please ensure the modal is included.');
+    }
+});
 </script>
 
 <?php

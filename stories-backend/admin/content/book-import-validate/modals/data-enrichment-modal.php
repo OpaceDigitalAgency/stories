@@ -197,7 +197,7 @@ if (!$dataEnrichmentScriptsLoaded) {
     $dataEnrichmentScriptsLoaded = true;
     // Determine the correct path based on current directory
     $isContentDir = strpos($_SERVER['SCRIPT_FILENAME'], '/content/') !== false;
-    $scriptBasePath = '/admin/assets/js/';
+    $scriptBasePath = $isContentDir ? '../../assets/js/' : '../assets/js/';
 
     echo '<script src="' . $scriptBasePath . 'data-enrichment-modal.js"></script>';
     echo '<script src="' . $scriptBasePath . 'data-enrichment-helpers.js"></script>';

@@ -5,10 +5,15 @@
  */
 
 // Include database connection
-require_once '../../../db-connect.php';
+require_once '../includes/db-connect.php';
 
-// Include the enrichment functions
-require_once 'book-import-validate/ajax/data-enrichment-ajax.php';
+// Include the enrichment functions - check if file exists first
+$enrichmentFile = 'book-import-validate/ajax/data-enrichment-ajax.php';
+if (file_exists($enrichmentFile)) {
+    require_once $enrichmentFile;
+} else {
+    echo '<div class="alert alert-danger">Enrichment file not found: ' . $enrichmentFile . '</div>';
+}
 
 ?>
 <!DOCTYPE html>
@@ -45,7 +50,7 @@ require_once 'book-import-validate/ajax/data-enrichment-ajax.php';
         echo '<div class="card mb-4">';
         echo '<div class="card-header"><h3>Test 1: Database Connection</h3></div>';
         echo '<div class="card-body">';
-        
+
         try {
             $stmt = $db->query("SELECT COUNT(*) as count FROM books LIMIT 1");
             $result = $stmt->fetch();
@@ -55,18 +60,18 @@ require_once 'book-import-validate/ajax/data-enrichment-ajax.php';
             echo '<div class="alert alert-danger">❌ Database connection failed</div>';
             echo '<div class="debug-output error">Error: ' . $e->getMessage() . '</div>';
         }
-        
+
         echo '</div></div>';
 
         // Test 2: Check books table structure
         echo '<div class="card mb-4">';
         echo '<div class="card-header"><h3>Test 2: Books Table Structure</h3></div>';
         echo '<div class="card-body">';
-        
+
         try {
             $stmt = $db->query("SHOW COLUMNS FROM books");
             $columns = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
+
             echo '<div class="alert alert-success">✅ Books table structure retrieved</div>';
             echo '<div class="debug-output">';
             echo "Books table columns:\n";
@@ -74,38 +79,38 @@ require_once 'book-import-validate/ajax/data-enrichment-ajax.php';
                 echo "- {$column['Field']} ({$column['Type']})\n";
             }
             echo '</div>';
-            
+
             // Check for specific fields that enrichment system uses
-            $requiredFields = ['directory_item_id', 'title', 'author', 'publisher', 'isbn', 'isbn13', 
-                              'publication_date', 'page_count', 'language', 'format', 'cover_url', 
+            $requiredFields = ['directory_item_id', 'title', 'author', 'publisher', 'isbn', 'isbn13',
+                              'publication_date', 'page_count', 'language', 'format', 'cover_url',
                               'alternative_isbns', 'awards', 'characters', 'settings'];
-            
+
             $existingFields = array_column($columns, 'Field');
             $missingFields = array_diff($requiredFields, $existingFields);
-            
+
             if (empty($missingFields)) {
                 echo '<div class="alert alert-success">✅ All required enrichment fields exist</div>';
             } else {
                 echo '<div class="alert alert-warning">⚠️ Some enrichment fields are missing</div>';
                 echo '<div class="debug-output error">Missing fields: ' . implode(', ', $missingFields) . '</div>';
             }
-            
+
         } catch (Exception $e) {
             echo '<div class="alert alert-danger">❌ Failed to check table structure</div>';
             echo '<div class="debug-output error">Error: ' . $e->getMessage() . '</div>';
         }
-        
+
         echo '</div></div>';
 
         // Test 3: Get a sample book for testing
         echo '<div class="card mb-4">';
         echo '<div class="card-header"><h3>Test 3: Sample Book Data</h3></div>';
         echo '<div class="card-body">';
-        
+
         try {
             $stmt = $db->query("SELECT * FROM books LIMIT 1");
             $sampleBook = $stmt->fetch(PDO::FETCH_ASSOC);
-            
+
             if ($sampleBook) {
                 echo '<div class="alert alert-success">✅ Sample book found</div>';
                 echo '<div class="debug-output">';
@@ -116,30 +121,30 @@ require_once 'book-import-validate/ajax/data-enrichment-ajax.php';
                 echo "ISBN: " . ($sampleBook['isbn'] ?: 'NULL') . "\n";
                 echo "ISBN13: " . ($sampleBook['isbn13'] ?: 'NULL') . "\n";
                 echo '</div>';
-                
+
                 // Store sample book ID for testing
                 $testBookId = $sampleBook['directory_item_id'];
-                
+
             } else {
                 echo '<div class="alert alert-warning">⚠️ No books found in database</div>';
                 $testBookId = null;
             }
-            
+
         } catch (Exception $e) {
             echo '<div class="alert alert-danger">❌ Failed to get sample book</div>';
             echo '<div class="debug-output error">Error: ' . $e->getMessage() . '</div>';
             $testBookId = null;
         }
-        
+
         echo '</div></div>';
 
         // Test 4: Test columnExists function
         echo '<div class="card mb-4">';
         echo '<div class="card-header"><h3>Test 4: Column Existence Check</h3></div>';
         echo '<div class="card-body">';
-        
+
         $testColumns = ['author', 'publisher', 'isbn', 'isbn13', 'alternative_isbns', 'nonexistent_field'];
-        
+
         echo '<div class="debug-output">';
         echo "Testing columnExists function:\n";
         foreach ($testColumns as $column) {
@@ -148,7 +153,7 @@ require_once 'book-import-validate/ajax/data-enrichment-ajax.php';
             echo "- {$column}: {$status}\n";
         }
         echo '</div>';
-        
+
         echo '</div></div>';
 
         // Test 5: Simulate enrichment data save
@@ -156,7 +161,7 @@ require_once 'book-import-validate/ajax/data-enrichment-ajax.php';
             echo '<div class="card mb-4">';
             echo '<div class="card-header"><h3>Test 5: Simulate Enrichment Save</h3></div>';
             echo '<div class="card-body">';
-            
+
             // Create test enrichment data
             $testFields = [
                 'author' => [
@@ -170,29 +175,29 @@ require_once 'book-import-validate/ajax/data-enrichment-ajax.php';
                     'confidence' => 100
                 ]
             ];
-            
+
             echo '<div class="debug-output">';
             echo "Test enrichment data:\n";
             echo json_encode($testFields, JSON_PRETTY_PRINT) . "\n";
             echo '</div>';
-            
+
             // Simulate the POST data
             $_POST['action'] = 'apply_enrichment';
             $_POST['book_id'] = $testBookId;
             $_POST['fields'] = json_encode($testFields);
-            
+
             echo '<div class="alert alert-info">🔧 Simulating enrichment save...</div>';
-            
+
             // Capture output
             ob_start();
             handleApplyEnrichment();
             $output = ob_get_clean();
-            
+
             echo '<div class="debug-output">';
             echo "Enrichment function output:\n";
             echo $output;
             echo '</div>';
-            
+
             // Try to decode the JSON response
             $response = json_decode($output, true);
             if ($response) {
@@ -205,7 +210,7 @@ require_once 'book-import-validate/ajax/data-enrichment-ajax.php';
             } else {
                 echo '<div class="alert alert-warning">⚠️ Could not parse response as JSON</div>';
             }
-            
+
             echo '</div></div>';
         }
         ?>
@@ -222,7 +227,7 @@ require_once 'book-import-validate/ajax/data-enrichment-ajax.php';
                     <li><strong>Column existence check failures:</strong> Verify table structure matches documentation</li>
                     <li><strong>Enrichment save failures:</strong> Check the detailed error messages above</li>
                 </ul>
-                
+
                 <p class="mt-3">
                     <a href="book-validation.php" class="btn btn-primary">← Back to Book Validation</a>
                     <button onclick="location.reload()" class="btn btn-secondary">🔄 Refresh Test</button>

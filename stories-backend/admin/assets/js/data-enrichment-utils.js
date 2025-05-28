@@ -83,14 +83,16 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
                     $('#dataEnrichmentModal').modal('hide');
 
                     // Show success message with debug info
-                    showAlert('success', `✅ SUCCESS! Updated ${Object.keys(selectedFields).length} field(s)!\n\n${debugMessage}`);
+                    showNotification(`✅ SUCCESS! Updated ${Object.keys(selectedFields).length} field(s)!`, 'success', 3000);
+                    console.log('✅ SUCCESS DEBUG:', debugMessage);
 
                     // Force page refresh with cache busting
                     setTimeout(() => {
                         window.location.href = window.location.href.split('?')[0] + '?_refresh=' + Date.now();
                     }, 2000);
                 } else {
-                    showAlert('danger', `❌ ERROR! ${response.message || 'Unknown error'}\n\n${debugMessage}`);
+                    showNotification(`❌ ERROR! ${response.message || 'Unknown error'}`, 'danger', 5000);
+                    console.log('❌ ERROR DEBUG:', debugMessage);
                     $('#apply-enrichment-btn').prop('disabled', false).html('<i class="fas fa-save"></i> Apply Selected Changes');
                 }
             },
@@ -103,7 +105,8 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
                 errorMessage += 'Error: ' + error + '\n';
                 errorMessage += 'Response Text: ' + xhr.responseText + '\n';
 
-                showAlert('danger', `❌ AJAX ERROR!\n\n${errorMessage}`);
+                showNotification(`❌ AJAX ERROR! ${error}`, 'danger', 8000);
+                console.log('❌ AJAX ERROR DEBUG:', errorMessage);
                 $('#apply-enrichment-btn').prop('disabled', false).html('<i class="fas fa-save"></i> Apply Selected Changes');
             }
         });

@@ -156,12 +156,19 @@ if (file_exists($enrichmentFile)) {
 
         echo '</div></div>';
 
-        // Test 5: Simulate enrichment data save
-        if ($testBookId) {
-            echo '<div class="card mb-4">';
-            echo '<div class="card-header"><h3>Test 5: Simulate Enrichment Save</h3></div>';
-            echo '<div class="card-body">';
+        // Test 5: Check enrichment file and functions
+        echo '<div class="card mb-4">';
+        echo '<div class="card-header"><h3>Test 5: Check Enrichment Functions</h3></div>';
+        echo '<div class="card-body">';
 
+        echo '<div class="debug-output">';
+        echo "Checking enrichment file and functions:\n";
+        echo "File exists: " . (file_exists($enrichmentFile) ? 'YES' : 'NO') . "\n";
+        echo "handleApplyEnrichment function exists: " . (function_exists('handleApplyEnrichment') ? 'YES' : 'NO') . "\n";
+        echo "columnExists function exists: " . (function_exists('columnExists') ? 'YES' : 'NO') . "\n";
+        echo '</div>';
+
+        if (function_exists('handleApplyEnrichment') && $testBookId) {
             // Create test enrichment data
             $testFields = [
                 'author' => [
@@ -188,31 +195,38 @@ if (file_exists($enrichmentFile)) {
 
             echo '<div class="alert alert-info">🔧 Simulating enrichment save...</div>';
 
-            // Capture output
-            ob_start();
-            handleApplyEnrichment();
-            $output = ob_get_clean();
+            try {
+                // Capture output
+                ob_start();
+                handleApplyEnrichment();
+                $output = ob_get_clean();
 
-            echo '<div class="debug-output">';
-            echo "Enrichment function output:\n";
-            echo $output;
-            echo '</div>';
+                echo '<div class="debug-output">';
+                echo "Enrichment function output:\n";
+                echo $output;
+                echo '</div>';
 
-            // Try to decode the JSON response
-            $response = json_decode($output, true);
-            if ($response) {
-                if ($response['success']) {
-                    echo '<div class="alert alert-success">✅ Enrichment save test successful!</div>';
+                // Try to decode the JSON response
+                $response = json_decode($output, true);
+                if ($response) {
+                    if ($response['success']) {
+                        echo '<div class="alert alert-success">✅ Enrichment save test successful!</div>';
+                    } else {
+                        echo '<div class="alert alert-danger">❌ Enrichment save test failed</div>';
+                        echo '<div class="debug-output error">Error message: ' . ($response['message'] ?? 'Unknown error') . '</div>';
+                    }
                 } else {
-                    echo '<div class="alert alert-danger">❌ Enrichment save test failed</div>';
-                    echo '<div class="debug-output error">Error message: ' . ($response['message'] ?? 'Unknown error') . '</div>';
+                    echo '<div class="alert alert-warning">⚠️ Could not parse response as JSON</div>';
                 }
-            } else {
-                echo '<div class="alert alert-warning">⚠️ Could not parse response as JSON</div>';
+            } catch (Exception $e) {
+                echo '<div class="alert alert-danger">❌ Exception during enrichment test</div>';
+                echo '<div class="debug-output error">Exception: ' . $e->getMessage() . '</div>';
             }
-
-            echo '</div></div>';
+        } else {
+            echo '<div class="alert alert-warning">⚠️ Cannot run enrichment test - missing functions or book ID</div>';
         }
+
+        echo '</div></div>';
         ?>
 
         <div class="card">

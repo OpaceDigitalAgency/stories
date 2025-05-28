@@ -10,6 +10,9 @@
 
 require_once 'admin/content/book-import-validate/functions/data-enrichment-functions.php';
 
+// Enable Amazon debugging
+define('AMAZON_DEBUG', true);
+
 // Test ISBN (Coraline by Neil Gaiman)
 $testISBN13 = '9780380977789';
 $testISBN10 = '0380977788';
@@ -107,6 +110,24 @@ if ($convertedISBN10 === $testISBN10) {
     echo "<p><strong>✅ ISBN conversion working correctly!</strong></p>\n";
 } else {
     echo "<p><strong>❌ ISBN conversion failed!</strong></p>\n";
+}
+
+echo "<hr>\n";
+
+// Test 6: Full Amazon enrichment data (what the modal actually calls)
+echo "<h3>6. Testing Full Amazon Enrichment Data</h3>\n";
+
+$amazonData = getAmazonEnrichmentData($testISBN10);
+
+echo "<p><strong>Amazon Enrichment Data Result:</strong></p>\n";
+echo "<pre>" . print_r($amazonData, true) . "</pre>\n";
+
+if (!empty($amazonData['buying_options'])) {
+    echo "<p><strong>✅ Success!</strong> Found " . count($amazonData['buying_options']) . " buying options</p>\n";
+    echo "<p><strong>Selected Format:</strong> " . ($amazonData['selected_format'] ?? 'None') . "</p>\n";
+    echo "<p><strong>Selected Price:</strong> " . ($amazonData['selected_price'] ?? 'None') . "</p>\n";
+} else {
+    echo "<p><strong>❌ Failed!</strong> No buying options in enrichment data</p>\n";
 }
 
 echo "<hr>\n";

@@ -174,8 +174,69 @@ function getTableInfo($table) {
                                 }
                             }
                         }
+                        echo '<button onclick="consolidateAuthors(\'' . $group['ids'] . '\', \'' . htmlspecialchars($group['name']) . '\')" class="btn btn-sm btn-warning mt-2">🔧 Consolidate Duplicates</button>';
                         echo '</div>';
                     }
+                }
+
+                // Find similar authors (fuzzy matching for publishers)
+                echo '<h5 class="mt-4">🔍 Similar Publishers (Potential Duplicates):</h5>';
+                $stmt = $db->query("
+                    SELECT
+                        a1.id as id1, a1.name as name1,
+                        a2.id as id2, a2.name as name2,
+                        'similar' as match_type
+                    FROM authors a1
+                    JOIN authors a2 ON a1.id < a2.id
+                    WHERE (
+                        -- Harper Collins variations
+                        (LOWER(a1.name) LIKE '%harper%collins%' AND LOWER(a2.name) LIKE '%harper%collins%')
+                        OR (LOWER(a1.name) LIKE '%bloomsbury%' AND LOWER(a2.name) LIKE '%bloomsbury%')
+                        OR (LOWER(a1.name) LIKE '%scholastic%' AND LOWER(a2.name) LIKE '%scholastic%')
+                        OR (LOWER(a1.name) LIKE '%penguin%' AND LOWER(a2.name) LIKE '%penguin%')
+                        OR (LOWER(a1.name) LIKE '%simon%schuster%' AND LOWER(a2.name) LIKE '%simon%schuster%')
+                        OR (LOWER(a1.name) LIKE '%egmont%' AND LOWER(a2.name) LIKE '%egmont%')
+                        OR (LOWER(a1.name) LIKE '%puffin%' AND LOWER(a2.name) LIKE '%puffin%')
+                        OR (LOWER(a1.name) LIKE '%orion%' AND LOWER(a2.name) LIKE '%orion%')
+                        OR (LOWER(a1.name) LIKE '%macmillan%' AND LOWER(a2.name) LIKE '%macmillan%')
+                        OR (LOWER(a1.name) LIKE '%oxford%' AND LOWER(a2.name) LIKE '%oxford%')
+                        OR (LOWER(a1.name) LIKE '%cambridge%' AND LOWER(a2.name) LIKE '%cambridge%')
+                        OR (LOWER(a1.name) LIKE '%frances%lincoln%' AND LOWER(a2.name) LIKE '%frances%lincoln%')
+                        OR (LOWER(a1.name) LIKE '%marion%lloyd%' AND LOWER(a2.name) LIKE '%marion%lloyd%')
+                        OR (LOWER(a1.name) LIKE '%little%tiger%' AND LOWER(a2.name) LIKE '%little%tiger%')
+                        OR (LOWER(a1.name) LIKE '%nosy%crow%' AND LOWER(a2.name) LIKE '%nosy%crow%')
+                        OR (LOWER(a1.name) LIKE '%chicken%house%' AND LOWER(a2.name) LIKE '%chicken%house%')
+                        OR (LOWER(a1.name) LIKE '%david%fickling%' AND LOWER(a2.name) LIKE '%david%fickling%')
+                        OR (LOWER(a1.name) LIKE '%hachette%' AND LOWER(a2.name) LIKE '%hachette%')
+                        OR (LOWER(a1.name) LIKE '%piccadilly%' AND LOWER(a2.name) LIKE '%piccadilly%')
+                        OR (LOWER(a1.name) LIKE '%andersen%' AND LOWER(a2.name) LIKE '%andersen%')
+                        OR (LOWER(a1.name) LIKE '%barrington%stoke%' AND LOWER(a2.name) LIKE '%barrington%stoke%')
+                    )
+                    AND a1.name != a2.name
+                    ORDER BY a1.name
+                    LIMIT 30
+                ");
+                $similarAuthors = $stmt->fetchAll();
+
+                if (empty($similarAuthors)) {
+                    echo '<div class="alert alert-success">✅ No similar publishers found</div>';
+                } else {
+                    echo '<div class="alert alert-info">🔍 Found ' . count($similarAuthors) . ' potential similar publishers:</div>';
+                    echo '<div class="table-responsive">';
+                    echo '<table class="table table-sm">';
+                    echo '<thead><tr><th>Publisher 1</th><th>Publisher 2</th><th>Action</th></tr></thead>';
+                    echo '<tbody>';
+                    foreach ($similarAuthors as $pair) {
+                        echo '<tr>';
+                        echo '<td>' . htmlspecialchars($pair['name1']) . ' (ID: ' . $pair['id1'] . ')</td>';
+                        echo '<td>' . htmlspecialchars($pair['name2']) . ' (ID: ' . $pair['id2'] . ')</td>';
+                        echo '<td>';
+                        echo '<button onclick="mergePublishers(' . $pair['id1'] . ', ' . $pair['id2'] . ', \'' . htmlspecialchars($pair['name1']) . '\', \'' . htmlspecialchars($pair['name2']) . '\')" class="btn btn-xs btn-warning">Merge</button>';
+                        echo '</td>';
+                        echo '</tr>';
+                    }
+                    echo '</tbody></table>';
+                    echo '</div>';
                 }
 
             } catch (Exception $e) {
@@ -268,27 +329,61 @@ function getTableInfo($table) {
 
                 // Show books with missing publisher relationships
                 echo '<h5>📚 Books with Missing Publisher Relationships:</h5>';
+
+                // First get the total count
                 $stmt = $db->query("
-                    SELECT b.directory_item_id, di.title, b.publisher
+                    SELECT COUNT(*) as total
                     FROM books b
                     JOIN directory_items di ON b.directory_item_id = di.id
                     WHERE b.publisher IS NOT NULL
                     AND b.publisher != ''
                     AND b.publisher_id IS NULL
-                    LIMIT 10
                 ");
-                $missingRelationships = $stmt->fetchAll();
+                $totalMissing = $stmt->fetchColumn();
 
-                if (empty($missingRelationships)) {
+                if ($totalMissing == 0) {
                     echo '<div class="alert alert-success">✅ All books with publishers have relationships set</div>';
                 } else {
-                    echo '<div class="alert alert-warning">⚠️ Found ' . count($missingRelationships) . ' books with missing publisher relationships (showing first 10):</div>';
+                    echo '<div class="alert alert-warning">⚠️ Found ' . $totalMissing . ' books with missing publisher relationships:</div>';
+
+                    // Show pagination controls
+                    $page = $_GET['page'] ?? 1;
+                    $perPage = 20;
+                    $offset = ($page - 1) * $perPage;
+                    $totalPages = ceil($totalMissing / $perPage);
+
+                    echo '<div class="d-flex justify-content-between align-items-center mb-3">';
+                    echo '<div>';
+                    echo '<button onclick="fixAllPublisherRelationships()" class="btn btn-success">🔧 Fix All Relationships</button>';
+                    echo '<button onclick="bulkFixSelected()" class="btn btn-primary ms-2">🔧 Fix Selected</button>';
+                    echo '</div>';
+                    echo '<div>Page ' . $page . ' of ' . $totalPages . ' (Total: ' . $totalMissing . ')</div>';
+                    echo '</div>';
+
+                    // Get the actual data
+                    $stmt = $db->prepare("
+                        SELECT b.directory_item_id, di.title, b.publisher
+                        FROM books b
+                        JOIN directory_items di ON b.directory_item_id = di.id
+                        WHERE b.publisher IS NOT NULL
+                        AND b.publisher != ''
+                        AND b.publisher_id IS NULL
+                        ORDER BY di.title
+                        LIMIT ? OFFSET ?
+                    ");
+                    $stmt->execute([$perPage, $offset]);
+                    $missingRelationships = $stmt->fetchAll();
+
                     echo '<div class="table-responsive">';
                     echo '<table class="table table-sm">';
-                    echo '<thead><tr><th>Book</th><th>Publisher</th><th>Action</th></tr></thead>';
+                    echo '<thead><tr>';
+                    echo '<th><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>';
+                    echo '<th>Book</th><th>Publisher</th><th>Action</th>';
+                    echo '</tr></thead>';
                     echo '<tbody>';
                     foreach ($missingRelationships as $book) {
                         echo '<tr>';
+                        echo '<td><input type="checkbox" class="book-checkbox" value="' . $book['directory_item_id'] . '"></td>';
                         echo '<td>' . htmlspecialchars($book['title']) . '</td>';
                         echo '<td>' . htmlspecialchars($book['publisher']) . '</td>';
                         echo '<td><button onclick="fixPublisherRelationship(' . $book['directory_item_id'] . ')" class="btn btn-xs btn-primary">Fix</button></td>';
@@ -296,6 +391,18 @@ function getTableInfo($table) {
                     }
                     echo '</tbody></table>';
                     echo '</div>';
+
+                    // Pagination links
+                    if ($totalPages > 1) {
+                        echo '<nav><ul class="pagination">';
+                        for ($i = 1; $i <= $totalPages; $i++) {
+                            $active = $i == $page ? 'active' : '';
+                            echo '<li class="page-item ' . $active . '">';
+                            echo '<a class="page-link" href="?stage=analyze&page=' . $i . '">' . $i . '</a>';
+                            echo '</li>';
+                        }
+                        echo '</ul></nav>';
+                    }
                 }
 
             } catch (Exception $e) {
@@ -526,17 +633,72 @@ function getTableInfo($table) {
                     if (empty($readingLevelValues)) {
                         echo '<div class="alert alert-info">No reading level values found in books</div>';
                     } else {
+                        echo '<div class="alert alert-warning">⚠️ Current reading levels need standardization. Found inconsistent values:</div>';
                         echo '<div class="table-responsive">';
                         echo '<table class="table table-sm">';
-                        echo '<thead><tr><th>Reading Level</th><th>Book Count</th></tr></thead>';
+                        echo '<thead><tr><th>Current Reading Level</th><th>Book Count</th><th>Suggested Standard</th><th>Action</th></tr></thead>';
                         echo '<tbody>';
+
+                        // Define standard reading levels mapping
+                        $standardLevels = [
+                            'middle-grade' => 'Transitional Reader (7-8 years)',
+                            'Middle Grade' => 'Transitional Reader (7-8 years)',
+                            'chapter-book' => 'Fluent Reader (8-11 years)',
+                            'early reader' => 'Early Reader (5-6 years)',
+                            'picture book' => 'Beginning Reader (4-5 years)',
+                            'young adult' => 'Advanced Reader (14-16 years)',
+                            'adult' => 'Proficient Reader (18+ years)'
+                        ];
+
                         foreach ($readingLevelValues as $value) {
+                            $current = $value['reading_level'];
+                            $suggested = $standardLevels[strtolower($current)] ?? 'Needs Manual Review';
+
                             echo '<tr>';
-                            echo '<td>' . htmlspecialchars($value['reading_level']) . '</td>';
+                            echo '<td>' . htmlspecialchars($current) . '</td>';
                             echo '<td><span class="badge bg-info">' . $value['count'] . '</span></td>';
+                            echo '<td>' . htmlspecialchars($suggested) . '</td>';
+                            echo '<td>';
+                            if ($suggested !== 'Needs Manual Review') {
+                                echo '<button onclick="standardizeReadingLevel(\'' . htmlspecialchars($current) . '\', \'' . htmlspecialchars($suggested) . '\')" class="btn btn-xs btn-success">Standardize</button>';
+                            } else {
+                                echo '<span class="text-muted">Manual review needed</span>';
+                            }
+                            echo '</td>';
                             echo '</tr>';
                         }
                         echo '</tbody></table>';
+                        echo '</div>';
+
+                        echo '<div class="mt-3">';
+                        echo '<button onclick="createStandardReadingLevels()" class="btn btn-primary">📚 Create Standard Reading Levels System</button>';
+                        echo '<button onclick="migrateAllReadingLevels()" class="btn btn-warning ms-2">🔄 Migrate All to Standards</button>';
+                        echo '</div>';
+
+                        // Show the proposed standard system
+                        echo '<div class="mt-4">';
+                        echo '<h6>📋 Proposed Standard Reading Levels System:</h6>';
+                        echo '<div class="table-responsive">';
+                        echo '<table class="table table-sm table-striped">';
+                        echo '<thead><tr><th>Age Group</th><th>School Year</th><th>Reading Stage</th><th>Lexile Range</th><th>Typical Skills</th></tr></thead>';
+                        echo '<tbody>';
+                        echo '<tr><td>0-12 months</td><td>-</td><td>Pre-literacy (Sensory)</td><td>N/A</td><td>Listening to voices, looking at pictures</td></tr>';
+                        echo '<tr><td>12-24 months</td><td>-</td><td>Pre-literacy (Naming)</td><td>N/A</td><td>Responding to stories, pointing at objects</td></tr>';
+                        echo '<tr><td>2-3 years</td><td>-</td><td>Pre-literacy (Mimicry)</td><td>BR</td><td>Repeating phrases, "reading" from memory</td></tr>';
+                        echo '<tr><td>3-4 years</td><td>-</td><td>Early Pre-reader</td><td>BR</td><td>Identifying letters, understanding sequences</td></tr>';
+                        echo '<tr><td>4-5 years</td><td>Reception</td><td>Beginning Reader</td><td>BR-120L</td><td>Introduction to phonics, basic sentences</td></tr>';
+                        echo '<tr><td>5-6 years</td><td>Year 1</td><td>Early Reader</td><td>120L-220L</td><td>Development of decoding skills</td></tr>';
+                        echo '<tr><td>6-7 years</td><td>Year 2</td><td>Developing Reader</td><td>220L-420L</td><td>Enhancement of fluency and comprehension</td></tr>';
+                        echo '<tr><td>7-8 years</td><td>Year 3</td><td>Transitional Reader</td><td>420L-620L</td><td>Transition from learning to read to reading to learn</td></tr>';
+                        echo '<tr><td>8-9 years</td><td>Year 4</td><td>Fluent Reader</td><td>620L-820L</td><td>Exposure to variety of genres</td></tr>';
+                        echo '<tr><td>9-10 years</td><td>Year 5</td><td>Fluent Reader</td><td>820L-940L</td><td>More complex texts and analysis</td></tr>';
+                        echo '<tr><td>10-11 years</td><td>Year 6</td><td>Fluent Reader</td><td>940L-1000L+</td><td>Advanced comprehension skills</td></tr>';
+                        echo '<tr><td>11-14 years</td><td>Years 7-9</td><td>Advanced Reader</td><td>1000L-1100L+</td><td>Critical reading and text analysis</td></tr>';
+                        echo '<tr><td>14-16 years</td><td>Years 10-11</td><td>Advanced Reader</td><td>1100L-1200L+</td><td>GCSE preparation, literature study</td></tr>';
+                        echo '<tr><td>16-18 years</td><td>Years 12-13</td><td>Advanced Reader</td><td>1200L-1300L+</td><td>A-level analytical skills</td></tr>';
+                        echo '<tr><td>18+ years</td><td>Adult</td><td>Proficient Reader</td><td>1300L-1600L+</td><td>Professional and academic reading</td></tr>';
+                        echo '</tbody></table>';
+                        echo '</div>';
                         echo '</div>';
                     }
                 }
@@ -791,6 +953,282 @@ function getTableInfo($table) {
         .then(data => {
             if (data.success) {
                 alert('✅ Publisher relationship fixed!\n' + (data.message || ''));
+                location.reload();
+            } else {
+                alert('❌ Error: ' + (data.message || 'Unknown error'));
+                button.textContent = originalText;
+                button.disabled = false;
+            }
+        })
+        .catch(error => {
+            alert('❌ Network error: ' + error.message);
+            button.textContent = originalText;
+            button.disabled = false;
+        });
+    }
+
+    function toggleSelectAll() {
+        const selectAll = document.getElementById('selectAll');
+        const checkboxes = document.querySelectorAll('.book-checkbox');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = selectAll.checked;
+        });
+    }
+
+    function bulkFixSelected() {
+        const checkboxes = document.querySelectorAll('.book-checkbox:checked');
+        if (checkboxes.length === 0) {
+            alert('Please select at least one book to fix.');
+            return;
+        }
+
+        if (!confirm('Fix publisher relationships for ' + checkboxes.length + ' selected books?')) {
+            return;
+        }
+
+        const bookIds = Array.from(checkboxes).map(cb => cb.value);
+
+        // Show progress
+        const progressDiv = document.createElement('div');
+        progressDiv.className = 'alert alert-info';
+        progressDiv.innerHTML = 'Processing ' + bookIds.length + ' books... <div class="progress"><div class="progress-bar" style="width: 0%"></div></div>';
+        document.querySelector('.table-responsive').before(progressDiv);
+
+        // Process books one by one
+        let processed = 0;
+        const processNext = () => {
+            if (processed >= bookIds.length) {
+                progressDiv.className = 'alert alert-success';
+                progressDiv.innerHTML = '✅ Completed processing ' + bookIds.length + ' books!';
+                setTimeout(() => location.reload(), 2000);
+                return;
+            }
+
+            const bookId = bookIds[processed];
+            const progress = ((processed + 1) / bookIds.length) * 100;
+            progressDiv.querySelector('.progress-bar').style.width = progress + '%';
+
+            fetch('book-import-validate/ajax/data-enrichment-ajax.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'action=fix_publisher_relationship&book_id=' + bookId
+            })
+            .then(response => response.json())
+            .then(data => {
+                processed++;
+                processNext();
+            })
+            .catch(error => {
+                console.error('Error processing book ' + bookId + ':', error);
+                processed++;
+                processNext();
+            });
+        };
+
+        processNext();
+    }
+
+    function fixAllPublisherRelationships() {
+        if (!confirm('This will attempt to fix ALL missing publisher relationships. This may take several minutes. Continue?')) {
+            return;
+        }
+
+        // Show progress
+        const progressDiv = document.createElement('div');
+        progressDiv.className = 'alert alert-info';
+        progressDiv.innerHTML = 'Processing all missing relationships... <div class="progress"><div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%"></div></div>';
+        document.querySelector('.table-responsive').before(progressDiv);
+
+        fetch('book-import-validate/ajax/data-enrichment-ajax.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'action=fix_all_publisher_relationships'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                progressDiv.className = 'alert alert-success';
+                progressDiv.innerHTML = '✅ ' + (data.message || 'All publisher relationships processed!');
+                setTimeout(() => location.reload(), 3000);
+            } else {
+                progressDiv.className = 'alert alert-danger';
+                progressDiv.innerHTML = '❌ Error: ' + (data.message || 'Unknown error');
+            }
+        })
+        .catch(error => {
+            progressDiv.className = 'alert alert-danger';
+            progressDiv.innerHTML = '❌ Network error: ' + error.message;
+        });
+    }
+
+    // Publisher consolidation functions
+    function consolidateAuthors(ids, name) {
+        if (!confirm('Consolidate duplicate authors/publishers for "' + name + '"?\nIDs: ' + ids)) {
+            return;
+        }
+
+        const button = event.target;
+        const originalText = button.textContent;
+        button.textContent = 'Consolidating...';
+        button.disabled = true;
+
+        fetch('book-import-validate/ajax/data-enrichment-ajax.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'action=consolidate_authors&ids=' + encodeURIComponent(ids) + '&name=' + encodeURIComponent(name)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ Authors/publishers consolidated successfully!');
+                location.reload();
+            } else {
+                alert('❌ Error: ' + (data.message || 'Unknown error'));
+                button.textContent = originalText;
+                button.disabled = false;
+            }
+        })
+        .catch(error => {
+            alert('❌ Network error: ' + error.message);
+            button.textContent = originalText;
+            button.disabled = false;
+        });
+    }
+
+    function mergePublishers(id1, id2, name1, name2) {
+        const choice = confirm('Merge publishers:\n"' + name1 + '" (ID: ' + id1 + ')\n"' + name2 + '" (ID: ' + id2 + ')\n\nClick OK to keep "' + name1 + '" or Cancel to keep "' + name2 + '"');
+        const keepId = choice ? id1 : id2;
+        const removeId = choice ? id2 : id1;
+        const keepName = choice ? name1 : name2;
+
+        const button = event.target;
+        const originalText = button.textContent;
+        button.textContent = 'Merging...';
+        button.disabled = true;
+
+        fetch('book-import-validate/ajax/data-enrichment-ajax.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'action=merge_publishers&keep_id=' + keepId + '&remove_id=' + removeId + '&keep_name=' + encodeURIComponent(keepName)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ Publishers merged successfully!\nKept: ' + keepName);
+                location.reload();
+            } else {
+                alert('❌ Error: ' + (data.message || 'Unknown error'));
+                button.textContent = originalText;
+                button.disabled = false;
+            }
+        })
+        .catch(error => {
+            alert('❌ Network error: ' + error.message);
+            button.textContent = originalText;
+            button.disabled = false;
+        });
+    }
+
+    // Reading level standardization functions
+    function standardizeReadingLevel(current, suggested) {
+        if (!confirm('Standardize reading level "' + current + '" to "' + suggested + '"?')) {
+            return;
+        }
+
+        const button = event.target;
+        const originalText = button.textContent;
+        button.textContent = 'Updating...';
+        button.disabled = true;
+
+        fetch('book-import-validate/ajax/data-enrichment-ajax.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'action=standardize_reading_level&current=' + encodeURIComponent(current) + '&suggested=' + encodeURIComponent(suggested)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ Reading level standardized successfully!');
+                location.reload();
+            } else {
+                alert('❌ Error: ' + (data.message || 'Unknown error'));
+                button.textContent = originalText;
+                button.disabled = false;
+            }
+        })
+        .catch(error => {
+            alert('❌ Network error: ' + error.message);
+            button.textContent = originalText;
+            button.disabled = false;
+        });
+    }
+
+    function createStandardReadingLevels() {
+        if (!confirm('Create standard reading levels lookup table?\nThis will create a new table with the UK education system standards.')) {
+            return;
+        }
+
+        const button = event.target;
+        const originalText = button.textContent;
+        button.textContent = 'Creating...';
+        button.disabled = true;
+
+        fetch('book-import-validate/ajax/data-enrichment-ajax.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'action=create_standard_reading_levels'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ Standard reading levels table created successfully!');
+                location.reload();
+            } else {
+                alert('❌ Error: ' + (data.message || 'Unknown error'));
+                button.textContent = originalText;
+                button.disabled = false;
+            }
+        })
+        .catch(error => {
+            alert('❌ Network error: ' + error.message);
+            button.textContent = originalText;
+            button.disabled = false;
+        });
+    }
+
+    function migrateAllReadingLevels() {
+        if (!confirm('Migrate ALL reading levels to the standard system?\nThis will update all books with standardized reading levels.')) {
+            return;
+        }
+
+        const button = event.target;
+        const originalText = button.textContent;
+        button.textContent = 'Migrating...';
+        button.disabled = true;
+
+        fetch('book-import-validate/ajax/data-enrichment-ajax.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'action=migrate_all_reading_levels'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ All reading levels migrated successfully!\n' + (data.message || ''));
                 location.reload();
             } else {
                 alert('❌ Error: ' + (data.message || 'Unknown error'));

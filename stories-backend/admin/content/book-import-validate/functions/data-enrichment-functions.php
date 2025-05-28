@@ -236,13 +236,14 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
                                 error_log("PUBLISHER_TEST: Looking for publisher match for: " . $option['value']);
                                 $bestMatch = findBestPublisherMatch($option['value']);
                                 error_log("PUBLISHER_TEST: Publisher match result: " . json_encode($bestMatch));
-                                if ($bestMatch && $bestMatch['confidence'] >= 30) { // Lowered threshold for debugging
+                                if ($bestMatch && $bestMatch['confidence'] >= 80) { // Higher threshold - only recommend very good matches
                                     $option['recommended'] = $bestMatch['name'];
                                     $option['recommendation_confidence'] = $bestMatch['confidence'];
                                     $option['match_type'] = $bestMatch['match_type'];
                                     error_log("PUBLISHER_TEST: Added recommendation: " . $bestMatch['name'] . " with confidence " . $bestMatch['confidence']);
                                 } else {
-                                    error_log("PUBLISHER_TEST: No suitable match found (confidence too low or no match)");
+                                    $option['recommended'] = false; // Explicitly set to false when no good match
+                                    error_log("PUBLISHER_TEST: No suitable match found (confidence: " . ($bestMatch ? $bestMatch['confidence'] : 'no match') . "%)");
                                 }
                             } else {
                                 error_log("PUBLISHER_TEST: Option $index has no value or empty value: " . json_encode($option));

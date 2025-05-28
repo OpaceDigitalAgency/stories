@@ -15,7 +15,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         console.log('📚 Fetching ISBNs for book ID:', bookId);
 
         $.ajax({
-            url: '/admin/content/book-import-validate/ajax/data-enrichment-ajax.php',
+            url: 'book-import-validate/ajax/data-enrichment-ajax.php',
             method: 'POST',
             data: {
                 action: 'get_book_isbns',
@@ -62,7 +62,9 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             },
             error: function(xhr, status, error) {
                 console.error('📚 ❌ Error fetching ISBN data:', error);
-                console.error('📚 Response:', xhr.responseText);
+                console.error('📚 Response status:', xhr.status);
+                console.error('📚 Response text:', xhr.responseText);
+                console.error('📚 Request URL was:', 'book-import-validate/ajax/data-enrichment-ajax.php');
                 // Still show the section but with dashes
                 $('#enrichment-isbn13').text('-');
                 $('#enrichment-isbn10').text('-');

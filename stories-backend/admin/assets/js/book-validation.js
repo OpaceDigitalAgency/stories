@@ -135,6 +135,9 @@ if (typeof window.bookValidationLoaded === 'undefined') {
 
         // Test AJAX endpoint
         $('#test-ajax').click(function() {
+            console.log('🧪 Testing AJAX endpoints...');
+
+            // Test basic AJAX first
             $.ajax({
                 url: 'book-import-validate/ajax/data-enrichment-ajax.php',
                 method: 'POST',
@@ -143,11 +146,38 @@ if (typeof window.bookValidationLoaded === 'undefined') {
                 },
                 dataType: 'json',
                 success: function(response) {
-                    alert('AJAX Test Success: ' + response.message);
-                    console.log('AJAX response:', response);
+                    console.log('✅ Basic AJAX test successful:', response);
+
+                    // Now test ISBN fetch specifically for book ID 2104 (Coraline)
+                    console.log('🧪 Testing ISBN fetch for book ID 2104...');
+                    $.ajax({
+                        url: 'book-import-validate/ajax/data-enrichment-ajax.php',
+                        method: 'POST',
+                        data: {
+                            action: 'get_book_isbns',
+                            book_id: '2104'
+                        },
+                        dataType: 'json',
+                        success: function(isbnResponse) {
+                            console.log('✅ ISBN fetch test successful:', isbnResponse);
+                            alert('All AJAX tests passed!\n\n' +
+                                  'Basic Test: ' + response.message + '\n\n' +
+                                  'ISBN Fetch Test: ' + JSON.stringify(isbnResponse, null, 2));
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('❌ ISBN fetch test failed:', error);
+                            console.error('Response status:', xhr.status);
+                            console.error('Response text:', xhr.responseText);
+                            alert('ISBN fetch test failed!\n\n' +
+                                  'Error: ' + error + '\n' +
+                                  'Status: ' + xhr.status + '\n' +
+                                  'Response: ' + xhr.responseText);
+                        }
+                    });
                 },
                 error: function(xhr, status, error) {
-                    alert('AJAX Test Failed: ' + error);
+                    console.error('❌ Basic AJAX test failed:', error);
+                    alert('Basic AJAX Test Failed: ' + error);
                     console.error('AJAX Error:', { xhr, status, error, responseText: xhr.responseText });
                 }
             });

@@ -38,6 +38,20 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
                     </label>
                 </div>
             `;
+
+            // Add publisher recommendation if available
+            if (fieldName === 'publisher' && option.recommended) {
+                optionsHtml += `
+                    <div class="ml-4 mb-2 p-2 bg-light border-left border-success">
+                        <small class="text-success">
+                            <i class="fas fa-lightbulb"></i> <strong>Smart Match:</strong>
+                            ${option.recommended}
+                            <span class="badge badge-success ml-1">${option.recommendation_confidence}%</span>
+                            <span class="text-muted">(${option.match_type} match from your database)</span>
+                        </small>
+                    </div>
+                `;
+            }
         });
 
         return `

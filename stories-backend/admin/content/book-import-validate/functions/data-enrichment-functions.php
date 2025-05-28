@@ -1321,7 +1321,7 @@ function normalizeFormat($format) {
 }
 
 /**
- * Convert Lexile reading level to readable format
+ * Convert Lexile reading level to standardized reading level format
  */
 function convertLexileToReadingLevel($lexileValue) {
     if (!is_numeric($lexileValue)) {
@@ -1330,19 +1330,19 @@ function convertLexileToReadingLevel($lexileValue) {
 
     $lexile = (int) $lexileValue;
 
-    // Convert Lexile to reading level categories
+    // Convert Lexile to standardized reading level categories
     if ($lexile < 200) {
         return 'Beginning Reader';
     } elseif ($lexile < 400) {
         return 'Early Reader';
     } elseif ($lexile < 600) {
-        return 'Elementary';
+        return 'Developing Reader';
     } elseif ($lexile < 800) {
-        return 'Middle Grade';
+        return 'Fluent Reader';
     } elseif ($lexile < 1000) {
-        return 'Young Adult';
+        return 'Advanced Reader';
     } else {
-        return 'Advanced';
+        return 'Proficient Reader';
     }
 }
 

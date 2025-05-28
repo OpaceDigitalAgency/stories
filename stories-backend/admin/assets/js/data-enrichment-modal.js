@@ -12,20 +12,63 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         window.currentBookId = bookId;
         window.currentBookISBN = String(currentISBN || ''); // Ensure it's always a string
 
+        // Update modal header with book information
+        updateModalHeader(title, currentISBN);
+
         // Reset modal state
         $('#enrichment-loading').show();
         $('#enrichment-results').hide();
         $('#enrichment-error').hide();
         $('#apply-enrichment-btn').prop('disabled', true);
 
-        // Update modal title
-        $('#dataEnrichmentModalLabel').html(`<i class="fas fa-database"></i> Enrich Data: ${title}`);
-
         // Show modal
         $('#dataEnrichmentModal').modal('show');
 
         // Fetch enrichment data
         fetchEnrichmentData(title, author, window.currentBookISBN);
+    }
+
+    // Update modal header with book title and ISBN information
+    function updateModalHeader(title, isbn) {
+        // Update book title
+        $('#enrichment-book-title').text(title || 'Unknown Title');
+
+        // Process ISBN information
+        let isbn13 = '-', isbn10 = '-';
+
+        if (isbn) {
+            const cleanISBN = isbn.replace(/[^0-9X]/gi, '');
+            if (cleanISBN.length === 13) {
+                isbn13 = cleanISBN;
+                // Try to convert to ISBN-10
+                if (cleanISBN.startsWith('978')) {
+                    const isbn10Digits = cleanISBN.substring(3, 12);
+                    let sum = 0;
+                    for (let i = 0; i < 9; i++) {
+                        sum += parseInt(isbn10Digits[i]) * (10 - i);
+                    }
+                    const checkDigit = (11 - (sum % 11)) % 11;
+                    isbn10 = isbn10Digits + (checkDigit === 10 ? 'X' : checkDigit);
+                }
+            } else if (cleanISBN.length === 10) {
+                isbn10 = cleanISBN;
+                // Convert to ISBN-13
+                const isbn13Prefix = '978' + cleanISBN.substring(0, 9);
+                let sum = 0;
+                for (let i = 0; i < 12; i++) {
+                    sum += parseInt(isbn13Prefix[i]) * (i % 2 === 0 ? 1 : 3);
+                }
+                const checkDigit = (10 - (sum % 10)) % 10;
+                isbn13 = isbn13Prefix + checkDigit;
+            }
+        }
+
+        // Update ISBN displays
+        $('#enrichment-isbn13').text(isbn13);
+        $('#enrichment-isbn10').text(isbn10);
+
+        // Show the identifiers section
+        $('#enrichment-book-identifiers').show();
     }
 
     function fetchEnrichmentData(title, author, currentISBN) {
@@ -339,7 +382,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
 
     // Set up synchronization between age range and reading level fields
     function setupAgeRangeReadingLevelSync() {
-        // Age range to reading level mapping (same as in PHP)
+        // Age range to reading level mapping (matching database values)
         const ageToReadingMap = {
             '0-12 months': 'Pre-literacy (Sensory)',
             '12-24 months': 'Pre-literacy (Naming)',
@@ -355,10 +398,13 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             '11-14 years': 'Advanced Reader',
             '14-16 years': 'Advanced Reader',
             '16-18 years': 'Advanced Reader',
-            '18+ years': 'Proficient Reader'
+            '18+ years': 'Proficient Reader',
+            // Common variations that might come from APIs
+            '5-6 years': 'Early Reader',
+            'All Ages': 'Early Reader'
         };
 
-        // Reading level to age range mapping
+        // Reading level to age range mapping (including common API values)
         const readingToAgeMap = {
             'Pre-literacy (Sensory)': '0-12 months',
             'Pre-literacy (Naming)': '12-24 months',
@@ -370,7 +416,12 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             'Transitional Reader': '7-8 years',
             'Fluent Reader': '9-10 years',
             'Advanced Reader': '11-14 years',
-            'Proficient Reader': '18+ years'
+            'Proficient Reader': '18+ years',
+            // Common API variations
+            'Middle Grade': '9-10 years',
+            'Young Adult': '14-16 years',
+            'Adult': '18+ years',
+            'All Ages': '5-6 years'
         };
 
         // Listen for changes in age range selections

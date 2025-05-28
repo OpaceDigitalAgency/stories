@@ -968,36 +968,31 @@ function processTagsRelationships($bookId, $tagsToProcess) {
                 $newTags = array_map('trim', explode(',', $value));
             }
 
-            // Filter out age-related and award-related tags
-            $filteredTags = [];
-            foreach ($newTags as $tagName) {
-                if (empty($tagName)) continue;
+            // Use the enhanced filtering function
+            $filteredTags = filterAndDeduplicateTags($newTags);
 
+            // Merge with existing tags (avoid duplicates)
+            $allTagNames = array_merge($currentTagNames, $filteredTags);
+            $uniqueTagNames = [];
+
+            foreach ($allTagNames as $tagName) {
                 $tagLower = strtolower(trim($tagName));
+                $isDuplicate = false;
 
-                // Skip age-related tags
-                if (preg_match('/^\d+-\d+$/', $tagLower) ||
-                    preg_match('/^\d+\+$/', $tagLower) ||
-                    strpos($tagLower, 'years') !== false ||
-                    strpos($tagLower, 'age') !== false ||
-                    $tagLower === 'teen' ||
-                    $tagLower === 'young adult' ||
-                    $tagLower === 'adult' ||
-                    $tagLower === 'coming of age' ||
-                    in_array($tagLower, ['12+', '13+', '14+', '16+', '18+'])) {
-                    continue;
+                foreach ($uniqueTagNames as $existingTag) {
+                    if (strtolower($existingTag) === $tagLower) {
+                        $isDuplicate = true;
+                        break;
+                    }
                 }
 
-                // Skip award-related tags
-                if (strpos($tagLower, 'award') !== false ||
-                    strpos($tagLower, 'winner') !== false ||
-                    strpos($tagLower, 'medal') !== false ||
-                    strpos($tagLower, 'prize') !== false) {
-                    continue;
+                if (!$isDuplicate && !empty(trim($tagName))) {
+                    $uniqueTagNames[] = trim($tagName);
                 }
-
-                $filteredTags[] = trim($tagName);
             }
+
+            // Only process tags that are actually new
+            $tagsToAdd = array_diff($uniqueTagNames, $currentTagNames);
 
             // Merge with current tags and deduplicate
             $allTags = array_merge($currentTagNames, $filteredTags);
@@ -2404,7 +2399,7 @@ function handleFixAgeRangeSync() {
             }
         }
 
-        // 6. Synchronize age ranges with reading levels
+        // 6. Synchronize age ranges with reading levels using standardized values
         $ageToReadingMap = [
             '0-12 months' => 'Pre-literacy (Sensory)',
             '12-24 months' => 'Pre-literacy (Naming)',
@@ -2421,6 +2416,17 @@ function handleFixAgeRangeSync() {
             '14-16 years' => 'Advanced Reader',
             '16-18 years' => 'Advanced Reader',
             '18+ years' => 'Proficient Reader'
+        ];
+
+        // Map common API values to our standardized reading levels
+        $readingLevelMapping = [
+            'Middle Grade' => 'Fluent Reader',
+            'Young Adult' => 'Advanced Reader',
+            'Adult' => 'Proficient Reader',
+            'All Ages' => 'Early Reader',
+            'Children' => 'Early Reader',
+            'Juvenile' => 'Developing Reader',
+            'Teen' => 'Advanced Reader'
         ];
 
         $syncUpdates = 0;

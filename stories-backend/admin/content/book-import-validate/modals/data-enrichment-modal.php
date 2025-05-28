@@ -31,11 +31,19 @@
 <div class="modal fade" id="dataEnrichmentModal" tabindex="-1" role="dialog" aria-labelledby="dataEnrichmentModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="dataEnrichmentModalLabel">
-                    <i class="fas fa-database"></i> Enrich Book Data
-                </h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <div class="modal-header bg-primary text-white">
+                <div class="modal-title-container">
+                    <h4 class="modal-title mb-1" id="dataEnrichmentModalLabel">
+                        <i class="fas fa-database"></i> <span id="enrichment-book-title">Enrich Book Data</span>
+                    </h4>
+                    <div class="book-identifiers text-light" id="enrichment-book-identifiers" style="display: none;">
+                        <small>
+                            <strong>ISBN-13:</strong> <span id="enrichment-isbn13">-</span> |
+                            <strong>ISBN-10:</strong> <span id="enrichment-isbn10">-</span>
+                        </small>
+                    </div>
+                </div>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>

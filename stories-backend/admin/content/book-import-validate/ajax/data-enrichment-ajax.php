@@ -343,6 +343,20 @@ function handleApplyEnrichment() {
                 }
                 break;
 
+            case 'publication_date':
+                // Handle publication date with proper format conversion
+                if (!empty($value) && columnExists('books', 'publication_date')) {
+                    $formattedDate = formatPublicationDate($value);
+                    if ($formattedDate) {
+                        $updateFields[] = "publication_date = ?";
+                        $params[] = $formattedDate;
+                        error_log("Added publication_date to update: $value -> $formattedDate");
+                    } else {
+                        error_log("Skipping publication_date - invalid format: $value");
+                    }
+                }
+                break;
+
             case 'cover_url':
                 // Handle cover URL with download and optimization
                 if (!empty($value)) {
@@ -736,19 +750,59 @@ function processPublisherRelationship($bookId, $publisherName) {
     global $db;
 
     try {
-        // Check if publisher already exists in authors table
-        $stmt = $db->prepare("SELECT id FROM authors WHERE name = ? AND type = 'publisher'");
-        $stmt->execute([$publisherName]);
+        // Clean up publisher name
+        $cleanPublisherName = trim($publisherName);
+
+        // Check for exact match first
+        $stmt = $db->prepare("SELECT id, name FROM authors WHERE name = ? AND type = 'publisher'");
+        $stmt->execute([$cleanPublisherName]);
         $existingPublisher = $stmt->fetch();
 
         if ($existingPublisher) {
             $publisherId = $existingPublisher['id'];
+            error_log("Found exact publisher match: {$existingPublisher['name']} (ID: $publisherId)");
         } else {
-            // Create new publisher in authors table
-            $stmt = $db->prepare("INSERT INTO authors (name, type, slug) VALUES (?, 'publisher', ?)");
-            $slug = createSlug($publisherName);
-            $stmt->execute([$publisherName, $slug]);
-            $publisherId = $db->lastInsertId();
+            // Check for similar publishers to prevent duplicates
+            $stmt = $db->prepare("SELECT id, name FROM authors WHERE type = 'publisher'");
+            $stmt->execute();
+            $allPublishers = $stmt->fetchAll();
+
+            $bestMatch = null;
+            $bestSimilarity = 0;
+
+            foreach ($allPublishers as $publisher) {
+                // Calculate similarity
+                $similarity = similar_text(strtolower($cleanPublisherName), strtolower($publisher['name']), $percent);
+
+                // Check for common variations
+                $isVariation = false;
+                $name1 = strtolower(str_replace([' ', "'", '"', '-'], '', $cleanPublisherName));
+                $name2 = strtolower(str_replace([' ', "'", '"', '-'], '', $publisher['name']));
+
+                // Check if one is contained in the other (e.g., "Harper Collins" vs "HarperCollins Children's Books")
+                if (strpos($name1, $name2) !== false || strpos($name2, $name1) !== false) {
+                    $isVariation = true;
+                    $percent = 90; // High similarity for variations
+                }
+
+                if ($percent > $bestSimilarity && ($percent >= 85 || $isVariation)) {
+                    $bestMatch = $publisher;
+                    $bestSimilarity = $percent;
+                }
+            }
+
+            if ($bestMatch && $bestSimilarity >= 85) {
+                // Use existing similar publisher
+                $publisherId = $bestMatch['id'];
+                error_log("Found similar publisher match: '{$bestMatch['name']}' for '$cleanPublisherName' (similarity: {$bestSimilarity}%)");
+            } else {
+                // Create new publisher
+                $stmt = $db->prepare("INSERT INTO authors (name, type, slug) VALUES (?, 'publisher', ?)");
+                $slug = createSlug($cleanPublisherName);
+                $stmt->execute([$cleanPublisherName, $slug]);
+                $publisherId = $db->lastInsertId();
+                error_log("Created new publisher: '$cleanPublisherName' (ID: $publisherId)");
+            }
         }
 
         // Update books.publisher_id
@@ -772,22 +826,90 @@ function processTagsRelationships($bookId, $tagsToProcess) {
     $results = [];
 
     try {
+        // Get current tags for this book
+        $stmt = $db->prepare("
+            SELECT t.id, t.name
+            FROM tags t
+            JOIN directory_item_tags dit ON t.id = dit.tag_id
+            WHERE dit.directory_item_id = ?
+        ");
+        $stmt->execute([$bookId]);
+        $currentTags = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $currentTagNames = array_column($currentTags, 'name');
+
         foreach ($tagsToProcess as $fieldName => $value) {
             // Parse tags from value
-            $tags = [];
+            $newTags = [];
             if (is_array($value)) {
-                $tags = $value;
+                $newTags = $value;
             } elseif (is_string($value)) {
-                $tags = array_map('trim', explode(',', $value));
+                $newTags = array_map('trim', explode(',', $value));
+            }
+
+            // Filter out age-related and award-related tags
+            $filteredTags = [];
+            foreach ($newTags as $tagName) {
+                if (empty($tagName)) continue;
+
+                $tagLower = strtolower(trim($tagName));
+
+                // Skip age-related tags
+                if (preg_match('/^\d+-\d+$/', $tagLower) ||
+                    preg_match('/^\d+\+$/', $tagLower) ||
+                    strpos($tagLower, 'years') !== false ||
+                    strpos($tagLower, 'age') !== false ||
+                    $tagLower === 'teen' ||
+                    $tagLower === 'young adult' ||
+                    $tagLower === 'adult' ||
+                    $tagLower === 'coming of age' ||
+                    in_array($tagLower, ['12+', '13+', '14+', '16+', '18+'])) {
+                    continue;
+                }
+
+                // Skip award-related tags
+                if (strpos($tagLower, 'award') !== false ||
+                    strpos($tagLower, 'winner') !== false ||
+                    strpos($tagLower, 'medal') !== false ||
+                    strpos($tagLower, 'prize') !== false) {
+                    continue;
+                }
+
+                $filteredTags[] = trim($tagName);
+            }
+
+            // Merge with current tags and deduplicate
+            $allTags = array_merge($currentTagNames, $filteredTags);
+            $uniqueTags = [];
+
+            foreach ($allTags as $tagName) {
+                $tagLower = strtolower(trim($tagName));
+                $found = false;
+
+                // Check for duplicates (case-insensitive)
+                foreach ($uniqueTags as $existingTag) {
+                    if (strtolower($existingTag) === $tagLower) {
+                        $found = true;
+                        break;
+                    }
+                }
+
+                if (!$found) {
+                    $uniqueTags[] = trim($tagName);
+                }
             }
 
             $addedTags = [];
 
-            foreach ($tags as $tagName) {
+            foreach ($filteredTags as $tagName) {
                 if (empty($tagName)) continue;
 
-                // Check if tag exists
-                $stmt = $db->prepare("SELECT id FROM tags WHERE name = ?");
+                // Skip if tag already exists for this book
+                if (in_array($tagName, $currentTagNames)) {
+                    continue;
+                }
+
+                // Check if tag exists in database
+                $stmt = $db->prepare("SELECT id FROM tags WHERE LOWER(name) = LOWER(?)");
                 $stmt->execute([$tagName]);
                 $existingTag = $stmt->fetch();
 
@@ -815,6 +937,8 @@ function processTagsRelationships($bookId, $tagsToProcess) {
 
             if (!empty($addedTags)) {
                 $results[] = ucfirst($fieldName) . " added: " . implode(', ', $addedTags);
+            } else {
+                $results[] = ucfirst($fieldName) . ": No new tags added (filtered or already exist)";
             }
         }
 
@@ -871,6 +995,68 @@ function processCoverUrlDownload($bookId, $coverUrl) {
     } catch (Exception $e) {
         error_log("Error processing cover URL: " . $e->getMessage());
         return "Error processing cover: " . $e->getMessage();
+    }
+}
+
+/**
+ * Format publication date to MySQL date format
+ */
+function formatPublicationDate($dateString) {
+    if (empty($dateString)) {
+        return null;
+    }
+
+    try {
+        // Handle various date formats
+        $dateString = trim($dateString);
+
+        // If it's already in YYYY-MM-DD format, return as is
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateString)) {
+            return $dateString;
+        }
+
+        // Handle DD/MM/YYYY format (like 28/05/2025)
+        if (preg_match('/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/', $dateString, $matches)) {
+            $day = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+            $month = str_pad($matches[2], 2, '0', STR_PAD_LEFT);
+            $year = $matches[3];
+            return "$year-$month-$day";
+        }
+
+        // Handle MM/DD/YYYY format
+        if (preg_match('/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/', $dateString, $matches)) {
+            // Ambiguous - assume MM/DD/YYYY if first number > 12
+            if ($matches[1] > 12) {
+                $day = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+                $month = str_pad($matches[2], 2, '0', STR_PAD_LEFT);
+            } else {
+                $month = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+                $day = str_pad($matches[2], 2, '0', STR_PAD_LEFT);
+            }
+            $year = $matches[3];
+            return "$year-$month-$day";
+        }
+
+        // Handle YYYY-MM-DD format with different separators
+        if (preg_match('/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/', $dateString, $matches)) {
+            $year = $matches[1];
+            $month = str_pad($matches[2], 2, '0', STR_PAD_LEFT);
+            $day = str_pad($matches[3], 2, '0', STR_PAD_LEFT);
+            return "$year-$month-$day";
+        }
+
+        // Handle year only (like "2013")
+        if (preg_match('/^\d{4}$/', $dateString)) {
+            return "$dateString-01-01";
+        }
+
+        // Try to parse with DateTime
+        $date = new DateTime($dateString);
+        return $date->format('Y-m-d');
+
+    } catch (Exception $e) {
+        error_log("Failed to parse publication date '$dateString': " . $e->getMessage());
+        return null;
     }
 }
 

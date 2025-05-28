@@ -1102,100 +1102,82 @@ if (isset($_SESSION['error'])) {
                                 </div>
                             </div>
 
-                            <div class="form-row">
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label class="form-label" for="tag-select">Genre</label>
-                                        <select id="tag-select" class="form-control">
-                                            <option value="">Select a genre to add</option>
-                                            <?php foreach ($tags as $tag): ?>
-                                                <?php
-                                                    // Clean up tag name (remove ** prefix if present)
-                                                    $tagName = $tag['name'];
-                                                    if (strpos($tagName, '**') === 0) {
-                                                        $tagName = substr($tagName, 2);
-                                                    }
-                                                ?>
-                                                <option value="<?php echo $tag['id']; ?>"><?php echo htmlspecialchars($tagName); ?></option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                        <div class="tag-container" id="tag-container">
-                                            <?php
-                                            // Get item tags if they exist
-                                            $itemTags = [];
-                                            if (isset($_GET['id'])) {
-                                                if ($db->query("SHOW TABLES LIKE 'directory_item_tags'")->rowCount() > 0) {
-                                                    $tagStmt = $db->prepare("
-                                                        SELECT t.id, t.name
-                                                        FROM tags t
-                                                        JOIN directory_item_tags dit ON t.id = dit.tag_id
-                                                        WHERE dit.directory_item_id = ?
-                                                    ");
-                                                    $tagStmt->execute([$_GET['id']]);
-                                                    $itemTags = $tagStmt->fetchAll();
-                                                } else if ($db->query("SHOW TABLES LIKE 'item_tags'")->rowCount() > 0) {
-                                                    $tagStmt = $db->prepare("
-                                                        SELECT t.id, t.name
-                                                        FROM tags t
-                                                        JOIN item_tags it ON t.id = it.tag_id
-                                                        WHERE it.item_id = ? AND it.item_type = 'directory_item'
-                                                    ");
-                                                    $tagStmt->execute([$_GET['id']]);
-                                                    $itemTags = $tagStmt->fetchAll();
-                                                }
+                            <!-- Genre field - full width -->
+                            <div class="form-group">
+                                <label class="form-label" for="tag-select">Genre</label>
+                                <select id="tag-select" class="form-control">
+                                    <option value="">Select a genre to add</option>
+                                    <?php foreach ($tags as $tag): ?>
+                                        <?php
+                                            // Clean up tag name (remove ** prefix if present)
+                                            $tagName = $tag['name'];
+                                            if (strpos($tagName, '**') === 0) {
+                                                $tagName = substr($tagName, 2);
+                                            }
+                                        ?>
+                                        <option value="<?php echo $tag['id']; ?>"><?php echo htmlspecialchars($tagName); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <div class="tag-container" id="tag-container">
+                                    <?php
+                                    // Get item tags if they exist
+                                    $itemTags = [];
+                                    if (isset($_GET['id'])) {
+                                        if ($db->query("SHOW TABLES LIKE 'directory_item_tags'")->rowCount() > 0) {
+                                            $tagStmt = $db->prepare("
+                                                SELECT t.id, t.name
+                                                FROM tags t
+                                                JOIN directory_item_tags dit ON t.id = dit.tag_id
+                                                WHERE dit.directory_item_id = ?
+                                            ");
+                                            $tagStmt->execute([$_GET['id']]);
+                                            $itemTags = $tagStmt->fetchAll();
+                                        } else if ($db->query("SHOW TABLES LIKE 'item_tags'")->rowCount() > 0) {
+                                            $tagStmt = $db->prepare("
+                                                SELECT t.id, t.name
+                                                FROM tags t
+                                                JOIN item_tags it ON t.id = it.tag_id
+                                                WHERE it.item_id = ? AND it.item_type = 'directory_item'
+                                            ");
+                                            $tagStmt->execute([$_GET['id']]);
+                                            $itemTags = $tagStmt->fetchAll();
+                                        }
+                                    }
+
+                                    if (!empty($itemTags)):
+                                        foreach($itemTags as $tag):
+                                            // Clean up tag name (remove ** prefix if present)
+                                            $tagName = $tag['name'];
+                                            if (strpos($tagName, '**') === 0) {
+                                                $tagName = substr($tagName, 2);
                                             }
 
-                                            if (!empty($itemTags)):
-                                                foreach($itemTags as $tag):
-                                                    // Clean up tag name (remove ** prefix if present)
-                                                    $tagName = $tag['name'];
-                                                    if (strpos($tagName, '**') === 0) {
-                                                        $tagName = substr($tagName, 2);
-                                                    }
-
-                                                    // Skip age-related tags
-                                                    $name = strtolower($tagName);
-                                                    if (preg_match('/^\d+-\d+$/', $name) ||
-                                                        preg_match('/^\d+\+$/', $name) ||
-                                                        strpos($name, 'years') !== false ||
-                                                        strpos($name, 'age') !== false ||
-                                                        $name === 'teen' ||
-                                                        $name === 'young adult' ||
-                                                        $name === 'adult' ||
-                                                        $name === 'coming of age' ||
-                                                        $name === '12+' ||
-                                                        $name === '13+' ||
-                                                        $name === '14+' ||
-                                                        $name === '16+') {
-                                                        continue;
-                                                    }
-                                            ?>
-                                                    <span class="tag-badge" data-tag-id="<?php echo $tag['id']; ?>">
-                                                        <?php echo htmlspecialchars($tagName); ?>
-                                                        <i class="fas fa-times remove-tag"></i>
-                                                        <input type="hidden" name="tags[]" value="<?php echo $tag['id']; ?>">
-                                                    </span>
-                                            <?php
-                                                endforeach;
-                                            endif;
-                                            ?>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label class="form-label" for="price_range">Price Range</label>
-                                        <select id="price_range" name="price_range" class="form-control">
-                                            <option value="">Select Price Range</option>
-                                            <?php foreach ($priceRanges as $priceRange): ?>
-                                                <option value="<?php echo htmlspecialchars($priceRange); ?>"
-                                                        <?php echo (isset($item['price_range']) && $item['price_range'] == $priceRange) ? 'selected' : ''; ?>>
-                                                    <?php echo htmlspecialchars($priceRange); ?>
-                                                </option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                    </div>
+                                            // Skip age-related tags
+                                            $name = strtolower($tagName);
+                                            if (preg_match('/^\d+-\d+$/', $name) ||
+                                                preg_match('/^\d+\+$/', $name) ||
+                                                strpos($name, 'years') !== false ||
+                                                strpos($name, 'age') !== false ||
+                                                $name === 'teen' ||
+                                                $name === 'young adult' ||
+                                                $name === 'adult' ||
+                                                $name === 'coming of age' ||
+                                                $name === '12+' ||
+                                                $name === '13+' ||
+                                                $name === '14+' ||
+                                                $name === '16+') {
+                                                continue;
+                                            }
+                                    ?>
+                                            <span class="tag-badge" data-tag-id="<?php echo $tag['id']; ?>">
+                                                <?php echo htmlspecialchars($tagName); ?>
+                                                <i class="fas fa-times remove-tag"></i>
+                                                <input type="hidden" name="tags[]" value="<?php echo $tag['id']; ?>">
+                                            </span>
+                                    <?php
+                                        endforeach;
+                                    endif;
+                                    ?>
                                 </div>
                             </div>
 
@@ -1337,7 +1319,7 @@ if (isset($_SESSION['error'])) {
                             </div>
 
                             <div class="form-row">
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <div class="form-group">
                                         <label class="form-label" for="isbn">ISBN</label>
                                         <input type="text" id="isbn" name="book_isbn" class="form-control"
@@ -1345,7 +1327,7 @@ if (isset($_SESSION['error'])) {
                                     </div>
                                 </div>
 
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <div class="form-group">
                                         <label class="form-label" for="isbn13">ISBN-13</label>
                                         <input type="text" id="isbn13" name="book_isbn13" class="form-control"
@@ -1353,7 +1335,16 @@ if (isset($_SESSION['error'])) {
                                     </div>
                                 </div>
 
-                                <div class="col-md-4">
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label class="form-label" for="alternative_isbns">Alternative ISBNs</label>
+                                        <textarea id="alternative_isbns" name="book_alternative_isbns" class="form-control" rows="2"
+                                            placeholder="One ISBN per line"><?php echo htmlspecialchars($bookData['alternative_isbns'] ?? ''); ?></textarea>
+                                        <small class="form-text text-muted">One ISBN per line</small>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-3">
                                     <div class="form-group">
                                         <label class="form-label" for="page_count">Page Count</label>
                                         <input type="number" id="page_count" name="book_page_count" class="form-control"

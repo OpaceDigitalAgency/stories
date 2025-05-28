@@ -167,6 +167,96 @@ $diagnosticTools = [
             'icon' => 'fa-tools'
         ]
     ],
+    'Book Import & Scraping Tests' => [
+        [
+            'name' => 'Amazon Scraper Test',
+            'description' => 'Test Amazon book scraping functionality and data extraction',
+            'path' => 'public/test-amazon-scraper.php',
+            'icon' => 'fa-amazon'
+        ],
+        [
+            'name' => 'Goodreads Scraper Test',
+            'description' => 'Test Goodreads book scraping and review fetching',
+            'path' => 'public/test-goodreads-scraper.php',
+            'icon' => 'fa-book-reader'
+        ],
+        [
+            'name' => 'Book Enrichment Test',
+            'description' => 'Comprehensive test for book data enrichment from multiple sources',
+            'path' => 'public/test-enrichment-comprehensive.php',
+            'icon' => 'fa-magic'
+        ],
+        [
+            'name' => 'Book Validation',
+            'description' => 'Validate and enrich book data with ISBN lookup and scraping',
+            'path' => 'admin/content/book-validation.php',
+            'icon' => 'fa-check-double'
+        ],
+        [
+            'name' => 'Publisher Relationship Test',
+            'description' => 'Test publisher data relationships and validation',
+            'path' => 'admin/content/test-publisher-relationship.php',
+            'icon' => 'fa-building'
+        ],
+        [
+            'name' => 'OpenLibrary Test',
+            'description' => 'Test OpenLibrary API integration for book data',
+            'path' => 'admin/content/test-openlibrary.php',
+            'icon' => 'fa-book-open'
+        ]
+    ],
+    'VPS & External Services' => [
+        [
+            'name' => 'VPS Status Check',
+            'description' => 'Check VPS scraper service status and connectivity',
+            'path' => 'public/check-vps-status.php',
+            'icon' => 'fa-server'
+        ],
+        [
+            'name' => 'VPS API Key Check',
+            'description' => 'Verify VPS API key configuration',
+            'path' => 'public/check-vps-api-key.php',
+            'icon' => 'fa-key'
+        ],
+        [
+            'name' => 'VPS Logs',
+            'description' => 'View VPS scraper logs and debug information',
+            'path' => 'public/check-vps-logs.php',
+            'icon' => 'fa-file-alt'
+        ],
+        [
+            'name' => 'Direct VPS Connection Test',
+            'description' => 'Test direct connection to VPS scraper service',
+            'path' => 'public/test-direct-vps-connection.php',
+            'icon' => 'fa-plug'
+        ]
+    ],
+    'Data Management' => [
+        [
+            'name' => 'Cleanup Duplicates',
+            'description' => 'Find and remove duplicate entries in the database',
+            'path' => 'admin/content/cleanup-duplicates.php',
+            'icon' => 'fa-broom'
+        ],
+        [
+            'name' => 'Comprehensive Cleanup',
+            'description' => 'Comprehensive data cleanup and optimization tool',
+            'path' => 'admin/content/comprehensive-cleanup.php',
+            'icon' => 'fa-tools'
+        ],
+        [
+            'name' => 'Check DB Structure',
+            'description' => 'Verify database structure and schema integrity',
+            'path' => 'admin/content/check-db-structure.php',
+            'icon' => 'fa-database'
+        ],
+        [
+            'name' => 'Review Settings',
+            'description' => 'Configure review system settings and sources',
+            'path' => 'admin/content/review-settings.php',
+            'icon' => 'fa-cog'
+        ]
+    ],
     'Documentation' => [
         [
             'name' => 'Script Index',
@@ -306,10 +396,14 @@ require_once 'admin/includes/header.php';
     }
     .ai-tests .tool-icon { color: #6610f2; }
     .api-tests .tool-icon { color: #28a745; }
-    .auth-tests .tool-icon { color: #007bff; }
+    .authentication-tests .tool-icon { color: #007bff; }
     .admin-tests .tool-icon { color: #6f42c1; }
-    .db-tests .tool-icon { color: #fd7e14; }
+    .database-tests .tool-icon { color: #fd7e14; }
     .system-tests .tool-icon { color: #dc3545; }
+    .media-tests .tool-icon { color: #e83e8c; }
+    .book-import-scraping-tests .tool-icon { color: #ff6b6b; }
+    .vps-external-services .tool-icon { color: #4ecdc4; }
+    .data-management .tool-icon { color: #45b7d1; }
     .documentation .tool-icon { color: #17a2b8; }
     .unavailable {
         opacity: 0.5;

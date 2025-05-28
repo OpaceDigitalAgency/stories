@@ -332,6 +332,128 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         $('#deselect-all-fields').off('click').on('click', function() {
             $('.field-checkbox').prop('checked', false).trigger('change');
         });
+
+        // Set up age range and reading level synchronization
+        setupAgeRangeReadingLevelSync();
+    }
+
+    // Set up synchronization between age range and reading level fields
+    function setupAgeRangeReadingLevelSync() {
+        // Age range to reading level mapping (same as in PHP)
+        const ageToReadingMap = {
+            '0-12 months': 'Pre-literacy (Sensory)',
+            '12-24 months': 'Pre-literacy (Naming)',
+            '2-3 years': 'Pre-literacy (Mimicry)',
+            '3-4 years': 'Early Pre-reader',
+            '4-5 years': 'Beginning Reader',
+            '5-6 years': 'Early Reader',
+            '6-7 years': 'Developing Reader',
+            '7-8 years': 'Transitional Reader',
+            '8-9 years': 'Fluent Reader',
+            '9-10 years': 'Fluent Reader',
+            '10-11 years': 'Fluent Reader',
+            '11-14 years': 'Advanced Reader',
+            '14-16 years': 'Advanced Reader',
+            '16-18 years': 'Advanced Reader',
+            '18+ years': 'Proficient Reader'
+        };
+
+        // Reading level to age range mapping
+        const readingToAgeMap = {
+            'Pre-literacy (Sensory)': '0-12 months',
+            'Pre-literacy (Naming)': '12-24 months',
+            'Pre-literacy (Mimicry)': '2-3 years',
+            'Early Pre-reader': '3-4 years',
+            'Beginning Reader': '4-5 years',
+            'Early Reader': '5-6 years',
+            'Developing Reader': '6-7 years',
+            'Transitional Reader': '7-8 years',
+            'Fluent Reader': '9-10 years',
+            'Advanced Reader': '11-14 years',
+            'Proficient Reader': '18+ years'
+        };
+
+        // Listen for changes in age range selections
+        $(document).on('change', 'input[name="field_age_range_option"], input[name="field_age_range"]', function() {
+            if ($(this).is(':checked')) {
+                const selectedAgeRange = getSelectedFieldValue('age_range');
+                if (selectedAgeRange && ageToReadingMap[selectedAgeRange]) {
+                    const expectedReading = ageToReadingMap[selectedAgeRange];
+                    syncReadingLevelField(expectedReading);
+                }
+            }
+        });
+
+        // Listen for changes in reading level selections
+        $(document).on('change', 'input[name="field_reading_level_option"], input[name="field_reading_level"]', function() {
+            if ($(this).is(':checked')) {
+                const selectedReadingLevel = getSelectedFieldValue('reading_level');
+                if (selectedReadingLevel && readingToAgeMap[selectedReadingLevel]) {
+                    const expectedAge = readingToAgeMap[selectedReadingLevel];
+                    syncAgeRangeField(expectedAge);
+                }
+            }
+        });
+    }
+
+    // Get the currently selected value for a field
+    function getSelectedFieldValue(fieldName) {
+        const checkedOption = $(`input[name="field_${fieldName}_option"]:checked`);
+        if (checkedOption.length > 0) {
+            const optionIndex = parseInt(checkedOption.val());
+            const fieldData = window.currentEnrichmentData.fields[fieldName];
+            if (fieldData && fieldData.new_data && fieldData.new_data.options) {
+                return fieldData.new_data.options[optionIndex]?.value;
+            }
+        }
+
+        const checkedField = $(`input[name="field_${fieldName}"]:checked`);
+        if (checkedField.length > 0) {
+            const fieldData = window.currentEnrichmentData.fields[fieldName];
+            return fieldData?.new_data?.value;
+        }
+
+        return null;
+    }
+
+    // Sync reading level field based on age range
+    function syncReadingLevelField(expectedReading) {
+        const readingField = window.currentEnrichmentData.fields['reading_level'];
+        if (!readingField) return;
+
+        // Check if we have options to select from
+        if (readingField.new_data && readingField.new_data.options) {
+            // Find matching option
+            readingField.new_data.options.forEach((option, index) => {
+                if (option.value === expectedReading) {
+                    $(`input[name="field_reading_level_option"][value="${index}"]`).prop('checked', true);
+                    $(`input[name="field_reading_level"]`).prop('checked', true);
+                }
+            });
+        } else if (readingField.new_data && readingField.new_data.value === expectedReading) {
+            // Single option matches
+            $(`input[name="field_reading_level"]`).prop('checked', true);
+        }
+    }
+
+    // Sync age range field based on reading level
+    function syncAgeRangeField(expectedAge) {
+        const ageField = window.currentEnrichmentData.fields['age_range'];
+        if (!ageField) return;
+
+        // Check if we have options to select from
+        if (ageField.new_data && ageField.new_data.options) {
+            // Find matching option
+            ageField.new_data.options.forEach((option, index) => {
+                if (option.value === expectedAge) {
+                    $(`input[name="field_age_range_option"][value="${index}"]`).prop('checked', true);
+                    $(`input[name="field_age_range"]`).prop('checked', true);
+                }
+            });
+        } else if (ageField.new_data && ageField.new_data.value === expectedAge) {
+            // Single option matches
+            $(`input[name="field_age_range"]`).prop('checked', true);
+        }
     }
 
     function createSingleSourceField(fieldName, field, label, isUnknown, isPendingAmazon) {

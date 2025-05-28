@@ -199,23 +199,35 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
                         'label' => $fieldConfig['label']
                     ];
                 } else {
-                    // Values differ - offer both options
-                    $combinedFields[$fieldName] = [
-                        'options' => [
-                            [
-                                'value' => $googleValue,
-                                'source' => 'google_books',
-                                'confidence' => $fieldConfig['confidence'],
-                                'label' => $fieldConfig['label']
-                            ],
-                            [
-                                'value' => $openLibraryValue,
-                                'source' => 'open_library',
-                                'confidence' => $fieldConfig['confidence'] - 5, // Slightly lower confidence for OpenLibrary
-                                'label' => $fieldConfig['label']
-                            ]
+                    // Values differ - offer both options with enhanced publisher matching
+                    $options = [
+                        [
+                            'value' => $googleValue,
+                            'source' => 'google_books',
+                            'confidence' => $fieldConfig['confidence'],
+                            'label' => $fieldConfig['label']
+                        ],
+                        [
+                            'value' => $openLibraryValue,
+                            'source' => 'open_library',
+                            'confidence' => $fieldConfig['confidence'] - 5, // Slightly lower confidence for OpenLibrary
+                            'label' => $fieldConfig['label']
                         ]
                     ];
+
+                    // For publisher field, add recommended matches from existing database
+                    if ($fieldName === 'publisher') {
+                        foreach ($options as &$option) {
+                            $bestMatch = findBestPublisherMatch($option['value']);
+                            if ($bestMatch && $bestMatch['confidence'] > 85) {
+                                $option['recommended'] = $bestMatch['name'];
+                                $option['recommendation_confidence'] = $bestMatch['confidence'];
+                                $option['match_type'] = $bestMatch['match_type'];
+                            }
+                        }
+                    }
+
+                    $combinedFields[$fieldName] = ['options' => $options];
                 }
             } elseif (!in_array($fieldName, ['purchase_links', 'format', 'price_range'])) {
                 // Only one source has data (but don't override Amazon fields)
@@ -1111,7 +1123,7 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
             break;
 
         case 'settings':
-            // Use Open Library place_facet[] - simple processing
+            // Use Open Library place_facet[] with enhanced processing
             $places = [];
             if (isset($match['place_facet']) && is_array($match['place_facet'])) {
                 $places = $match['place_facet'];
@@ -1120,26 +1132,26 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
             }
 
             if (!empty($places)) {
-                $cleanPlaces = [];
-                foreach ($places as $place) {
-                    if (!is_string($place)) {
-                        $place = (string) $place;
-                    }
-                    $place = trim($place);
-                    if (!empty($place)) {
-                        // Fix "London, London (England)" -> "London (England)"
-                        $place = deduplicateLocation($place);
-                        $cleanPlaces[] = ucwords(strtolower($place));
-                    }
-                }
+                // Convert array to comma-separated string for processing
+                $placesString = implode(', ', $places);
 
-                $uniquePlaces = array_unique($cleanPlaces);
-                return implode(', ', array_slice($uniquePlaces, 0, 3));
+                // Use enhanced location processing
+                $processedPlaces = processLocationValues($placesString);
+
+                // Limit to 3 locations and ensure proper capitalization
+                if (!empty($processedPlaces)) {
+                    $finalPlaces = array_slice(explode(', ', $processedPlaces), 0, 3);
+                    $capitalizedPlaces = array_map(function($place) {
+                        return ucwords(strtolower(trim($place)));
+                    }, $finalPlaces);
+
+                    return implode(', ', $capitalizedPlaces);
+                }
             }
             break;
 
         case 'publisher':
-            // Normalize publisher and get/create publisher_id
+            // Enhanced publisher processing with matching recommendations
             if (isset($match['publisher']) && is_array($match['publisher']) && !empty($match['publisher'])) {
                 $publisherName = $match['publisher'][0];
             } elseif (isset($match['publisher']) && is_string($match['publisher'])) {
@@ -1150,6 +1162,15 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
 
             // Clean and normalize publisher name
             $publisherName = normalizePublisherName($publisherName);
+
+            // Try to find a better match from existing publishers
+            $bestMatch = findBestPublisherMatch($publisherName);
+
+            if ($bestMatch && $bestMatch['confidence'] > 85) {
+                // High confidence match - recommend the existing publisher
+                return $bestMatch['name'] . ' (recommended: ' . $bestMatch['confidence'] . '% match)';
+            }
+
             return $publisherName;
 
         case 'price_range':
@@ -1187,7 +1208,6 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
 
         case 'purchase_links':
         case 'format':
-        case 'price_range':
             // These fields are now handled directly in the main enrichment flow
             // to avoid duplicate Amazon API calls
             return null;
@@ -1327,33 +1347,104 @@ function convertLexileToReadingLevel($lexileValue) {
 }
 
 /**
- * Deduplicate location strings (e.g., "London, London (England)" -> "London (England)")
+ * Deduplicate location strings with enhanced smart processing
+ * E.g., "London, London (England)" -> "London (England)"
  */
 function deduplicateLocation($location) {
     if (empty($location)) {
         return $location;
     }
 
-    // Handle concatenated duplicates like "LondonLondon (england)" -> "London"
-    if (preg_match('/^([a-zA-Z]+)\1\s*\([^)]*\)$/i', $location, $matches)) {
+    $location = trim($location);
+
+    // Handle concatenated duplicates like "LondonLondon (england)" -> "London (England)"
+    if (preg_match('/^([a-zA-Z]+)\1\s*\(([^)]*)\)$/i', $location, $matches)) {
+        return trim($matches[1]) . ' (' . trim($matches[2]) . ')';
+    }
+
+    // Handle patterns like "London, London (England)" -> "London (England)"
+    if (preg_match('/^([^,]+),\s*\1\s*\(([^)]+)\)$/i', $location, $matches)) {
+        return trim($matches[1]) . ' (' . trim($matches[2]) . ')';
+    }
+
+    // Handle patterns like "New York, New York" -> "New York"
+    if (preg_match('/^([^,]+),\s*\1$/i', $location, $matches)) {
         return trim($matches[1]);
     }
 
-    // Handle patterns like "London, London (England)"
-    if (preg_match('/^([^,]+),\s*\1\s*\(([^)]+)\)$/', $location, $matches)) {
-        return $matches[1] . ' (' . $matches[2] . ')';
-    }
-
-    // Handle patterns like "New York, New York"
-    if (preg_match('/^([^,]+),\s*\1$/', $location, $matches)) {
-        return $matches[1];
+    // Handle case variations like "london, London" -> "London"
+    if (preg_match('/^([^,]+),\s*([^,]+)$/i', $location, $matches)) {
+        $part1 = trim($matches[1]);
+        $part2 = trim($matches[2]);
+        if (strtolower($part1) === strtolower($part2)) {
+            // Use the version with better capitalization (more uppercase letters)
+            return (substr_count($part1, strtoupper($part1)) >= substr_count($part2, strtoupper($part2))) ? $part1 : $part2;
+        }
     }
 
     return $location;
 }
 
 /**
- * Merge tags from multiple sources
+ * Process and deduplicate multiple location values
+ * Returns comma-separated unique locations
+ */
+function processLocationValues($locations) {
+    if (empty($locations)) {
+        return '';
+    }
+
+    // Convert to array if string
+    if (is_string($locations)) {
+        $locationArray = array_map('trim', explode(',', $locations));
+    } else {
+        $locationArray = is_array($locations) ? $locations : [$locations];
+    }
+
+    $processedLocations = [];
+
+    foreach ($locationArray as $location) {
+        if (empty($location)) {
+            continue;
+        }
+
+        // Deduplicate individual location
+        $cleanLocation = deduplicateLocation(trim($location));
+
+        // Check if this location (or a very similar one) already exists
+        $isDuplicate = false;
+        foreach ($processedLocations as $existing) {
+            if (strtolower($cleanLocation) === strtolower($existing)) {
+                $isDuplicate = true;
+                break;
+            }
+
+            // Check for partial matches (e.g., "London" vs "London (England)")
+            if (strpos(strtolower($existing), strtolower($cleanLocation)) !== false ||
+                strpos(strtolower($cleanLocation), strtolower($existing)) !== false) {
+                // Keep the more specific version (longer one)
+                if (strlen($cleanLocation) > strlen($existing)) {
+                    // Replace existing with more specific version
+                    $index = array_search($existing, $processedLocations);
+                    if ($index !== false) {
+                        $processedLocations[$index] = $cleanLocation;
+                    }
+                }
+                $isDuplicate = true;
+                break;
+            }
+        }
+
+        if (!$isDuplicate) {
+            $processedLocations[] = $cleanLocation;
+        }
+    }
+
+    return implode(', ', $processedLocations);
+}
+
+/**
+ * Merge tags from multiple sources with intelligent filtering and deduplication
  */
 function mergeTagsFromSources($googleTags, $openLibraryTags) {
     $allTags = [];
@@ -1376,16 +1467,115 @@ function mergeTagsFromSources($googleTags, $openLibraryTags) {
         }
     }
 
-    // Deduplicate and clean
-    $uniqueTags = [];
-    foreach ($allTags as $tag) {
+    // Clean, filter and intelligently deduplicate tags
+    $cleanTags = filterAndDeduplicateTags($allTags);
+
+    return !empty($cleanTags) ? implode(', ', array_slice($cleanTags, 0, 15)) : null;
+}
+
+/**
+ * Filter out awards, age-related tags and intelligently deduplicate similar tags
+ */
+function filterAndDeduplicateTags($tags) {
+    $cleanTags = [];
+
+    // Define patterns to exclude
+    $excludePatterns = [
+        // Awards patterns
+        '/award/i',
+        '/winner/i',
+        '/nominee/i',
+        '/medal/i',
+        '/prize/i',
+        '/honor/i',
+        '/newbery/i',
+        '/caldecott/i',
+        '/hugo/i',
+        '/nebula/i',
+        '/booker/i',
+        '/pulitzer/i',
+
+        // Age-related patterns
+        '/\d+-\d+\s*(years?|yrs?)/i',
+        '/\d+\+/i',
+        '/ages?\s*\d+/i',
+        '/children\'?s?\s*books?/i',
+        '/juvenile/i',
+        '/young\s*adult/i',
+        '/middle\s*grade/i',
+        '/teen/i',
+        '/tween/i',
+        '/early\s*reader/i',
+        '/picture\s*book/i',
+        '/board\s*book/i',
+    ];
+
+    foreach ($tags as $tag) {
         $cleanTag = trim($tag);
-        if (!empty($cleanTag) && !in_array(strtolower($cleanTag), array_map('strtolower', $uniqueTags))) {
-            $uniqueTags[] = $cleanTag;
+        if (empty($cleanTag) || strlen($cleanTag) <= 2 || strlen($cleanTag) > 100) {
+            continue;
+        }
+
+        // Check if tag matches any exclude pattern
+        $shouldExclude = false;
+        foreach ($excludePatterns as $pattern) {
+            if (preg_match($pattern, $cleanTag)) {
+                $shouldExclude = true;
+                break;
+            }
+        }
+
+        if ($shouldExclude) {
+            continue;
+        }
+
+        // Normalize tag
+        $normalizedTag = ucwords(strtolower($cleanTag));
+
+        // Check for intelligent deduplication
+        if (!isDuplicateOrSubsetTag($normalizedTag, $cleanTags)) {
+            $cleanTags[] = $normalizedTag;
         }
     }
 
-    return !empty($uniqueTags) ? implode(', ', array_slice($uniqueTags, 0, 15)) : null;
+    return $cleanTags;
+}
+
+/**
+ * Check if a tag is a duplicate or subset of existing tags
+ * E.g., "supernatural - juvenile fiction" is a subset of "supernatural"
+ */
+function isDuplicateOrSubsetTag($newTag, $existingTags) {
+    $newTagLower = strtolower($newTag);
+
+    foreach ($existingTags as $existingTag) {
+        $existingTagLower = strtolower($existingTag);
+
+        // Exact match (case-insensitive)
+        if ($newTagLower === $existingTagLower) {
+            return true;
+        }
+
+        // Check if new tag is a longer version of existing tag
+        // E.g., "supernatural - juvenile fiction" contains "supernatural"
+        if (strpos($newTagLower, $existingTagLower) === 0 && strlen($newTagLower) > strlen($existingTagLower)) {
+            // New tag starts with existing tag and is longer - it's likely a subset
+            return true;
+        }
+
+        // Check if existing tag is a longer version of new tag
+        // E.g., existing "supernatural - juvenile fiction" vs new "supernatural"
+        if (strpos($existingTagLower, $newTagLower) === 0 && strlen($existingTagLower) > strlen($newTagLower)) {
+            // Replace the longer existing tag with the shorter, more general one
+            $index = array_search($existingTag, $existingTags);
+            if ($index !== false) {
+                $existingTags[$index] = $newTag;
+            }
+            return true;
+        }
+    }
+
+    return false;
 }
 
 /**
@@ -1415,7 +1605,7 @@ function extractAlternativeISBNs($openLibraryMatch, $currentISBN) {
 
 
 /**
- * Normalize publisher name
+ * Normalize publisher name with enhanced cleaning
  */
 function normalizePublisherName($publisherName) {
     // Clean up common publisher name variations
@@ -1431,7 +1621,9 @@ function normalizePublisherName($publisherName) {
         ' Ltd',
         ' Limited',
         ' Inc',
-        ' LLC'
+        ' LLC',
+        ' Plc',
+        ' PLC'
     ];
 
     foreach ($suffixesToRemove as $suffix) {
@@ -1442,6 +1634,91 @@ function normalizePublisherName($publisherName) {
     }
 
     return trim($publisherName);
+}
+
+/**
+ * Find best matching publisher from existing database entries
+ * Returns array with recommended publisher and confidence score
+ */
+function findBestPublisherMatch($publisherName) {
+    global $db;
+
+    if (empty($publisherName)) {
+        return null;
+    }
+
+    try {
+        // Get all existing publishers from authors table (type = 'publisher' or null for legacy)
+        $stmt = $db->prepare("
+            SELECT id, name
+            FROM authors
+            WHERE (type = 'publisher' OR type IS NULL)
+            AND name IS NOT NULL
+            AND name != ''
+            ORDER BY name
+        ");
+        $stmt->execute();
+        $existingPublishers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $normalizedInput = strtolower(normalizePublisherName($publisherName));
+        $bestMatch = null;
+        $bestScore = 0;
+
+        foreach ($existingPublishers as $publisher) {
+            $normalizedExisting = strtolower(normalizePublisherName($publisher['name']));
+
+            // Exact match (highest score)
+            if ($normalizedInput === $normalizedExisting) {
+                return [
+                    'id' => $publisher['id'],
+                    'name' => $publisher['name'],
+                    'confidence' => 100,
+                    'match_type' => 'exact'
+                ];
+            }
+
+            // Check if one contains the other (partial match)
+            $containsScore = 0;
+            if (strpos($normalizedExisting, $normalizedInput) !== false) {
+                // Existing publisher contains input (e.g., "HarperCollins Children's Books" contains "HarperCollins")
+                $containsScore = 85;
+            } elseif (strpos($normalizedInput, $normalizedExisting) !== false) {
+                // Input contains existing (e.g., "HarperCollins Publishers" contains "HarperCollins")
+                $containsScore = 80;
+            }
+
+            if ($containsScore > $bestScore) {
+                $bestMatch = [
+                    'id' => $publisher['id'],
+                    'name' => $publisher['name'],
+                    'confidence' => $containsScore,
+                    'match_type' => 'partial'
+                ];
+                $bestScore = $containsScore;
+            }
+
+            // Fuzzy string matching for similar names
+            $similarity = calculateStringSimilarity($normalizedInput, $normalizedExisting);
+            $fuzzyScore = $similarity * 100;
+
+            if ($fuzzyScore > 70 && $fuzzyScore > $bestScore) {
+                $bestMatch = [
+                    'id' => $publisher['id'],
+                    'name' => $publisher['name'],
+                    'confidence' => $fuzzyScore,
+                    'match_type' => 'fuzzy'
+                ];
+                $bestScore = $fuzzyScore;
+            }
+        }
+
+        // Only return matches with confidence > 75%
+        return ($bestScore > 75) ? $bestMatch : null;
+
+    } catch (Exception $e) {
+        error_log("Error finding publisher match: " . $e->getMessage());
+        return null;
+    }
 }
 
 /**

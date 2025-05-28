@@ -1438,7 +1438,7 @@ function getTableInfo($table) {
                     $totalStoryAuthors = $stmt->fetchColumn();
                     $sanityStats['story_authors_total'] = $totalStoryAuthors;
 
-                    $stmt = $db->query("SELECT COUNT(*) FROM story_authors sa LEFT JOIN directory_items di ON sa.story_id = di.id WHERE di.id IS NULL");
+                    $stmt = $db->query("SELECT COUNT(*) FROM story_authors sa LEFT JOIN stories s ON sa.story_id = s.id WHERE s.id IS NULL");
                     $orphanedStoryAuthors = $stmt->fetchColumn();
                     if ($orphanedStoryAuthors > 0) {
                         $sanityIssues[] = "❌ $orphanedStoryAuthors story_authors reference non-existent stories";

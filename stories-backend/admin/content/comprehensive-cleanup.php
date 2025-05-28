@@ -179,64 +179,105 @@ function getTableInfo($table) {
                     }
                 }
 
-                // Find similar authors (fuzzy matching for publishers)
-                echo '<h5 class="mt-4">🔍 Similar Publishers (Potential Duplicates):</h5>';
-                $stmt = $db->query("
-                    SELECT
-                        a1.id as id1, a1.name as name1,
-                        a2.id as id2, a2.name as name2,
-                        'similar' as match_type
-                    FROM authors a1
-                    JOIN authors a2 ON a1.id < a2.id
-                    WHERE (
-                        -- Harper Collins variations
-                        (LOWER(a1.name) LIKE '%harper%collins%' AND LOWER(a2.name) LIKE '%harper%collins%')
-                        OR (LOWER(a1.name) LIKE '%bloomsbury%' AND LOWER(a2.name) LIKE '%bloomsbury%')
-                        OR (LOWER(a1.name) LIKE '%scholastic%' AND LOWER(a2.name) LIKE '%scholastic%')
-                        OR (LOWER(a1.name) LIKE '%penguin%' AND LOWER(a2.name) LIKE '%penguin%')
-                        OR (LOWER(a1.name) LIKE '%simon%schuster%' AND LOWER(a2.name) LIKE '%simon%schuster%')
-                        OR (LOWER(a1.name) LIKE '%egmont%' AND LOWER(a2.name) LIKE '%egmont%')
-                        OR (LOWER(a1.name) LIKE '%puffin%' AND LOWER(a2.name) LIKE '%puffin%')
-                        OR (LOWER(a1.name) LIKE '%orion%' AND LOWER(a2.name) LIKE '%orion%')
-                        OR (LOWER(a1.name) LIKE '%macmillan%' AND LOWER(a2.name) LIKE '%macmillan%')
-                        OR (LOWER(a1.name) LIKE '%oxford%' AND LOWER(a2.name) LIKE '%oxford%')
-                        OR (LOWER(a1.name) LIKE '%cambridge%' AND LOWER(a2.name) LIKE '%cambridge%')
-                        OR (LOWER(a1.name) LIKE '%frances%lincoln%' AND LOWER(a2.name) LIKE '%frances%lincoln%')
-                        OR (LOWER(a1.name) LIKE '%marion%lloyd%' AND LOWER(a2.name) LIKE '%marion%lloyd%')
-                        OR (LOWER(a1.name) LIKE '%little%tiger%' AND LOWER(a2.name) LIKE '%little%tiger%')
-                        OR (LOWER(a1.name) LIKE '%nosy%crow%' AND LOWER(a2.name) LIKE '%nosy%crow%')
-                        OR (LOWER(a1.name) LIKE '%chicken%house%' AND LOWER(a2.name) LIKE '%chicken%house%')
-                        OR (LOWER(a1.name) LIKE '%david%fickling%' AND LOWER(a2.name) LIKE '%david%fickling%')
-                        OR (LOWER(a1.name) LIKE '%hachette%' AND LOWER(a2.name) LIKE '%hachette%')
-                        OR (LOWER(a1.name) LIKE '%piccadilly%' AND LOWER(a2.name) LIKE '%piccadilly%')
-                        OR (LOWER(a1.name) LIKE '%andersen%' AND LOWER(a2.name) LIKE '%andersen%')
-                        OR (LOWER(a1.name) LIKE '%barrington%stoke%' AND LOWER(a2.name) LIKE '%barrington%stoke%')
-                    )
-                    AND a1.name != a2.name
-                    ORDER BY a1.name
-                    LIMIT 30
-                ");
-                $similarAuthors = $stmt->fetchAll();
+                // Find similar publishers grouped by publisher family
+                echo '<h5 class="mt-4">🔍 Publisher Groups (All Variations):</h5>';
 
-                if (empty($similarAuthors)) {
-                    echo '<div class="alert alert-success">✅ No similar publishers found</div>';
-                } else {
-                    echo '<div class="alert alert-info">🔍 Found ' . count($similarAuthors) . ' potential similar publishers:</div>';
-                    echo '<div class="table-responsive">';
-                    echo '<table class="table table-sm">';
-                    echo '<thead><tr><th>Publisher 1</th><th>Publisher 2</th><th>Action</th></tr></thead>';
-                    echo '<tbody>';
-                    foreach ($similarAuthors as $pair) {
-                        echo '<tr>';
-                        echo '<td>' . htmlspecialchars($pair['name1']) . ' (ID: ' . $pair['id1'] . ')</td>';
-                        echo '<td>' . htmlspecialchars($pair['name2']) . ' (ID: ' . $pair['id2'] . ')</td>';
-                        echo '<td>';
-                        echo '<button onclick="mergePublishers(' . $pair['id1'] . ', ' . $pair['id2'] . ', \'' . htmlspecialchars($pair['name1']) . '\', \'' . htmlspecialchars($pair['name2']) . '\')" class="btn btn-xs btn-warning">Merge</button>';
-                        echo '</td>';
-                        echo '</tr>';
+                // Define publisher groups to check
+                $publisherGroups = [
+                    'Harper Collins' => ['harper', 'collins'],
+                    'Bloomsbury' => ['bloomsbury'],
+                    'Scholastic' => ['scholastic'],
+                    'Penguin' => ['penguin'],
+                    'Simon & Schuster' => ['simon', 'schuster'],
+                    'Egmont' => ['egmont'],
+                    'Puffin' => ['puffin'],
+                    'Orion' => ['orion'],
+                    'Macmillan' => ['macmillan'],
+                    'Oxford' => ['oxford'],
+                    'Cambridge' => ['cambridge'],
+                    'Frances Lincoln' => ['frances', 'lincoln'],
+                    'Marion Lloyd' => ['marion', 'lloyd'],
+                    'Little Tiger' => ['little', 'tiger'],
+                    'Nosy Crow' => ['nosy', 'crow'],
+                    'Chicken House' => ['chicken', 'house'],
+                    'David Fickling' => ['david', 'fickling'],
+                    'Hachette' => ['hachette'],
+                    'Piccadilly' => ['piccadilly'],
+                    'Andersen' => ['andersen'],
+                    'Barrington Stoke' => ['barrington', 'stoke']
+                ];
+
+                $foundGroups = [];
+                foreach ($publisherGroups as $groupName => $keywords) {
+                    $whereConditions = [];
+                    foreach ($keywords as $keyword) {
+                        $whereConditions[] = "LOWER(name) LIKE '%$keyword%'";
                     }
-                    echo '</tbody></table>';
-                    echo '</div>';
+                    $whereClause = implode(' AND ', $whereConditions);
+
+                    $stmt = $db->query("
+                        SELECT id, name,
+                               (SELECT COUNT(*) FROM books WHERE publisher_id = authors.id) as book_count
+                        FROM authors
+                        WHERE $whereClause
+                        ORDER BY name
+                    ");
+                    $variations = $stmt->fetchAll();
+
+                    if (count($variations) > 1) {
+                        $foundGroups[$groupName] = $variations;
+                    }
+                }
+
+                if (empty($foundGroups)) {
+                    echo '<div class="alert alert-success">✅ No publisher groups with multiple variations found</div>';
+                } else {
+                    echo '<div class="alert alert-info">🔍 Found ' . count($foundGroups) . ' publisher groups with multiple variations:</div>';
+
+                    foreach ($foundGroups as $groupName => $variations) {
+                        echo '<div class="card mb-3">';
+                        echo '<div class="card-header"><h6>📚 ' . $groupName . ' Group (' . count($variations) . ' variations)</h6></div>';
+                        echo '<div class="card-body">';
+                        echo '<div class="table-responsive">';
+                        echo '<table class="table table-sm">';
+                        echo '<thead><tr><th>Publisher Name</th><th>ID</th><th>Books Using</th><th>Action</th></tr></thead>';
+                        echo '<tbody>';
+
+                        $preferredId = null;
+                        $maxBooks = 0;
+
+                        foreach ($variations as $variation) {
+                            if ($variation['book_count'] > $maxBooks) {
+                                $maxBooks = $variation['book_count'];
+                                $preferredId = $variation['id'];
+                            }
+                        }
+
+                        foreach ($variations as $variation) {
+                            $isPreferred = $variation['id'] == $preferredId;
+                            echo '<tr' . ($isPreferred ? ' class="table-success"' : '') . '>';
+                            echo '<td>' . htmlspecialchars($variation['name']);
+                            if ($isPreferred) echo ' <span class="badge bg-success">SUGGESTED MASTER</span>';
+                            echo '</td>';
+                            echo '<td>' . $variation['id'] . '</td>';
+                            echo '<td><span class="badge bg-info">' . $variation['book_count'] . '</span></td>';
+                            echo '<td>';
+                            if (!$isPreferred) {
+                                echo '<button onclick="mergeIntoMaster(' . $variation['id'] . ', ' . $preferredId . ', \'' . htmlspecialchars($variation['name']) . '\', \'' . htmlspecialchars($variations[array_search($preferredId, array_column($variations, 'id'))]['name']) . '\')" class="btn btn-xs btn-warning">Merge into Master</button>';
+                            } else {
+                                echo '<span class="text-success">Master Record</span>';
+                            }
+                            echo '</td>';
+                            echo '</tr>';
+                        }
+                        echo '</tbody></table>';
+                        echo '</div>';
+                        echo '<div class="mt-2">';
+                        echo '<button onclick="mergeAllInGroup(\'' . $groupName . '\', ' . $preferredId . ')" class="btn btn-sm btn-success">🔧 Merge All into Master</button>';
+                        echo '</div>';
+                        echo '</div>';
+                        echo '</div>';
+                    }
                 }
 
             } catch (Exception $e) {
@@ -639,7 +680,13 @@ function getTableInfo($table) {
                         echo '<thead><tr><th>Current Reading Level</th><th>Book Count</th><th>Suggested Standard</th><th>Action</th></tr></thead>';
                         echo '<tbody>';
 
-                        // Define standard reading levels mapping
+                        // Show synchronization warning
+                        echo '<div class="alert alert-info">';
+                        echo '<strong>📋 SYNCHRONIZED SYSTEM:</strong> Reading levels and age ranges are linked. ';
+                        echo 'Changes to reading levels will automatically update corresponding age ranges to maintain consistency.';
+                        echo '</div>';
+
+                        // Define standard reading levels mapping (SYNCHRONIZED with age ranges)
                         $standardLevels = [
                             'middle-grade' => 'Transitional Reader (7-8 years)',
                             'Middle Grade' => 'Transitional Reader (7-8 years)',
@@ -647,7 +694,10 @@ function getTableInfo($table) {
                             'early reader' => 'Early Reader (5-6 years)',
                             'picture book' => 'Beginning Reader (4-5 years)',
                             'young adult' => 'Advanced Reader (14-16 years)',
-                            'adult' => 'Proficient Reader (18+ years)'
+                            'adult' => 'Proficient Reader (18+ years)',
+                            'beginner' => 'Beginning Reader (4-5 years)',
+                            'intermediate' => 'Developing Reader (6-7 years)',
+                            'advanced' => 'Advanced Reader (11-14 years)'
                         ];
 
                         foreach ($readingLevelValues as $value) {
@@ -671,6 +721,11 @@ function getTableInfo($table) {
                         echo '</div>';
 
                         echo '<div class="mt-3">';
+                        echo '<div class="alert alert-light border">';
+                        echo '<h6>🔧 Standardization Tools:</h6>';
+                        echo '<p><strong>📚 Create Standard Reading Levels System:</strong> Creates lookup tables with UK education system standards (Reception to A-levels) with synchronized age ranges and Lexile mappings.</p>';
+                        echo '<p><strong>🔄 Migrate All to Standards:</strong> Automatically converts all existing reading level values to the standardized system and updates corresponding age ranges to maintain synchronization.</p>';
+                        echo '</div>';
                         echo '<button onclick="createStandardReadingLevels()" class="btn btn-primary">📚 Create Standard Reading Levels System</button>';
                         echo '<button onclick="migrateAllReadingLevels()" class="btn btn-warning ms-2">🔄 Migrate All to Standards</button>';
                         echo '</div>';
@@ -802,33 +857,65 @@ function getTableInfo($table) {
                         }
                     }
 
-                    // Show all unique series for reference
+                    // Show all unique series for reference and detect erroneous data
                     $sql = "
                         SELECT
                             series,
-                            COUNT(*) as count
+                            COUNT(*) as count,
+                            LENGTH(series) as length
                         FROM books
                         WHERE series IS NOT NULL AND series != ''
                         GROUP BY series
-                        ORDER BY count DESC, series
-                        LIMIT 20
+                        ORDER BY length DESC, count DESC, series
+                        LIMIT 50
                     ";
                     $stmt = $db->query($sql);
                     $allSeries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                     if (!empty($allSeries)) {
-                        echo '<h5>Top 20 Series (for reference):</h5>';
+                        echo '<h5>Series Data Analysis (Top 50 by length):</h5>';
+                        echo '<div class="alert alert-warning">⚠️ Long series values may contain erroneous data (descriptions, author bios, etc.)</div>';
                         echo '<div class="table-responsive">';
                         echo '<table class="table table-sm">';
-                        echo '<thead><tr><th>Series Name</th><th>Book Count</th></tr></thead>';
+                        echo '<thead><tr><th>Series Name</th><th>Length</th><th>Book Count</th><th>Action</th></tr></thead>';
                         echo '<tbody>';
                         foreach ($allSeries as $series) {
-                            echo '<tr>';
-                            echo '<td>' . htmlspecialchars($series['series']) . '</td>';
+                            $isErroneous = strlen($series['series']) > 100 ||
+                                          strpos(strtolower($series['series']), 'studied') !== false ||
+                                          strpos(strtolower($series['series']), 'oxford') !== false ||
+                                          strpos(strtolower($series['series']), 'author') !== false ||
+                                          strpos(strtolower($series['series']), 'writing') !== false ||
+                                          strpos(strtolower($series['series']), 'publisher') !== false ||
+                                          strpos(strtolower($series['series']), 'novel') !== false;
+
+                            echo '<tr' . ($isErroneous ? ' class="table-danger"' : '') . '>';
+                            echo '<td>';
+                            if (strlen($series['series']) > 100) {
+                                echo htmlspecialchars(substr($series['series'], 0, 100)) . '...';
+                            } else {
+                                echo htmlspecialchars($series['series']);
+                            }
+                            if ($isErroneous) echo ' <span class="badge bg-danger">ERRONEOUS</span>';
+                            echo '</td>';
+                            echo '<td><span class="badge bg-info">' . $series['length'] . '</span></td>';
                             echo '<td><span class="badge bg-info">' . $series['count'] . '</span></td>';
+                            echo '<td>';
+                            if ($isErroneous) {
+                                echo '<button onclick="cleanErroneousData(\'series\', \'' . htmlspecialchars($series['series']) . '\')" class="btn btn-xs btn-danger">Delete</button> ';
+                                echo '<button onclick="editErroneousData(\'series\', \'' . htmlspecialchars($series['series']) . '\')" class="btn btn-xs btn-warning">Edit</button>';
+                            } else {
+                                echo '<span class="text-muted">OK</span>';
+                            }
+                            echo '</td>';
                             echo '</tr>';
                         }
                         echo '</tbody></table>';
+                        echo '</div>';
+
+                        // Show erroneous data cleanup tools
+                        echo '<div class="mt-3">';
+                        echo '<button onclick="cleanAllErroneousSeriesData()" class="btn btn-danger">🗑️ Clean All Erroneous Series Data</button>';
+                        echo '<button onclick="showErroneousDataModal()" class="btn btn-warning ms-2">🔍 Review All Erroneous Data</button>';
                         echo '</div>';
                     }
                 }
@@ -1101,11 +1188,10 @@ function getTableInfo($table) {
         });
     }
 
-    function mergePublishers(id1, id2, name1, name2) {
-        const choice = confirm('Merge publishers:\n"' + name1 + '" (ID: ' + id1 + ')\n"' + name2 + '" (ID: ' + id2 + ')\n\nClick OK to keep "' + name1 + '" or Cancel to keep "' + name2 + '"');
-        const keepId = choice ? id1 : id2;
-        const removeId = choice ? id2 : id1;
-        const keepName = choice ? name1 : name2;
+    function mergeIntoMaster(sourceId, masterId, sourceName, masterName) {
+        if (!confirm('Merge "' + sourceName + '" (ID: ' + sourceId + ') into master "' + masterName + '" (ID: ' + masterId + ')?\n\nThis will:\n- Update all books using source publisher to use master\n- Delete the source publisher record\n- Keep the master publisher name')) {
+            return;
+        }
 
         const button = event.target;
         const originalText = button.textContent;
@@ -1117,12 +1203,154 @@ function getTableInfo($table) {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: 'action=merge_publishers&keep_id=' + keepId + '&remove_id=' + removeId + '&keep_name=' + encodeURIComponent(keepName)
+            body: 'action=merge_into_master&source_id=' + sourceId + '&master_id=' + masterId + '&source_name=' + encodeURIComponent(sourceName) + '&master_name=' + encodeURIComponent(masterName)
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert('✅ Publishers merged successfully!\nKept: ' + keepName);
+                alert('✅ Publisher merged successfully!\nMerged: "' + sourceName + '" → "' + masterName + '"\nBooks updated: ' + (data.books_updated || 0));
+                location.reload();
+            } else {
+                alert('❌ Error: ' + (data.message || 'Unknown error'));
+                button.textContent = originalText;
+                button.disabled = false;
+            }
+        })
+        .catch(error => {
+            alert('❌ Network error: ' + error.message);
+            button.textContent = originalText;
+            button.disabled = false;
+        });
+    }
+
+    function mergeAllInGroup(groupName, masterId) {
+        if (!confirm('Merge ALL variations in "' + groupName + '" group into the master record (ID: ' + masterId + ')?\n\nThis will consolidate all publisher variations into one master record.')) {
+            return;
+        }
+
+        const button = event.target;
+        const originalText = button.textContent;
+        button.textContent = 'Merging All...';
+        button.disabled = true;
+
+        fetch('book-import-validate/ajax/data-enrichment-ajax.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'action=merge_all_in_group&group_name=' + encodeURIComponent(groupName) + '&master_id=' + masterId
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ All publishers in "' + groupName + '" group merged successfully!\nTotal merged: ' + (data.merged_count || 0) + '\nBooks updated: ' + (data.books_updated || 0));
+                location.reload();
+            } else {
+                alert('❌ Error: ' + (data.message || 'Unknown error'));
+                button.textContent = originalText;
+                button.disabled = false;
+            }
+        })
+        .catch(error => {
+            alert('❌ Network error: ' + error.message);
+            button.textContent = originalText;
+            button.disabled = false;
+        });
+    }
+
+    // Erroneous data cleanup functions
+    function cleanErroneousData(field, value) {
+        if (!confirm('Delete erroneous data from ' + field + ' field?\nValue: "' + value.substring(0, 100) + (value.length > 100 ? '...' : '') + '"')) {
+            return;
+        }
+
+        const button = event.target;
+        const originalText = button.textContent;
+        button.textContent = 'Deleting...';
+        button.disabled = true;
+
+        fetch('book-import-validate/ajax/data-enrichment-ajax.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'action=clean_erroneous_data&field=' + encodeURIComponent(field) + '&value=' + encodeURIComponent(value)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ Erroneous data cleaned successfully!\nBooks updated: ' + (data.books_updated || 0));
+                location.reload();
+            } else {
+                alert('❌ Error: ' + (data.message || 'Unknown error'));
+                button.textContent = originalText;
+                button.disabled = false;
+            }
+        })
+        .catch(error => {
+            alert('❌ Network error: ' + error.message);
+            button.textContent = originalText;
+            button.disabled = false;
+        });
+    }
+
+    function editErroneousData(field, value) {
+        const newValue = prompt('Edit ' + field + ' value:\n\nCurrent value:\n' + value, value);
+        if (newValue === null || newValue === value) {
+            return;
+        }
+
+        const button = event.target;
+        const originalText = button.textContent;
+        button.textContent = 'Updating...';
+        button.disabled = true;
+
+        fetch('book-import-validate/ajax/data-enrichment-ajax.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'action=edit_erroneous_data&field=' + encodeURIComponent(field) + '&old_value=' + encodeURIComponent(value) + '&new_value=' + encodeURIComponent(newValue)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ Data updated successfully!\nBooks updated: ' + (data.books_updated || 0));
+                location.reload();
+            } else {
+                alert('❌ Error: ' + (data.message || 'Unknown error'));
+                button.textContent = originalText;
+                button.disabled = false;
+            }
+        })
+        .catch(error => {
+            alert('❌ Network error: ' + error.message);
+            button.textContent = originalText;
+            button.disabled = false;
+        });
+    }
+
+    function cleanAllErroneousSeriesData() {
+        if (!confirm('Clean ALL erroneous series data?\n\nThis will delete series values that appear to be author bios, descriptions, or other non-series content.')) {
+            return;
+        }
+
+        const button = event.target;
+        const originalText = button.textContent;
+        button.textContent = 'Cleaning...';
+        button.disabled = true;
+
+        fetch('book-import-validate/ajax/data-enrichment-ajax.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'action=clean_all_erroneous_series'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ All erroneous series data cleaned!\nBooks updated: ' + (data.books_updated || 0) + '\nSeries cleaned: ' + (data.series_cleaned || 0));
                 location.reload();
             } else {
                 alert('❌ Error: ' + (data.message || 'Unknown error'));

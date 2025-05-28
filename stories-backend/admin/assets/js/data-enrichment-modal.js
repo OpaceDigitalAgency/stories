@@ -21,6 +21,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         });
 
         // Update modal header with book information
+        console.log('🚀 About to call updateModalHeader with:', { title, currentISBN });
         updateModalHeader(title, currentISBN);
 
         // Reset modal state
@@ -118,16 +119,23 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             isbn10VerifiedElement: $isbn10VerifiedElement.length
         });
 
+        // Debug: Check if modal is actually visible
+        console.log('📖 Modal visibility check:', {
+            modalExists: $('#dataEnrichmentModal').length,
+            modalVisible: $('#dataEnrichmentModal').is(':visible'),
+            identifiersSection: $('#enrichment-book-identifiers').length
+        });
+
         if ($isbn13Element.length > 0) {
             $isbn13Element.text(isbn13);
-            console.log('📖 Successfully set ISBN-13 display');
+            console.log('📖 Successfully set ISBN-13 display to:', $isbn13Element.text());
         } else {
             console.error('📖 ISBN-13 element not found!');
         }
 
         if ($isbn10Element.length > 0) {
             $isbn10Element.text(isbn10);
-            console.log('📖 Successfully set ISBN-10 display');
+            console.log('📖 Successfully set ISBN-10 display to:', $isbn10Element.text());
         } else {
             console.error('📖 ISBN-10 element not found!');
         }
@@ -639,32 +647,54 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
 
         // Listen for changes in age range selections
         $(document).on('change', 'input[name="field_age_range_option"], input[name="field_age_range"]', function() {
-            console.log('Age range field changed:', $(this).attr('name'), $(this).val(), $(this).is(':checked'));
+            console.log('🔄 Age range field changed:', $(this).attr('name'), $(this).val(), $(this).is(':checked'));
+            console.log('🔄 Element details:', {
+                element: this,
+                name: $(this).attr('name'),
+                value: $(this).val(),
+                checked: $(this).is(':checked'),
+                type: $(this).attr('type')
+            });
+
             if ($(this).is(':checked')) {
                 const selectedAgeRange = getSelectedFieldValue('age_range');
-                console.log('Selected age range:', selectedAgeRange);
+                console.log('🔄 Selected age range:', selectedAgeRange);
+                console.log('🔄 Available mappings:', Object.keys(ageToReadingMap));
+
                 if (selectedAgeRange && ageToReadingMap[selectedAgeRange]) {
                     const expectedReading = ageToReadingMap[selectedAgeRange];
-                    console.log('Expected reading level:', expectedReading);
+                    console.log('🔄 Expected reading level:', expectedReading);
                     syncReadingLevelField(expectedReading);
                 } else {
-                    console.log('No mapping found for age range:', selectedAgeRange);
+                    console.log('🔄 No mapping found for age range:', selectedAgeRange);
+                    console.log('🔄 Exact match check:', ageToReadingMap[selectedAgeRange]);
                 }
             }
         });
 
         // Listen for changes in reading level selections
         $(document).on('change', 'input[name="field_reading_level_option"], input[name="field_reading_level"]', function() {
-            console.log('Reading level field changed:', $(this).attr('name'), $(this).val(), $(this).is(':checked'));
+            console.log('🔄 Reading level field changed:', $(this).attr('name'), $(this).val(), $(this).is(':checked'));
+            console.log('🔄 Element details:', {
+                element: this,
+                name: $(this).attr('name'),
+                value: $(this).val(),
+                checked: $(this).is(':checked'),
+                type: $(this).attr('type')
+            });
+
             if ($(this).is(':checked')) {
                 const selectedReadingLevel = getSelectedFieldValue('reading_level');
-                console.log('Selected reading level:', selectedReadingLevel);
+                console.log('🔄 Selected reading level:', selectedReadingLevel);
+                console.log('🔄 Available mappings:', Object.keys(readingToAgeMap));
+
                 if (selectedReadingLevel && readingToAgeMap[selectedReadingLevel]) {
                     const expectedAge = readingToAgeMap[selectedReadingLevel];
-                    console.log('Expected age range:', expectedAge);
+                    console.log('🔄 Expected age range:', expectedAge);
                     syncAgeRangeField(expectedAge);
                 } else {
-                    console.log('No mapping found for reading level:', selectedReadingLevel);
+                    console.log('🔄 No mapping found for reading level:', selectedReadingLevel);
+                    console.log('🔄 Exact match check:', readingToAgeMap[selectedReadingLevel]);
                 }
             }
         });
@@ -672,34 +702,41 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
 
     // Get the currently selected value for a field
     function getSelectedFieldValue(fieldName) {
-        console.log('Getting selected value for field:', fieldName);
+        console.log('🔍 Getting selected value for field:', fieldName);
 
         const checkedOption = $(`input[name="field_${fieldName}_option"]:checked`);
-        console.log('Checked option elements found:', checkedOption.length);
+        console.log('🔍 Checked option elements found:', checkedOption.length);
 
         if (checkedOption.length > 0) {
             const optionIndex = parseInt(checkedOption.val());
-            console.log('Selected option index:', optionIndex);
+            console.log('🔍 Selected option index:', optionIndex);
 
             const fieldData = window.currentEnrichmentData.fields[fieldName];
+            console.log('🔍 Field data:', fieldData);
+
             if (fieldData && fieldData.new_data && fieldData.new_data.options) {
                 const value = fieldData.new_data.options[optionIndex]?.value;
-                console.log('Multi-option field value:', value);
+                console.log('🔍 Multi-option field value:', value);
+                console.log('🔍 All options:', fieldData.new_data.options);
                 return value;
+            } else {
+                console.log('🔍 No options found in field data');
             }
         }
 
         const checkedField = $(`input[name="field_${fieldName}"]:checked`);
-        console.log('Checked field elements found:', checkedField.length);
+        console.log('🔍 Checked field elements found:', checkedField.length);
 
         if (checkedField.length > 0) {
             const fieldData = window.currentEnrichmentData.fields[fieldName];
             const value = fieldData?.new_data?.value;
-            console.log('Single field value:', value);
+            console.log('🔍 Single field value:', value);
+            console.log('🔍 Field data structure:', fieldData);
             return value;
         }
 
-        console.log('No value found for field:', fieldName);
+        console.log('🔍 No value found for field:', fieldName);
+        console.log('🔍 Available fields:', window.currentEnrichmentData ? Object.keys(window.currentEnrichmentData.fields) : 'No enrichment data');
         return null;
     }
 

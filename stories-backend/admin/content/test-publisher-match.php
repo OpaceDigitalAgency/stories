@@ -1,6 +1,22 @@
 <?php
-require_once '../../../db-connect.php';
-require_once 'book-import-validate/functions/data-enrichment-functions.php';
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+try {
+    require_once '../../db-connect.php';
+    echo '<p>✅ Database connection loaded</p>';
+} catch (Exception $e) {
+    echo '<p style="color: red;">❌ Database connection failed: ' . $e->getMessage() . '</p>';
+    exit;
+}
+
+try {
+    require_once 'book-import-validate/functions/data-enrichment-functions.php';
+    echo '<p>✅ Data enrichment functions loaded</p>';
+} catch (Exception $e) {
+    echo '<p style="color: red;">❌ Data enrichment functions failed: ' . $e->getMessage() . '</p>';
+    exit;
+}
 
 echo '<h1>Publisher Matching Debug Test</h1>';
 
@@ -25,17 +41,17 @@ try {
     ");
     $stmt->execute();
     $publishers = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
+
     echo '<h3>Publishers in database containing Harper, Collins, or Bloomsbury:</h3>';
     if (empty($publishers)) {
         echo '<p style="color: red;">NO PUBLISHERS FOUND! This is the problem!</p>';
-        
+
         // Check if there are ANY publishers at all
         $stmt = $db->prepare("SELECT COUNT(*) as count FROM authors WHERE type = 'publisher' OR type IS NULL");
         $stmt->execute();
         $totalCount = $stmt->fetch(PDO::FETCH_ASSOC);
         echo '<p>Total publishers in database: ' . $totalCount['count'] . '</p>';
-        
+
         // Show first 10 publishers
         $stmt = $db->prepare("SELECT id, name, type FROM authors WHERE type = 'publisher' OR type IS NULL LIMIT 10");
         $stmt->execute();
@@ -46,7 +62,7 @@ try {
             echo '<li>ID: ' . $pub['id'] . ' - ' . htmlspecialchars($pub['name']) . ' (type: ' . ($pub['type'] ?? 'NULL') . ')</li>';
         }
         echo '</ul>';
-        
+
     } else {
         echo '<ul>';
         foreach ($publishers as $pub) {
@@ -54,7 +70,7 @@ try {
         }
         echo '</ul>';
     }
-    
+
 } catch (Exception $e) {
     echo '<p style="color: red;">Database error: ' . htmlspecialchars($e->getMessage()) . '</p>';
 }
@@ -64,9 +80,9 @@ echo '<h2>Publisher Matching Tests</h2>';
 foreach ($testCases as $testInput => $expectedResult) {
     echo '<h3>Testing: "' . htmlspecialchars($testInput) . '"</h3>';
     echo '<p>Expected: ' . htmlspecialchars($expectedResult) . '</p>';
-    
+
     $result = findBestPublisherMatch($testInput);
-    
+
     if ($result) {
         echo '<p style="color: green;">✅ Match found:</p>';
         echo '<ul>';
@@ -77,7 +93,7 @@ foreach ($testCases as $testInput => $expectedResult) {
     } else {
         echo '<p style="color: red;">❌ No match found</p>';
     }
-    
+
     echo '<hr>';
 }
 

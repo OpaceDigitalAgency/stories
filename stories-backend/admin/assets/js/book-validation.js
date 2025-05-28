@@ -319,14 +319,16 @@ if (typeof window.bookValidationLoaded === 'undefined') {
                     bookId: bookId
                 });
 
-                if (!isbn || isbn.trim() === '') {
+                // Ensure ISBN is a string and not empty
+                const isbnString = String(isbn || '').trim();
+                if (!isbnString || isbnString === '') {
                     console.log('📚 No ISBN found for instant validation', index);
                     $statusElement.html('<span class="badge badge-secondary">Unknown</span>');
                     return;
                 }
 
                 // Perform instant ISBN validation (simple format check)
-                const cleanISBN = isbn.replace(/[^0-9X]/gi, '');
+                const cleanISBN = isbnString.replace(/[^0-9X]/gi, '');
                 const isValidFormat = (cleanISBN.length === 10 || cleanISBN.length === 13);
 
                 if (isValidFormat) {
@@ -369,7 +371,9 @@ if (typeof window.bookValidationLoaded === 'undefined') {
                     element: $statusElement[0].outerHTML
                 });
 
-                if (!isbn || isbn.trim() === '') {
+                // Ensure ISBN is a string and not empty
+                const isbnString = String(isbn || '').trim();
+                if (!isbnString || isbnString === '') {
                     console.log('📚 No ISBN found for element', index);
                     $statusElement.html('<span class="badge badge-secondary">No ISBN</span>');
                     return;
@@ -377,17 +381,17 @@ if (typeof window.bookValidationLoaded === 'undefined') {
 
                 // Add delay to avoid overwhelming Goodreads
                 setTimeout(() => {
-                    console.log(`📚 Making AJAX request for ISBN: ${isbn}`);
+                    console.log(`📚 Making AJAX request for ISBN: ${isbnString}`);
                     $.ajax({
                         url: 'book-import-validate/ajax/data-enrichment-ajax.php',
                         method: 'POST',
                         data: {
                             action: 'check_goodreads_isbn',
-                            isbn: isbn
+                            isbn: isbnString
                         },
                         dataType: 'json',
                         success: function(response) {
-                            console.log('📚 Goodreads response for ISBN ' + isbn + ':', response);
+                            console.log('📚 Goodreads response for ISBN ' + isbnString + ':', response);
                             if (response.success && response.exists) {
                                 $statusElement.html('<span class="badge" style="background-color: #28a745; color: white; border: none;"><i class="fas fa-book"></i> Goodreads</span>');
                                 console.log('📚 ✅ Updated status to: Found on Goodreads');
@@ -400,7 +404,7 @@ if (typeof window.bookValidationLoaded === 'undefined') {
                             }
                         },
                         error: function(xhr, status, error) {
-                            console.error('📚 Goodreads AJAX error for ISBN ' + isbn + ':', {
+                            console.error('📚 Goodreads AJAX error for ISBN ' + isbnString + ':', {
                                 xhr: xhr,
                                 status: status,
                                 error: error,

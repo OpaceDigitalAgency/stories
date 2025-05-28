@@ -71,7 +71,7 @@ try {
 
                 // Ensure AMAZON_DEBUG is defined for this context
                 if (!defined('AMAZON_DEBUG')) {
-                    define('AMAZON_DEBUG', true); // Enable debug for troubleshooting
+                    define('AMAZON_DEBUG', false); // Disable debug for production
                 }
 
                 // Fetch cached Amazon enrichment payload (includes all options, default format, and price)

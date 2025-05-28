@@ -1402,23 +1402,49 @@ function handleMergeGroupIntoMaster() {
         $otherIdsArray = explode(',', $otherIds);
         $otherIdsArray = array_map('trim', $otherIdsArray);
 
-        // Update all books to use master publisher
-        $placeholders = str_repeat('?,', count($otherIdsArray) - 1) . '?';
-        $stmt = $db->prepare("UPDATE books SET publisher_id = ? WHERE publisher_id IN ($placeholders)");
-        $params = array_merge([$masterId], $otherIdsArray);
-        $stmt->execute($params);
-        $booksUpdated = $stmt->rowCount();
+        // First, get the names of all publishers being merged
+        $allIds = array_merge([$masterId], $otherIdsArray);
+        $placeholders = str_repeat('?,', count($allIds) - 1) . '?';
+        $stmt = $db->prepare("SELECT id, name FROM authors WHERE id IN ($placeholders)");
+        $stmt->execute($allIds);
+        $publishers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $publisherNames = array_column($publishers, 'name');
+
+        // Update books that match by publisher name (text field) to use master publisher_id
+        $namePlaceholders = str_repeat('?,', count($publisherNames) - 1) . '?';
+        $stmt = $db->prepare("UPDATE books SET publisher_id = ? WHERE publisher IN ($namePlaceholders)");
+        $nameParams = array_merge([$masterId], $publisherNames);
+        $stmt->execute($nameParams);
+        $booksUpdatedByName = $stmt->rowCount();
+
+        // Update books that already have publisher_id set to other IDs
+        if (!empty($otherIdsArray)) {
+            $idPlaceholders = str_repeat('?,', count($otherIdsArray) - 1) . '?';
+            $stmt = $db->prepare("UPDATE books SET publisher_id = ? WHERE publisher_id IN ($idPlaceholders)");
+            $idParams = array_merge([$masterId], $otherIdsArray);
+            $stmt->execute($idParams);
+            $booksUpdatedById = $stmt->rowCount();
+        } else {
+            $booksUpdatedById = 0;
+        }
+
+        $totalBooksUpdated = $booksUpdatedByName + $booksUpdatedById;
 
         // Delete the other publisher records
-        $stmt = $db->prepare("DELETE FROM authors WHERE id IN ($placeholders)");
-        $stmt->execute($otherIdsArray);
-        $publishersRemoved = $stmt->rowCount();
+        if (!empty($otherIdsArray)) {
+            $stmt = $db->prepare("DELETE FROM authors WHERE id IN ($idPlaceholders)");
+            $stmt->execute($otherIdsArray);
+            $publishersRemoved = $stmt->rowCount();
+        } else {
+            $publishersRemoved = 0;
+        }
 
         $db->commit();
 
         echo json_encode([
             'success' => true,
-            'books_updated' => $booksUpdated,
+            'books_updated' => $totalBooksUpdated,
             'publishers_removed' => $publishersRemoved,
             'master_name' => $masterName
         ]);
@@ -1498,10 +1524,34 @@ function handleMergeIntoMaster() {
     try {
         $db->beginTransaction();
 
-        // Update books to use master publisher
+        // Get publisher names for both source and master
+        $stmt = $db->prepare("SELECT id, name FROM authors WHERE id IN (?, ?)");
+        $stmt->execute([$sourceId, $masterId]);
+        $publishers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $sourcePublisher = null;
+        foreach ($publishers as $pub) {
+            if ($pub['id'] == $sourceId) {
+                $sourcePublisher = $pub;
+                break;
+            }
+        }
+
+        // Update books that match by publisher name (text field) to use master publisher_id
+        if ($sourcePublisher) {
+            $stmt = $db->prepare("UPDATE books SET publisher_id = ? WHERE publisher = ?");
+            $stmt->execute([$masterId, $sourcePublisher['name']]);
+            $booksUpdatedByName = $stmt->rowCount();
+        } else {
+            $booksUpdatedByName = 0;
+        }
+
+        // Update books that already have publisher_id set to source ID
         $stmt = $db->prepare("UPDATE books SET publisher_id = ? WHERE publisher_id = ?");
         $stmt->execute([$masterId, $sourceId]);
-        $booksUpdated = $stmt->rowCount();
+        $booksUpdatedById = $stmt->rowCount();
+
+        $totalBooksUpdated = $booksUpdatedByName + $booksUpdatedById;
 
         // Delete source publisher
         $stmt = $db->prepare("DELETE FROM authors WHERE id = ?");
@@ -1511,7 +1561,7 @@ function handleMergeIntoMaster() {
 
         echo json_encode([
             'success' => true,
-            'books_updated' => $booksUpdated
+            'books_updated' => $totalBooksUpdated
         ]);
 
     } catch (Exception $e) {

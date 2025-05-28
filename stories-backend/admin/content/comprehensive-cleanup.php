@@ -22,12 +22,7 @@ require_once '../includes/header.php';
 // Set execution time limit for large operations
 set_time_limit(300);
 
-// Get current stage from URL parameter
-$stage = $_GET['stage'] ?? 'analyze';
-$validStages = ['analyze', 'reassign', 'update'];
-if (!in_array($stage, $validStages)) {
-    $stage = 'analyze';
-}
+// Removed stages - now a single comprehensive analysis and cleanup page
 
 // Helper function to check if column exists
 function columnExists($table, $column) {
@@ -78,35 +73,30 @@ function getTableInfo($table) {
     }
 </style>
     <div class="container-fluid">
-        <!-- Stage Navigation -->
+        <!-- Main Header -->
         <div class="mb-4">
             <h1 class="mb-3">🔧 Comprehensive Duplicate Cleanup Tool</h1>
-            <p class="text-muted">Analyzes all dropdown fields from directory-item-form.php for duplicates</p>
-
-            <div class="stage-nav mb-3">
-                <a href="?stage=analyze" class="btn <?php echo $stage === 'analyze' ? 'btn-primary' : 'btn-outline-primary'; ?>">
-                    📊 Stage 1: Analyze Duplicates
-                </a>
-                <a href="?stage=reassign" class="btn <?php echo $stage === 'reassign' ? 'btn-warning' : 'btn-outline-warning'; ?>">
-                    🔄 Stage 2: Reassign References
-                </a>
-                <a href="?stage=update" class="btn <?php echo $stage === 'update' ? 'btn-success' : 'btn-outline-success'; ?>">
-                    ✅ Stage 3: Update Database
-                </a>
-            </div>
+            <p class="text-muted">Analyzes and fixes all duplicates, similar values, and erroneous data across the database</p>
 
             <div class="alert alert-warning">
                 <strong>⚠️ Warning:</strong> This tool will modify your database. Make sure you have a backup before proceeding.
             </div>
+
+            <div class="alert alert-info">
+                <strong>🎯 Features:</strong>
+                • Publisher group consolidation with master record selection
+                • Erroneous data detection and cleanup (author bios in series fields, etc.)
+                • Synchronized reading levels and age ranges
+                • Bulk operations with progress tracking
+            </div>
         </div>
 
-        <?php if ($stage === 'analyze'): ?>
-            <div class="row">
-                <div class="col-12">
-                    <h2>📊 Stage 1: Analyze All Duplicates</h2>
-                    <p>Scanning all lookup tables and text fields for potential duplicates...</p>
-                </div>
+        <div class="row">
+            <div class="col-12">
+                <h2>📊 Comprehensive Data Analysis & Cleanup</h2>
+                <p>Scanning all lookup tables and text fields for duplicates, similar values, and erroneous data...</p>
             </div>
+        </div>
 
             <?php
             // 1. AUTHORS (Publishers and Book Authors)
@@ -179,101 +169,150 @@ function getTableInfo($table) {
                     }
                 }
 
-                // Find similar publishers grouped by publisher family
-                echo '<h5 class="mt-4">🔍 Publisher Groups (All Variations):</h5>';
+                // DYNAMIC SIMILARITY DETECTION - finds ALL similar publishers
+                echo '<h5 class="mt-4">🔍 Dynamic Publisher Similarity Detection:</h5>';
+                echo '<div class="alert alert-info">Using advanced algorithms to find ALL similar publishers without hard-coded rules</div>';
 
-                // Define publisher groups to check
-                $publisherGroups = [
-                    'Harper Collins' => ['harper', 'collins'],
-                    'Bloomsbury' => ['bloomsbury'],
-                    'Scholastic' => ['scholastic'],
-                    'Penguin' => ['penguin'],
-                    'Simon & Schuster' => ['simon', 'schuster'],
-                    'Egmont' => ['egmont'],
-                    'Puffin' => ['puffin'],
-                    'Orion' => ['orion'],
-                    'Macmillan' => ['macmillan'],
-                    'Oxford' => ['oxford'],
-                    'Cambridge' => ['cambridge'],
-                    'Frances Lincoln' => ['frances', 'lincoln'],
-                    'Marion Lloyd' => ['marion', 'lloyd'],
-                    'Little Tiger' => ['little', 'tiger'],
-                    'Nosy Crow' => ['nosy', 'crow'],
-                    'Chicken House' => ['chicken', 'house'],
-                    'David Fickling' => ['david', 'fickling'],
-                    'Hachette' => ['hachette'],
-                    'Piccadilly' => ['piccadilly'],
-                    'Andersen' => ['andersen'],
-                    'Barrington Stoke' => ['barrington', 'stoke']
-                ];
+                // Get all publishers
+                $stmt = $db->query("
+                    SELECT id, name,
+                           (SELECT COUNT(*) FROM books WHERE publisher_id = authors.id) as book_count
+                    FROM authors
+                    WHERE name IS NOT NULL AND name != ''
+                    ORDER BY name
+                ");
+                $allPublishers = $stmt->fetchAll();
 
-                $foundGroups = [];
-                foreach ($publisherGroups as $groupName => $keywords) {
-                    $whereConditions = [];
-                    foreach ($keywords as $keyword) {
-                        $whereConditions[] = "LOWER(name) LIKE '%$keyword%'";
+                // Function to calculate similarity between two strings
+                function calculateSimilarity($str1, $str2) {
+                    $str1 = strtolower(trim($str1));
+                    $str2 = strtolower(trim($str2));
+
+                    // Remove common suffixes/prefixes that don't affect publisher identity
+                    $commonWords = ['ltd', 'limited', 'plc', 'inc', 'books', 'publishing', 'publishers', 'press', 'children\'s', 'childrens', 'uk', 'usa', 'group', 'imprint'];
+                    foreach ($commonWords as $word) {
+                        $str1 = preg_replace('/\b' . preg_quote($word) . '\b/', '', $str1);
+                        $str2 = preg_replace('/\b' . preg_quote($word) . '\b/', '', $str2);
                     }
-                    $whereClause = implode(' AND ', $whereConditions);
 
-                    $stmt = $db->query("
-                        SELECT id, name,
-                               (SELECT COUNT(*) FROM books WHERE publisher_id = authors.id) as book_count
-                        FROM authors
-                        WHERE $whereClause
-                        ORDER BY name
-                    ");
-                    $variations = $stmt->fetchAll();
+                    // Clean up extra spaces
+                    $str1 = preg_replace('/\s+/', ' ', trim($str1));
+                    $str2 = preg_replace('/\s+/', ' ', trim($str2));
 
-                    if (count($variations) > 1) {
-                        $foundGroups[$groupName] = $variations;
+                    // Calculate various similarity metrics
+                    $levenshtein = levenshtein($str1, $str2);
+                    $maxLen = max(strlen($str1), strlen($str2));
+                    $levenshteinSimilarity = $maxLen > 0 ? (1 - $levenshtein / $maxLen) * 100 : 0;
+
+                    // Check for substring matches
+                    $substringMatch = 0;
+                    if (strlen($str1) > 3 && strlen($str2) > 3) {
+                        if (strpos($str1, $str2) !== false || strpos($str2, $str1) !== false) {
+                            $substringMatch = 80;
+                        }
+                    }
+
+                    // Check for word overlap
+                    $words1 = explode(' ', $str1);
+                    $words2 = explode(' ', $str2);
+                    $commonWords = array_intersect($words1, $words2);
+                    $wordOverlap = count($commonWords) > 0 ? (count($commonWords) / max(count($words1), count($words2))) * 100 : 0;
+
+                    // Return the highest similarity score
+                    return max($levenshteinSimilarity, $substringMatch, $wordOverlap);
+                }
+
+                // Find similar groups dynamically
+                $similarGroups = [];
+                $processed = [];
+
+                foreach ($allPublishers as $i => $publisher1) {
+                    if (in_array($publisher1['id'], $processed)) continue;
+
+                    $group = [$publisher1];
+                    $processed[] = $publisher1['id'];
+
+                    foreach ($allPublishers as $j => $publisher2) {
+                        if ($i >= $j || in_array($publisher2['id'], $processed)) continue;
+
+                        $similarity = calculateSimilarity($publisher1['name'], $publisher2['name']);
+
+                        if ($similarity >= 70) { // 70% similarity threshold
+                            $group[] = $publisher2;
+                            $processed[] = $publisher2['id'];
+                        }
+                    }
+
+                    if (count($group) > 1) {
+                        // Sort by book count descending to suggest best master
+                        usort($group, function($a, $b) {
+                            return $b['book_count'] - $a['book_count'];
+                        });
+                        $similarGroups[] = $group;
                     }
                 }
 
-                if (empty($foundGroups)) {
-                    echo '<div class="alert alert-success">✅ No publisher groups with multiple variations found</div>';
-                } else {
-                    echo '<div class="alert alert-info">🔍 Found ' . count($foundGroups) . ' publisher groups with multiple variations:</div>';
+                // Sort groups by total book count
+                usort($similarGroups, function($a, $b) {
+                    $totalA = array_sum(array_column($a, 'book_count'));
+                    $totalB = array_sum(array_column($b, 'book_count'));
+                    return $totalB - $totalA;
+                });
 
-                    foreach ($foundGroups as $groupName => $variations) {
+                if (empty($similarGroups)) {
+                    echo '<div class="alert alert-success">✅ No similar publisher groups found</div>';
+                } else {
+                    echo '<div class="alert alert-info">🔍 Found ' . count($similarGroups) . ' groups of similar publishers using dynamic detection:</div>';
+
+                    foreach ($similarGroups as $groupIndex => $group) {
+                        $groupId = 'group_' . $groupIndex;
                         echo '<div class="card mb-3">';
-                        echo '<div class="card-header"><h6>📚 ' . $groupName . ' Group (' . count($variations) . ' variations)</h6></div>';
+                        echo '<div class="card-header">';
+                        echo '<h6>📚 Similar Publisher Group ' . ($groupIndex + 1) . ' (' . count($group) . ' variations)</h6>';
+                        echo '<small class="text-muted">Total books: ' . array_sum(array_column($group, 'book_count')) . '</small>';
+                        echo '</div>';
                         echo '<div class="card-body">';
+
+                        echo '<div class="alert alert-warning">';
+                        echo '<strong>👤 SELECT YOUR MASTER:</strong> Choose which publisher name to keep as the master record:';
+                        echo '</div>';
+
                         echo '<div class="table-responsive">';
                         echo '<table class="table table-sm">';
-                        echo '<thead><tr><th>Publisher Name</th><th>ID</th><th>Books Using</th><th>Action</th></tr></thead>';
+                        echo '<thead><tr><th>Select Master</th><th>Publisher Name</th><th>ID</th><th>Books Using</th><th>Similarity Score</th></tr></thead>';
                         echo '<tbody>';
 
-                        $preferredId = null;
-                        $maxBooks = 0;
-
-                        foreach ($variations as $variation) {
-                            if ($variation['book_count'] > $maxBooks) {
-                                $maxBooks = $variation['book_count'];
-                                $preferredId = $variation['id'];
-                            }
-                        }
-
-                        foreach ($variations as $variation) {
-                            $isPreferred = $variation['id'] == $preferredId;
-                            echo '<tr' . ($isPreferred ? ' class="table-success"' : '') . '>';
-                            echo '<td>' . htmlspecialchars($variation['name']);
-                            if ($isPreferred) echo ' <span class="badge bg-success">SUGGESTED MASTER</span>';
-                            echo '</td>';
-                            echo '<td>' . $variation['id'] . '</td>';
-                            echo '<td><span class="badge bg-info">' . $variation['book_count'] . '</span></td>';
+                        foreach ($group as $index => $publisher) {
+                            $isRecommended = $index === 0; // First one (highest book count) is recommended
+                            echo '<tr' . ($isRecommended ? ' class="table-warning" title="Recommended based on book usage"' : '') . '>';
                             echo '<td>';
-                            if (!$isPreferred) {
-                                echo '<button onclick="mergeIntoMaster(' . $variation['id'] . ', ' . $preferredId . ', \'' . htmlspecialchars($variation['name']) . '\', \'' . htmlspecialchars($variations[array_search($preferredId, array_column($variations, 'id'))]['name']) . '\')" class="btn btn-xs btn-warning">Merge into Master</button>';
+                            echo '<input type="radio" name="master_' . $groupId . '" value="' . $publisher['id'] . '"' . ($isRecommended ? ' checked' : '') . ' onchange="updateMasterSelection(\'' . $groupId . '\', ' . $publisher['id'] . ', \'' . htmlspecialchars($publisher['name']) . '\')">';
+                            echo '</td>';
+                            echo '<td>';
+                            echo htmlspecialchars($publisher['name']);
+                            if ($isRecommended) echo ' <span class="badge bg-warning">RECOMMENDED</span>';
+                            echo '</td>';
+                            echo '<td>' . $publisher['id'] . '</td>';
+                            echo '<td><span class="badge bg-info">' . $publisher['book_count'] . '</span></td>';
+                            echo '<td>';
+                            if ($index > 0) {
+                                $similarity = calculateSimilarity($group[0]['name'], $publisher['name']);
+                                echo '<span class="badge bg-secondary">' . round($similarity, 1) . '%</span>';
                             } else {
-                                echo '<span class="text-success">Master Record</span>';
+                                echo '<span class="text-muted">Base</span>';
                             }
                             echo '</td>';
                             echo '</tr>';
                         }
                         echo '</tbody></table>';
                         echo '</div>';
-                        echo '<div class="mt-2">';
-                        echo '<button onclick="mergeAllInGroup(\'' . $groupName . '\', ' . $preferredId . ')" class="btn btn-sm btn-success">🔧 Merge All into Master</button>';
+
+                        echo '<div class="mt-3">';
+                        echo '<div class="alert alert-light border" id="master_preview_' . $groupId . '">';
+                        echo '<strong>Selected Master:</strong> <span id="master_name_' . $groupId . '">' . htmlspecialchars($group[0]['name']) . '</span> (ID: <span id="master_id_' . $groupId . '">' . $group[0]['id'] . '</span>)';
+                        echo '</div>';
+                        echo '<button onclick="mergeGroupIntoMaster(\'' . $groupId . '\')" class="btn btn-success">🔧 Merge All into Selected Master</button>';
+                        echo '<button onclick="previewMergeChanges(\'' . $groupId . '\')" class="btn btn-outline-info ms-2">👁️ Preview Changes</button>';
                         echo '</div>';
                         echo '</div>';
                         echo '</div>';
@@ -439,7 +478,7 @@ function getTableInfo($table) {
                         for ($i = 1; $i <= $totalPages; $i++) {
                             $active = $i == $page ? 'active' : '';
                             echo '<li class="page-item ' . $active . '">';
-                            echo '<a class="page-link" href="?stage=analyze&page=' . $i . '">' . $i . '</a>';
+                            echo '<a class="page-link" href="?page=' . $i . '">' . $i . '</a>';
                             echo '</li>';
                         }
                         echo '</ul></nav>';
@@ -925,27 +964,7 @@ function getTableInfo($table) {
             }
 
             echo '</div></div>';
-
-        elseif ($stage === 'reassign'):
-        ?>
-            <div class="row">
-                <div class="col-12">
-                    <h2>🔄 Stage 2: Reassign References</h2>
-                    <p>This stage will show you what changes will be made and allow you to confirm them.</p>
-                    <div class="alert alert-info">Stage 2 implementation coming next...</div>
-                </div>
-            </div>
-
-        <?php elseif ($stage === 'update'): ?>
-            <div class="row">
-                <div class="col-12">
-                    <h2>✅ Stage 3: Update Database</h2>
-                    <p>This stage will execute the confirmed changes.</p>
-                    <div class="alert alert-info">Stage 3 implementation coming next...</div>
-                </div>
-            </div>
-
-        <?php endif; ?>
+            ?>
     </div>
 
     <script>
@@ -1174,6 +1193,110 @@ function getTableInfo($table) {
         .then(data => {
             if (data.success) {
                 alert('✅ Authors/publishers consolidated successfully!');
+                location.reload();
+            } else {
+                alert('❌ Error: ' + (data.message || 'Unknown error'));
+                button.textContent = originalText;
+                button.disabled = false;
+            }
+        })
+        .catch(error => {
+            alert('❌ Network error: ' + error.message);
+            button.textContent = originalText;
+            button.disabled = false;
+        });
+    }
+
+    // Dynamic master selection functions
+    function updateMasterSelection(groupId, masterId, masterName) {
+        document.getElementById('master_name_' + groupId).textContent = masterName;
+        document.getElementById('master_id_' + groupId).textContent = masterId;
+    }
+
+    function previewMergeChanges(groupId) {
+        const selectedRadio = document.querySelector('input[name="master_' + groupId + '"]:checked');
+        if (!selectedRadio) {
+            alert('Please select a master publisher first');
+            return;
+        }
+
+        const masterId = selectedRadio.value;
+        const masterName = document.getElementById('master_name_' + groupId).textContent;
+
+        // Get all publishers in this group
+        const allRadios = document.querySelectorAll('input[name="master_' + groupId + '"]');
+        const publisherIds = Array.from(allRadios).map(radio => radio.value);
+        const otherIds = publisherIds.filter(id => id !== masterId);
+
+        fetch('book-import-validate/ajax/data-enrichment-ajax.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'action=preview_merge_changes&master_id=' + masterId + '&other_ids=' + encodeURIComponent(otherIds.join(','))
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                let preview = 'MERGE PREVIEW:\n\n';
+                preview += 'Master Publisher: ' + masterName + ' (ID: ' + masterId + ')\n\n';
+                preview += 'Changes that will be made:\n';
+                preview += '• Books to update: ' + (data.books_to_update || 0) + '\n';
+                preview += '• Publishers to remove: ' + (data.publishers_to_remove || 0) + '\n\n';
+                if (data.affected_books && data.affected_books.length > 0) {
+                    preview += 'Sample affected books:\n';
+                    data.affected_books.slice(0, 5).forEach(book => {
+                        preview += '  - ' + book.title + '\n';
+                    });
+                    if (data.affected_books.length > 5) {
+                        preview += '  ... and ' + (data.affected_books.length - 5) + ' more\n';
+                    }
+                }
+                alert(preview);
+            } else {
+                alert('❌ Error: ' + (data.message || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            alert('❌ Network error: ' + error.message);
+        });
+    }
+
+    function mergeGroupIntoMaster(groupId) {
+        const selectedRadio = document.querySelector('input[name="master_' + groupId + '"]:checked');
+        if (!selectedRadio) {
+            alert('Please select a master publisher first');
+            return;
+        }
+
+        const masterId = selectedRadio.value;
+        const masterName = document.getElementById('master_name_' + groupId).textContent;
+
+        // Get all publishers in this group
+        const allRadios = document.querySelectorAll('input[name="master_' + groupId + '"]');
+        const publisherIds = Array.from(allRadios).map(radio => radio.value);
+        const otherIds = publisherIds.filter(id => id !== masterId);
+
+        if (!confirm('Merge all publishers in this group into "' + masterName + '"?\n\nThis will:\n• Update all books to use the master publisher\n• Remove the other publisher records\n• Cannot be undone\n\nContinue?')) {
+            return;
+        }
+
+        const button = event.target;
+        const originalText = button.textContent;
+        button.textContent = 'Merging...';
+        button.disabled = true;
+
+        fetch('book-import-validate/ajax/data-enrichment-ajax.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'action=merge_group_into_master&master_id=' + masterId + '&other_ids=' + encodeURIComponent(otherIds.join(',')) + '&master_name=' + encodeURIComponent(masterName)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ Publishers merged successfully!\n\nMaster: ' + masterName + '\nBooks updated: ' + (data.books_updated || 0) + '\nPublishers removed: ' + (data.publishers_removed || 0));
                 location.reload();
             } else {
                 alert('❌ Error: ' + (data.message || 'Unknown error'));

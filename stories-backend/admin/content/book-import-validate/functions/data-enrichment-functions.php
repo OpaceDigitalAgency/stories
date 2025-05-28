@@ -45,14 +45,11 @@ function fixDuplicateLocation($location) {
  * @return array Enriched book data with confidence scores
  */
 function getEnrichedBookData($title, $author, $currentISBN = '', $currentPublisher = null) {
-    // CACHE BUSTER TEST - This should appear in console if changes are working
-    error_log("CACHE_BUSTER_TEST: getEnrichedBookData called with title='$title', currentPublisher='$currentPublisher'");
+    // PUBLISHER DEBUG - Track the publisher parameter
+    error_log("PUBLISHER_DEBUG: getEnrichedBookData called with currentPublisher='$currentPublisher'");
 
-    // FORCE CONSOLE LOG - This should definitely appear
-    echo "<script>console.log('DIRECT_CONSOLE_TEST: Function called with title: $title');</script>";
-
-    // FORCE ERROR LOG WITH UNIQUE TIMESTAMP
-    error_log("TIMESTAMP_TEST_" . time() . ": Function execution at " . date('Y-m-d H:i:s'));
+    // FUNCTION ENTRY DEBUG
+    error_log("FUNCTION_ENTRY: title='$title', author='$author', isbn='$currentISBN'");
 
     $enrichedData = [
         'sources_checked' => [],

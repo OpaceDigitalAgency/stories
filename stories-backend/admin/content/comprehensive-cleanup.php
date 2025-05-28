@@ -1030,9 +1030,11 @@ function getTableInfo($table) {
                         echo '<h6>🔧 Standardization Tools:</h6>';
                         echo '<p><strong>📚 Create Standard Reading Levels System:</strong> Creates lookup tables with UK education system standards (Reception to A-levels) with synchronized age ranges and Lexile mappings.</p>';
                         echo '<p><strong>🔄 Migrate All to Standards:</strong> Automatically converts all existing reading level values to the standardized system and updates corresponding age ranges to maintain synchronization.</p>';
+                        echo '<p><strong>🔗 Synchronize Age Ranges:</strong> Maps all existing age range values in books to match the standard reading level age groups, ensuring consistency between reading levels and age ranges.</p>';
                         echo '</div>';
                         echo '<button onclick="createStandardReadingLevels()" class="btn btn-primary">📚 Create Standard Reading Levels System</button>';
                         echo '<button onclick="migrateAllReadingLevels()" class="btn btn-warning ms-2">🔄 Migrate All to Standards</button>';
+                        echo '<button onclick="synchronizeAgeRanges()" class="btn btn-info ms-2">🔗 Synchronize Age Ranges</button>';
                         echo '</div>';
 
                         // Show the proposed standard system
@@ -1846,6 +1848,43 @@ function getTableInfo($table) {
         .then(data => {
             if (data.success) {
                 alert('✅ All reading levels migrated successfully!\n' + (data.message || ''));
+                location.reload();
+            } else {
+                alert('❌ Error: ' + (data.message || 'Unknown error'));
+                button.textContent = originalText;
+                button.disabled = false;
+            }
+        })
+        .catch(error => {
+            alert('❌ Network error: ' + error.message);
+            button.textContent = originalText;
+            button.disabled = false;
+        });
+    }
+
+    function synchronizeAgeRanges() {
+        if (!confirm('Synchronize ALL age ranges with reading level age groups?\nThis will update all books to use consistent age range values that match the reading level system.')) {
+            return;
+        }
+
+        const button = event.target;
+        const originalText = button.textContent;
+        button.textContent = 'Synchronizing...';
+        button.disabled = true;
+
+        fetch('book-import-validate/ajax/data-enrichment-ajax.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'action=synchronize_age_ranges'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ Age ranges synchronized successfully!\n' +
+                      'Books updated: ' + (data.books_updated || 0) + '\n' +
+                      'Standard age groups: ' + (data.standard_groups ? data.standard_groups.length : 0));
                 location.reload();
             } else {
                 alert('❌ Error: ' + (data.message || 'Unknown error'));

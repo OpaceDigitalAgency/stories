@@ -217,6 +217,10 @@ try {
             handleMigrateAllReadingLevels();
             break;
 
+        case 'synchronize_age_ranges':
+            handleSynchronizeAgeRanges();
+            break;
+
         case 'standardize_reading_level':
             handleStandardizeReadingLevel();
             break;
@@ -1813,6 +1817,112 @@ function handleMigrateAllReadingLevels() {
     } catch (Exception $e) {
         $db->rollBack();
         error_log("Error migrating reading levels: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+    }
+}
+
+/**
+ * Handle synchronizing age ranges with reading level age groups
+ */
+function handleSynchronizeAgeRanges() {
+    global $db;
+
+    try {
+        $db->beginTransaction();
+
+        // Check if standard_reading_levels table exists
+        $stmt = $db->query("SHOW TABLES LIKE 'standard_reading_levels'");
+        if ($stmt->rowCount() === 0) {
+            echo json_encode(['success' => false, 'message' => 'Standard reading levels table not found. Please create it first.']);
+            return;
+        }
+
+        // Get the standard age groups from reading levels
+        $stmt = $db->query("SELECT DISTINCT age_group FROM standard_reading_levels ORDER BY sort_order");
+        $standardAgeGroups = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        if (empty($standardAgeGroups)) {
+            echo json_encode(['success' => false, 'message' => 'No standard age groups found in reading levels table.']);
+            return;
+        }
+
+        // Create mapping from current age ranges to standard age groups
+        $ageRangeMapping = [
+            // Direct matches
+            '0-12 months' => '0-12 months',
+            '12-24 months' => '12-24 months',
+            '2-3 years' => '2-3 years',
+            '3-4 years' => '3-4 years',
+            '4-5 years' => '4-5 years',
+            '5-6 years' => '5-6 years',
+            '6-7 years' => '6-7 years',
+            '7-8 years' => '7-8 years',
+            '8-9 years' => '8-9 years',
+            '9-10 years' => '9-10 years',
+            '10-11 years' => '10-11 years',
+            '11-14 years' => '11-14 years',
+            '14-16 years' => '14-16 years',
+            '16-18 years' => '16-18 years',
+            '18+ years' => '18+ years',
+
+            // Map existing inconsistent ranges to standard groups
+            '9-12' => '9-10 years',
+            '8-12' => '8-9 years',
+            '7-10' => '7-8 years',
+            '10+' => '10-11 years',
+            '12+' => '11-14 years',
+            '12 and up' => '11-14 years',
+            '9+' => '9-10 years',
+            'Unknown' => null, // Keep as null for unknown
+
+            // Additional mappings for common variations
+            '0-3' => '2-3 years',
+            '3-5' => '3-4 years',
+            '4-6' => '4-5 years',
+            '5-7' => '5-6 years',
+            '6-8' => '6-7 years',
+            '7-9' => '7-8 years',
+            '8-10' => '8-9 years',
+            '9-11' => '9-10 years',
+            '10-12' => '10-11 years',
+            '11-13' => '11-14 years',
+            '12-14' => '11-14 years',
+            '13-15' => '14-16 years',
+            '14-17' => '14-16 years',
+            '15-17' => '16-18 years',
+            '16+' => '16-18 years',
+            '18+' => '18+ years'
+        ];
+
+        $booksUpdated = 0;
+        foreach ($ageRangeMapping as $oldRange => $newRange) {
+            if ($newRange === null) {
+                // Skip null mappings (like Unknown)
+                continue;
+            }
+
+            $stmt = $db->prepare("UPDATE books SET age_range = ? WHERE age_range = ?");
+            $stmt->execute([$newRange, $oldRange]);
+            $updated = $stmt->rowCount();
+            $booksUpdated += $updated;
+
+            if ($updated > 0) {
+                error_log("Synchronized age range: '$oldRange' → '$newRange' ($updated books)");
+            }
+        }
+
+        $db->commit();
+
+        echo json_encode([
+            'success' => true,
+            'message' => "Synchronized age ranges with reading level age groups",
+            'books_updated' => $booksUpdated,
+            'standard_groups' => $standardAgeGroups
+        ]);
+
+    } catch (Exception $e) {
+        $db->rollBack();
+        error_log("Error synchronizing age ranges: " . $e->getMessage());
         echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
     }
 }

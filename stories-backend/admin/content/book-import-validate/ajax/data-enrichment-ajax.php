@@ -2624,7 +2624,7 @@ function handleGetBookISBNs() {
 
     try {
         // Get ISBN data from the books table (correct column names: isbn for ISBN-10, isbn13 for ISBN-13)
-        $stmt = $db->prepare("SELECT isbn, isbn13, title FROM books b JOIN directory_items di ON b.directory_item_id = di.id WHERE b.directory_item_id = ?");
+        $stmt = $db->prepare("SELECT b.isbn, b.isbn13, di.title FROM books b JOIN directory_items di ON b.directory_item_id = di.id WHERE b.directory_item_id = ?");
         $stmt->execute([$bookId]);
         $book = $stmt->fetch();
 

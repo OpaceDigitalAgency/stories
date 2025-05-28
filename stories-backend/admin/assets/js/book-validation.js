@@ -4,16 +4,16 @@ if (typeof window.bookValidationLoaded === 'undefined') {
     window.bookValidationLoaded = true;
 
     $(document).ready(function() {
-        // Auto-validate all ISBNs on page load (unless disabled)
-        let autoValidationEnabled = true;
+        // Disable auto-validation to reduce AJAX load - use manual validation instead
+        let autoValidationEnabled = false;
         if (autoValidationEnabled) {
             autoValidateAllISBNs();
         }
 
-        // Check Goodreads status for all books after a delay to ensure elements exist
-        setTimeout(function() {
-            checkAllGoodreadsStatus();
-        }, 2000); // 2 second delay to allow auto-validation to create the elements
+        // Disable automatic Goodreads checking to reduce AJAX load
+        // setTimeout(function() {
+        //     checkAllGoodreadsStatus();
+        // }, 2000); // 2 second delay to allow auto-validation to create the elements
 
         // ISBN Validation Tab Handlers
         $('.select-all-checkbox').on('change', function() {

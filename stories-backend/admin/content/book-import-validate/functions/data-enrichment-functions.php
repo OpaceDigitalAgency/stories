@@ -1706,6 +1706,15 @@ function findBestPublisherMatch($publisherName) {
 
     error_log("findBestPublisherMatch called with: '$publisherName'");
 
+    // Debug: Check if $db is available
+    if (!isset($db) || !$db) {
+        error_log("ERROR: \$db is not available in findBestPublisherMatch function!");
+        error_log("Global variables available: " . implode(', ', array_keys($GLOBALS)));
+        return null;
+    }
+
+    error_log("SUCCESS: \$db is available, type: " . get_class($db));
+
     if (empty($publisherName)) {
         error_log("Publisher name is empty, returning null");
         return null;

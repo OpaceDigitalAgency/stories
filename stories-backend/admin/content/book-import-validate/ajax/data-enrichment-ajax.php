@@ -80,14 +80,70 @@ try {
                 // Log the result for debugging
                 error_log("Amazon payload result: " . json_encode($amazonPayload));
 
+                // Structure the Amazon data properly for the enrichment system
+                $structuredData = [];
+
+                // Add purchase_links field if we have buying options
+                if (!empty($amazonPayload['buying_options'])) {
+                    $structuredData['purchase_links'] = [
+                        'new_data' => [
+                            'value' => json_encode($amazonPayload['buying_options']),
+                            'source' => 'amazon_derived',
+                            'confidence' => 90,
+                            'status' => 'ready'
+                        ]
+                    ];
+                }
+
+                // Add format field if we have selected format
+                if (!empty($amazonPayload['selected_format'])) {
+                    $structuredData['format'] = [
+                        'new_data' => [
+                            'value' => $amazonPayload['selected_format'],
+                            'source' => 'amazon_derived',
+                            'confidence' => 95,
+                            'status' => 'ready'
+                        ]
+                    ];
+                }
+
+                // Add price_range field if we have selected price
+                if (!empty($amazonPayload['selected_price'])) {
+                    // Calculate price range from selected price
+                    $price = floatval(str_replace('£', '', $amazonPayload['selected_price']));
+                    $priceRange = '';
+                    if ($price < 5) {
+                        $priceRange = 'Under £5';
+                    } elseif ($price <= 10) {
+                        $priceRange = '£5-£10';
+                    } elseif ($price <= 15) {
+                        $priceRange = '£10-£15';
+                    } elseif ($price <= 20) {
+                        $priceRange = '£15-£20';
+                    } else {
+                        $priceRange = 'Over £20';
+                    }
+
+                    $structuredData['price_range'] = [
+                        'new_data' => [
+                            'value' => $priceRange,
+                            'source' => 'amazon_derived',
+                            'confidence' => 90,
+                            'status' => 'ready'
+                        ]
+                    ];
+                }
+
                 echo json_encode([
                     'success' => true,
-                    'data' => $amazonPayload,
+                    'data' => $structuredData,
                     'debug' => [
                         'isbn_original' => $isbn,
                         'isbn_used' => $isbn10,
                         'options_count' => count($amazonPayload['buying_options'] ?? []),
-                        'selected_format' => $amazonPayload['selected_format'] ?? null
+                        'selected_format' => $amazonPayload['selected_format'] ?? null,
+                        'selected_price' => $amazonPayload['selected_price'] ?? null,
+                        'raw_amazon_payload' => $amazonPayload
                     ]
                 ]);
             }

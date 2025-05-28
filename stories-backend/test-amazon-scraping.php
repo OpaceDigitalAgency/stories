@@ -26,14 +26,16 @@ echo "<hr>\n";
 // Test 1: Amazon buying options scraping
 echo "<h3>1. Testing Amazon Buying Options Scraping</h3>\n";
 echo "<p>Testing with ISBN-10: $testISBN10</p>\n";
+echo "<p><strong>Amazon URL:</strong> <a href='https://www.amazon.co.uk/gp/product/$testISBN10' target='_blank'>https://www.amazon.co.uk/gp/product/$testISBN10</a></p>\n";
 
 $buyingOptions = scrapeAmazonBuyingOptions($testISBN10);
 
 if (!empty($buyingOptions)) {
     echo "<p><strong>✅ Success!</strong> Found " . count($buyingOptions) . " buying options:</p>\n";
     echo "<ul>\n";
-    foreach ($buyingOptions as $format => $price) {
-        echo "<li><strong>$format:</strong> $price</li>\n";
+    foreach ($buyingOptions as $format => $data) {
+        $isSelected = isset($data['is_selected']) && $data['is_selected'] ? ' (SELECTED)' : '';
+        echo "<li><strong>$format:</strong> {$data['price']} - <a href='{$data['url']}' target='_blank'>Link</a>$isSelected</li>\n";
     }
     echo "</ul>\n";
 } else {

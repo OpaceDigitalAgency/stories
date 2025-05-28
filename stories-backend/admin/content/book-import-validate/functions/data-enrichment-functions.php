@@ -1577,11 +1577,12 @@ function scrapeAmazonBuyingOptions($isbn) {
 
     // Updated patterns based on actual Amazon HTML structure
     // Look for the format divs and extract both href and price from aria-label
+    // Account for complex nested structure with multiple spans and divs
     $patterns = [
-        'Hardcover' => '/id="tmm-grid-swatch-HARDCOVER".*?<a href="([^"]*)".*?<span aria-label="£(\d+\.\d{2})"/is',
-        'Paperback' => '/id="tmm-grid-swatch-PAPERBACK".*?<a href="([^"]*)".*?<span aria-label="£(\d+\.\d{2})"/is',
-        'Kindle' => '/id="tmm-grid-swatch-KINDLE".*?<a href="([^"]*)".*?<span aria-label="£(\d+\.\d{2})"/is',
-        'Audio CD' => '/id="tmm-grid-swatch-AUDIOBOOK".*?<a href="([^"]*)".*?<span aria-label="£(\d+\.\d{2})"/is',
+        'Hardcover' => '/id="tmm-grid-swatch-HARDCOVER".*?<a href="([^"]*)".*?aria-label="£(\d+\.\d{2})"/is',
+        'Paperback' => '/id="tmm-grid-swatch-PAPERBACK".*?<a href="([^"]*)".*?aria-label="£(\d+\.\d{2})"/is',
+        'Kindle' => '/id="tmm-grid-swatch-KINDLE".*?<a href="([^"]*)".*?aria-label="£(\d+\.\d{2})"/is',
+        'Audio CD' => '/id="tmm-grid-swatch-AUDIOBOOK".*?<a href="([^"]*)".*?aria-label="£(\d+\.\d{2})"/is',
     ];
 
     $buyingOptions = [];
@@ -1589,7 +1590,8 @@ function scrapeAmazonBuyingOptions($isbn) {
 
     // First, detect which format is selected (has "selected" class and javascript:void(0))
     foreach ($responses as $responseType => $resp) {
-        if (preg_match('/id="tmm-grid-swatch-(\w+)"[^>]*selected[^>]*>.*?<span aria-label="£(\d+\.\d{2})"/is', $resp, $selectedMatch)) {
+        // Look for the selected format - it has both "selected" class and javascript:void(0) href
+        if (preg_match('/id="tmm-grid-swatch-(\w+)"[^>]*class="[^"]*selected[^"]*".*?href="javascript:void\(0\)".*?aria-label="£(\d+\.\d{2})"/is', $resp, $selectedMatch)) {
             $formatKey = $selectedMatch[1];
             $selectedPrice = $selectedMatch[2];
 

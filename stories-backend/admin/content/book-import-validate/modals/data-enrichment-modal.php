@@ -362,7 +362,11 @@ function fetchAmazonDataForFields(fields) {
     }, function(res) {
         console.log('📦 Amazon AJAX response received:', res);
 
-        if (res.success && res.data && res.data.buying_options && Object.keys(res.data.buying_options).length > 0) {
+        if (res.success && res.data && (
+            (res.data.buying_options && Object.keys(res.data.buying_options).length > 0) ||
+            res.data.selected_format ||
+            res.data.selected_price
+        )) {
             // Update the Amazon fields with real data
             updateAmazonFields(res.data);
         } else {
@@ -394,9 +398,11 @@ function fetchAmazonDataForFields(fields) {
 }
 
 function updateAmazonFields(amazonData) {
+    console.log('📦 updateAmazonFields called with:', amazonData);
+
     // Update purchase_links field
     const purchaseLinksField = $(`.enrichment-field[data-field="purchase_links"]`);
-    if (purchaseLinksField.length && amazonData.buying_options) {
+    if (purchaseLinksField.length && amazonData.buying_options && Object.keys(amazonData.buying_options).length > 0) {
         const jsonValue = JSON.stringify(amazonData.buying_options);
         purchaseLinksField.find('.new-value').html(formatFieldValue('purchase_links', jsonValue));
         purchaseLinksField.find('.badge:contains("Amazon")').removeClass('badge-info').addClass('badge-warning').text('Amazon');
@@ -407,11 +413,18 @@ function updateAmazonFields(amazonData) {
             currentEnrichmentData.fields.purchase_links.new_data.value = jsonValue;
             currentEnrichmentData.fields.purchase_links.new_data.status = 'ready';
         }
+        console.log('📦 Updated purchase_links field');
+    } else if (purchaseLinksField.length) {
+        // Show no data available for purchase links
+        purchaseLinksField.find('.new-value').html('<span class="text-muted">No purchase options found</span>');
+        purchaseLinksField.find('.badge:contains("Amazon")').removeClass('badge-info').addClass('badge-secondary').text('Amazon (No data)');
+        console.log('📦 No purchase links data available');
     }
 
     // Update format field
     const formatField = $(`.enrichment-field[data-field="format"]`);
     if (formatField.length && amazonData.selected_format) {
+        console.log('📦 Updating format field with:', amazonData.selected_format);
         formatField.find('.new-value').text(amazonData.selected_format);
         formatField.find('.badge:contains("Amazon")').removeClass('badge-info').addClass('badge-warning').text('Amazon');
         formatField.find('.field-checkbox').prop('disabled', false);
@@ -421,11 +434,18 @@ function updateAmazonFields(amazonData) {
             currentEnrichmentData.fields.format.new_data.value = amazonData.selected_format;
             currentEnrichmentData.fields.format.new_data.status = 'ready';
         }
+        console.log('📦 Updated format field successfully');
+    } else {
+        console.log('📦 Format field not found or no selected_format data:', {
+            fieldExists: formatField.length > 0,
+            hasSelectedFormat: !!amazonData.selected_format
+        });
     }
 
     // Update price_range field
     const priceRangeField = $(`.enrichment-field[data-field="price_range"]`);
     if (priceRangeField.length && amazonData.selected_price) {
+        console.log('📦 Updating price_range field with:', amazonData.selected_price);
         const price = parseFloat(amazonData.selected_price.replace('£', ''));
         let priceRange;
         if (price < 5) {
@@ -440,6 +460,7 @@ function updateAmazonFields(amazonData) {
             priceRange = 'Over £20';
         }
 
+        console.log('📦 Calculated price range:', priceRange);
         priceRangeField.find('.new-value').text(priceRange);
         priceRangeField.find('.badge:contains("Amazon")').removeClass('badge-info').addClass('badge-warning').text('Amazon');
         priceRangeField.find('.field-checkbox').prop('disabled', false);
@@ -449,6 +470,12 @@ function updateAmazonFields(amazonData) {
             currentEnrichmentData.fields.price_range.new_data.value = priceRange;
             currentEnrichmentData.fields.price_range.new_data.status = 'ready';
         }
+        console.log('📦 Updated price_range field successfully');
+    } else {
+        console.log('📦 Price range field not found or no selected_price data:', {
+            fieldExists: priceRangeField.length > 0,
+            hasSelectedPrice: !!amazonData.selected_price
+        });
     }
 }
 

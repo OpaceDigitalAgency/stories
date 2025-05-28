@@ -499,6 +499,17 @@ if (!$bookValidationScriptLoaded) {
     padding: 2px 6px;
     border-radius: 3px;
     border: 1px solid #28a745;
+    z-index: 10;
+    max-width: 120px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Ensure enrichment fields have enough padding to avoid overlap */
+.enrichment-field.exact-match {
+    padding-top: 25px !important; /* Extra space for the label */
+    padding-right: 140px !important; /* Space for the label on the right */
 }
 </style>
 

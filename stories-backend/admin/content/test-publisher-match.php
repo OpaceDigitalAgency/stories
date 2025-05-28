@@ -7,10 +7,12 @@ session_start();
 
 
 try {
-    require_once '../includes/auth.php';
+    require_once '../includes/auth-check.php';
+    echo '<p>✅ Authentication loaded</p>';
     require_once '../includes/db-connect.php';
+    echo '<p>✅ Database connection loaded</p>';
 } catch (Exception $e) {
-    echo '<p style="color: red;">❌ Database connection failed: ' . $e->getMessage() . '</p>';
+    echo '<p style="color: red;">❌ Setup failed: ' . $e->getMessage() . '</p>';
     exit;
 }
 

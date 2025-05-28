@@ -1393,22 +1393,8 @@ if (isset($_SESSION['error'])) {
                                         <select id="age_range" name="book_age_range" class="form-control">
                                             <option value="">Select Age Range</option>
                                             <?php
-                                            // Add common age ranges that should always be available
-                                            $commonAgeRanges = [
-                                                '0-3' => '0-3 years',
-                                                '3-5' => '3-5 years',
-                                                '5-7' => '5-7 years',
-                                                '7-9' => '7-9 years',
-                                                '7-10' => '7-10 years',
-                                                '9-12' => '9-12 years',
-                                                '12+' => '12+ years',
-                                                'teen' => 'Teen',
-                                                'young-adult' => 'Young Adult',
-                                                'adult' => 'Adult'
-                                            ];
-
-                                            // Combine common age ranges with database age ranges
-                                            $allAgeRanges = $commonAgeRanges;
+                                            // Use ONLY database age ranges - no hard-coded values
+                                            $allAgeRanges = [];
                                             foreach ($ageRangeList as $ageRange) {
                                                 if (!isset($allAgeRanges[$ageRange])) {
                                                     // Format the display name
@@ -1465,19 +1451,8 @@ if (isset($_SESSION['error'])) {
                                         <select id="reading_level" name="book_reading_level" class="form-control">
                                             <option value="">Select Reading Level</option>
                                             <?php
-                                            // Add common reading levels that should always be available
-                                            $commonReadingLevels = [
-                                                'early-reader' => 'Early Reader',
-                                                'beginner' => 'Beginner',
-                                                'intermediate' => 'Intermediate',
-                                                'advanced' => 'Advanced',
-                                                'chapter-book' => 'Chapter Book',
-                                                'middle-grade' => 'Middle Grade',
-                                                'young-adult' => 'Young Adult'
-                                            ];
-
-                                            // Combine common reading levels with database reading levels
-                                            $allReadingLevels = $commonReadingLevels;
+                                            // Use ONLY database reading levels - no hard-coded values
+                                            $allReadingLevels = [];
                                             foreach ($readingLevelList as $readingLevel) {
                                                 if (!isset($allReadingLevels[$readingLevel])) {
                                                     // Format the display name

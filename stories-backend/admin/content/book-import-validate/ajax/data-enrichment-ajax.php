@@ -185,6 +185,42 @@ try {
             handleFixAllPublisherRelationships();
             break;
 
+        case 'create_standard_reading_levels':
+            handleCreateStandardReadingLevels();
+            break;
+
+        case 'create_publisher':
+            handleCreatePublisher();
+            break;
+
+        case 'update_publisher_relationship':
+            handleUpdatePublisherRelationship();
+            break;
+
+        case 'bulk_fix_selected':
+            handleBulkFixSelected();
+            break;
+
+        case 'clean_erroneous_data':
+            handleCleanErroneousData();
+            break;
+
+        case 'edit_erroneous_data':
+            handleEditErroneousData();
+            break;
+
+        case 'clean_all_erroneous_series':
+            handleCleanAllErroneousSeriesData();
+            break;
+
+        case 'migrate_all_reading_levels':
+            handleMigrateAllReadingLevels();
+            break;
+
+        case 'standardize_reading_level':
+            handleStandardizeReadingLevel();
+            break;
+
         default:
             echo json_encode(['success' => false, 'message' => 'Invalid action: ' . $action]);
             break;
@@ -1549,6 +1585,348 @@ function handleFixAllPublisherRelationships() {
     } catch (Exception $e) {
         $db->rollBack();
         error_log("Error fixing all publisher relationships: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+    }
+}
+
+/**
+ * Handle creating standard reading levels
+ */
+function handleCreateStandardReadingLevels() {
+    global $db;
+
+    try {
+        // Create reading_levels table if it doesn't exist
+        $sql = "CREATE TABLE IF NOT EXISTS reading_levels (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            level_name VARCHAR(100) NOT NULL,
+            age_range VARCHAR(50),
+            description TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )";
+        $db->exec($sql);
+
+        // Insert standard UK reading levels
+        $standardLevels = [
+            ['Pre-literacy Sensory (0-12mo)', '0-1', 'Sensory exploration, visual tracking'],
+            ['Pre-literacy Naming (12-24mo)', '1-2', 'Object naming, simple words'],
+            ['Pre-literacy Mimicry/BR (2-3yrs)', '2-3', 'Mimicking sounds, basic recognition'],
+            ['Early Pre-reader/BR (3-4yrs)', '3-4', 'Letter recognition, phonics basics'],
+            ['Beginning Reader (4-5yrs)', '4-5', 'Simple words, basic sentences'],
+            ['Developing Reader (5-6yrs)', '5-6', 'Short books, building fluency'],
+            ['Early Reader (6-7yrs)', '6-7', 'Chapter books, independent reading'],
+            ['Transitional Reader (7-8yrs)', '7-8', 'Longer books, complex stories'],
+            ['Fluent Reader (8-11yrs)', '8-11', 'Advanced vocabulary, series books'],
+            ['Advanced Reader (11-14yrs)', '11-14', 'Complex themes, young adult content'],
+            ['Proficient Reader (14-16yrs)', '14-16', 'Adult themes, advanced literature'],
+            ['Expert Reader (16+yrs)', '16+', 'All content levels, academic texts']
+        ];
+
+        $stmt = $db->prepare("INSERT IGNORE INTO reading_levels (level_name, age_range, description) VALUES (?, ?, ?)");
+        $inserted = 0;
+        foreach ($standardLevels as $level) {
+            $stmt->execute($level);
+            if ($stmt->rowCount() > 0) $inserted++;
+        }
+
+        echo json_encode([
+            'success' => true,
+            'message' => "Created reading_levels table and inserted $inserted standard levels",
+            'inserted' => $inserted
+        ]);
+
+    } catch (Exception $e) {
+        error_log("Error creating standard reading levels: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+    }
+}
+
+/**
+ * Handle cleaning erroneous data
+ */
+function handleCleanErroneousData() {
+    global $db;
+
+    $field = $_POST['field'] ?? '';
+    $value = $_POST['value'] ?? '';
+
+    if (empty($field) || empty($value)) {
+        echo json_encode(['success' => false, 'message' => 'Field and value are required']);
+        return;
+    }
+
+    try {
+        $db->beginTransaction();
+
+        // Clean the erroneous data by setting it to NULL
+        $stmt = $db->prepare("UPDATE books SET $field = NULL WHERE $field = ?");
+        $stmt->execute([$value]);
+        $booksUpdated = $stmt->rowCount();
+
+        $db->commit();
+
+        echo json_encode([
+            'success' => true,
+            'message' => "Cleaned erroneous data from $field field",
+            'books_updated' => $booksUpdated
+        ]);
+
+    } catch (Exception $e) {
+        $db->rollBack();
+        error_log("Error cleaning erroneous data: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+    }
+}
+
+/**
+ * Handle editing erroneous data
+ */
+function handleEditErroneousData() {
+    global $db;
+
+    $field = $_POST['field'] ?? '';
+    $oldValue = $_POST['old_value'] ?? '';
+    $newValue = $_POST['new_value'] ?? '';
+
+    if (empty($field) || empty($oldValue)) {
+        echo json_encode(['success' => false, 'message' => 'Field and old value are required']);
+        return;
+    }
+
+    try {
+        $db->beginTransaction();
+
+        // Update the erroneous data with the new value
+        $stmt = $db->prepare("UPDATE books SET $field = ? WHERE $field = ?");
+        $stmt->execute([$newValue, $oldValue]);
+        $booksUpdated = $stmt->rowCount();
+
+        $db->commit();
+
+        echo json_encode([
+            'success' => true,
+            'message' => "Updated erroneous data in $field field",
+            'books_updated' => $booksUpdated,
+            'old_value' => $oldValue,
+            'new_value' => $newValue
+        ]);
+
+    } catch (Exception $e) {
+        $db->rollBack();
+        error_log("Error editing erroneous data: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+    }
+}
+
+/**
+ * Handle cleaning all erroneous series data
+ */
+function handleCleanAllErroneousSeriesData() {
+    global $db;
+
+    try {
+        $db->beginTransaction();
+
+        // Find and clean erroneous series data
+        $stmt = $db->query("
+            SELECT DISTINCT series, COUNT(*) as count
+            FROM books
+            WHERE series IS NOT NULL
+            AND series != ''
+            AND (
+                LENGTH(series) > 100
+                OR LOWER(series) LIKE '%studied%'
+                OR LOWER(series) LIKE '%oxford%'
+                OR LOWER(series) LIKE '%author%'
+                OR LOWER(series) LIKE '%writing%'
+                OR LOWER(series) LIKE '%publisher%'
+                OR LOWER(series) LIKE '%novel%'
+            )
+            GROUP BY series
+        ");
+        $erroneousSeries = $stmt->fetchAll();
+
+        $booksUpdated = 0;
+        $seriesCleaned = count($erroneousSeries);
+
+        foreach ($erroneousSeries as $series) {
+            $stmt = $db->prepare("UPDATE books SET series = NULL WHERE series = ?");
+            $stmt->execute([$series['series']]);
+            $booksUpdated += $stmt->rowCount();
+        }
+
+        $db->commit();
+
+        echo json_encode([
+            'success' => true,
+            'message' => "Cleaned all erroneous series data",
+            'books_updated' => $booksUpdated,
+            'series_cleaned' => $seriesCleaned
+        ]);
+
+    } catch (Exception $e) {
+        $db->rollBack();
+        error_log("Error cleaning all erroneous series data: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+    }
+}
+
+/**
+ * Handle migrating all reading levels
+ */
+function handleMigrateAllReadingLevels() {
+    global $db;
+
+    try {
+        $db->beginTransaction();
+
+        // Define migration mapping
+        $levelMapping = [
+            'middle-grade' => 'Transitional Reader (7-8 years)',
+            'Middle Grade' => 'Transitional Reader (7-8 years)',
+            'chapter-book' => 'Fluent Reader (8-11 years)',
+            'early reader' => 'Early Reader (6-7 years)',
+            'picture book' => 'Beginning Reader (4-5 years)',
+            'young adult' => 'Advanced Reader (14-16 years)',
+            'adult' => 'Proficient Reader (18+ years)',
+            'beginner' => 'Beginning Reader (4-5 years)',
+            'intermediate' => 'Developing Reader (6-7 years)',
+            'advanced' => 'Advanced Reader (11-14 years)'
+        ];
+
+        $booksUpdated = 0;
+        foreach ($levelMapping as $oldLevel => $newLevel) {
+            $stmt = $db->prepare("UPDATE books SET reading_level = ? WHERE reading_level = ?");
+            $stmt->execute([$newLevel, $oldLevel]);
+            $booksUpdated += $stmt->rowCount();
+        }
+
+        $db->commit();
+
+        echo json_encode([
+            'success' => true,
+            'message' => "Migrated all reading levels to standard system",
+            'books_updated' => $booksUpdated
+        ]);
+
+    } catch (Exception $e) {
+        $db->rollBack();
+        error_log("Error migrating reading levels: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+    }
+}
+
+/**
+ * Handle standardizing a specific reading level
+ */
+function handleStandardizeReadingLevel() {
+    global $db;
+
+    $currentLevel = $_POST['current_level'] ?? '';
+    $standardLevel = $_POST['standard_level'] ?? '';
+
+    if (empty($currentLevel) || empty($standardLevel)) {
+        echo json_encode(['success' => false, 'message' => 'Current level and standard level are required']);
+        return;
+    }
+
+    try {
+        $db->beginTransaction();
+
+        $stmt = $db->prepare("UPDATE books SET reading_level = ? WHERE reading_level = ?");
+        $stmt->execute([$standardLevel, $currentLevel]);
+        $booksUpdated = $stmt->rowCount();
+
+        $db->commit();
+
+        echo json_encode([
+            'success' => true,
+            'message' => "Standardized reading level: '$currentLevel' → '$standardLevel'",
+            'books_updated' => $booksUpdated
+        ]);
+
+    } catch (Exception $e) {
+        $db->rollBack();
+        error_log("Error standardizing reading level: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+    }
+}
+
+/**
+ * Handle bulk fixing selected items
+ */
+function handleBulkFixSelected() {
+    global $db;
+
+    $bookIds = $_POST['book_ids'] ?? '';
+
+    if (empty($bookIds)) {
+        echo json_encode(['success' => false, 'message' => 'Book IDs are required']);
+        return;
+    }
+
+    $bookIdsArray = explode(',', $bookIds);
+    $bookIdsArray = array_map('trim', $bookIdsArray);
+    $bookIdsArray = array_filter($bookIdsArray);
+
+    if (empty($bookIdsArray)) {
+        echo json_encode(['success' => false, 'message' => 'Valid book IDs are required']);
+        return;
+    }
+
+    try {
+        $db->beginTransaction();
+
+        $fixed = 0;
+        $created = 0;
+
+        foreach ($bookIdsArray as $bookId) {
+            // Get book publisher
+            $stmt = $db->prepare("SELECT publisher FROM books WHERE directory_item_id = ?");
+            $stmt->execute([$bookId]);
+            $book = $stmt->fetch();
+
+            if (!$book || empty($book['publisher'])) {
+                continue;
+            }
+
+            $publisherName = trim($book['publisher']);
+
+            // Try to find existing publisher
+            $stmt = $db->prepare("SELECT id FROM authors WHERE name = ?");
+            $stmt->execute([$publisherName]);
+            $existingPublisher = $stmt->fetch();
+
+            if ($existingPublisher) {
+                // Update relationship
+                $stmt = $db->prepare("UPDATE books SET publisher_id = ? WHERE directory_item_id = ?");
+                $stmt->execute([$existingPublisher['id'], $bookId]);
+                $fixed++;
+            } else {
+                // Create new publisher
+                $stmt = $db->prepare("INSERT INTO authors (name) VALUES (?)");
+                $stmt->execute([$publisherName]);
+                $newPublisherId = $db->lastInsertId();
+
+                // Update relationship
+                $stmt = $db->prepare("UPDATE books SET publisher_id = ? WHERE directory_item_id = ?");
+                $stmt->execute([$newPublisherId, $bookId]);
+                $created++;
+            }
+        }
+
+        $db->commit();
+
+        echo json_encode([
+            'success' => true,
+            'message' => "Bulk fix completed: Fixed $fixed relationships, created $created new publishers",
+            'fixed' => $fixed,
+            'created' => $created
+        ]);
+
+    } catch (Exception $e) {
+        $db->rollBack();
+        error_log("Error in bulk fix: " . $e->getMessage());
         echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
     }
 }

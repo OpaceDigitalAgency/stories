@@ -182,14 +182,30 @@ function getTableInfo($table) {
                 $seenNames = [];
 
                 // Add from books table (these are the actual publisher strings)
+                // First, try to find or create authors table entries for these publishers
                 foreach ($bookPublishers as $pub) {
                     $cleanName = trim($pub['name']);
                     if (!in_array(strtolower($cleanName), $seenNames)) {
+                        // Try to find existing author record for this publisher
+                        $stmt = $db->prepare("SELECT id FROM authors WHERE name = ?");
+                        $stmt->execute([$cleanName]);
+                        $existingAuthor = $stmt->fetch();
+
+                        if ($existingAuthor) {
+                            // Use existing author ID
+                            $publisherId = $existingAuthor['id'];
+                        } else {
+                            // Create new author record for this publisher
+                            $stmt = $db->prepare("INSERT INTO authors (name) VALUES (?)");
+                            $stmt->execute([$cleanName]);
+                            $publisherId = $db->lastInsertId();
+                        }
+
                         $allPublishers[] = [
-                            'id' => 'book_' . count($allPublishers), // Temporary ID for book publishers
+                            'id' => $publisherId, // Real ID from authors table
                             'name' => $cleanName,
                             'book_count' => $pub['book_count'],
-                            'source' => 'books_table'
+                            'source' => 'books_table_converted'
                         ];
                         $seenNames[] = strtolower($cleanName);
                     }
@@ -309,20 +325,41 @@ function getTableInfo($table) {
                     // If normalized versions are identical, high score
                     if ($norm1 === $norm2 && strlen($norm1) > 2) return 95;
 
-                    // Special cases for known publisher patterns
+                    // Special cases for known publisher patterns - ENHANCED
                     $specialCases = [
                         // Harper Collins variations
                         ['harper collins', 'harpercollins'],
                         ['harper collins', 'harper collins children'],
                         ['harpercollins', 'harpercollins children'],
+                        ['harper collins', 'harpercollins children'],
+                        ['harper', 'harpercollins'],
+                        ['collins', 'harpercollins'],
 
                         // Bloomsbury variations
                         ['bloomsbury', 'bloomsbury publishing'],
                         ['bloomsbury publishing', 'bloomsbury publishing plc'],
+                        ['bloomsbury', 'bloomsbury plc'],
+                        ['bloomsbury publishing', 'bloomsbury'],
 
                         // Simon & Schuster variations
                         ['simon schuster', 'simon schuster children'],
                         ['simon schuster', 'simon schuster young readers'],
+                        ['simon schuster', 'simon schuster books young readers'],
+                        ['simon', 'simon schuster'],
+                        ['schuster', 'simon schuster'],
+
+                        // Penguin variations
+                        ['penguin', 'penguin random house'],
+                        ['penguin books', 'penguin random house'],
+                        ['random house', 'penguin random house'],
+
+                        // Oxford variations
+                        ['oxford', 'oxford university press'],
+                        ['oxford university', 'oxford university press'],
+
+                        // Cambridge variations
+                        ['cambridge', 'cambridge university press'],
+                        ['cambridge university', 'cambridge university press'],
                     ];
 
                     foreach ($specialCases as $case) {
@@ -397,7 +434,7 @@ function getTableInfo($table) {
                             ];
                         }
 
-                        if ($similarity >= 60) { // Lowered threshold from 70 to 60
+                        if ($similarity >= 50) { // Lowered threshold from 60 to 50 to catch more matches
                             $similarityMatrix[] = [
                                 'pub1' => $i,
                                 'pub2' => $j,
@@ -416,7 +453,7 @@ function getTableInfo($table) {
                 echo '<tbody>';
                 usort($debugSimilarities, function($a, $b) { return $b['similarity'] - $a['similarity']; });
                 foreach (array_slice($debugSimilarities, 0, 20) as $sim) {
-                    $thresholdMet = $sim['similarity'] >= 60 ? '✅ YES' : '❌ NO';
+                    $thresholdMet = $sim['similarity'] >= 50 ? '✅ YES' : '❌ NO';
                     echo '<tr>';
                     echo '<td>' . htmlspecialchars($sim['name1']) . '</td>';
                     echo '<td>' . htmlspecialchars($sim['name2']) . '</td>';
@@ -1168,8 +1205,8 @@ function getTableInfo($table) {
                             echo '<td><span class="badge bg-info">' . $series['count'] . '</span></td>';
                             echo '<td>';
                             if ($isErroneous) {
-                                echo '<button onclick="cleanErroneousData(\'series\', \'' . htmlspecialchars($series['series']) . '\')" class="btn btn-xs btn-danger">Delete</button> ';
-                                echo '<button onclick="editErroneousData(\'series\', \'' . htmlspecialchars($series['series']) . '\')" class="btn btn-xs btn-warning">Edit</button>';
+                                echo '<button onclick="cleanErroneousData(\'series\', ' . htmlspecialchars(json_encode($series['series'])) . ')" class="btn btn-xs btn-danger">Delete</button> ';
+                                echo '<button onclick="editErroneousData(\'series\', ' . htmlspecialchars(json_encode($series['series'])) . ')" class="btn btn-xs btn-warning">Edit</button>';
                             } else {
                                 echo '<span class="text-muted">OK</span>';
                             }

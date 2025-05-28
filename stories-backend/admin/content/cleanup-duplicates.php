@@ -1,7 +1,8 @@
 <?php
 /**
- * Cleanup script for duplicate publishers and tags
- * This script identifies and merges duplicate entries
+ * Comprehensive Duplicate Cleanup Tool
+ * 3-Stage Process: Analyze → Reassign → Update
+ * Covers all dropdown fields from directory-item-form.php
  */
 
 // Set content type to HTML
@@ -12,6 +13,13 @@ require_once '../includes/db-connect.php';
 
 // Set execution time limit for large operations
 set_time_limit(300);
+
+// Get current stage from URL parameter
+$stage = $_GET['stage'] ?? 'analyze';
+$validStages = ['analyze', 'reassign', 'update'];
+if (!in_array($stage, $validStages)) {
+    $stage = 'analyze';
+}
 
 ?>
 <!DOCTYPE html>

@@ -330,7 +330,8 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             },
             dataType: 'json',
             success: function(response) {
-                console.log('Enrichment response:', response);
+                console.log('🔍 PUBLISHER_DEBUG: Full enrichment response:', response);
+                console.log('🔍 PUBLISHER_DEBUG: Publisher field data:', response.data?.fields?.publisher);
                 $('#enrichment-loading').hide();
                 if (response.success) {
                     window.currentEnrichmentData = response.data;

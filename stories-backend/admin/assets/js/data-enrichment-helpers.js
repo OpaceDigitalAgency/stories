@@ -56,11 +56,22 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
 
         // Add database recommendation option for publisher field
         if (fieldName === 'publisher') {
-            console.log('🏢 Processing publisher field options:', options);
+            console.log('🏢 PUBLISHER_DEBUG: Processing publisher field options:', options);
+            console.log('🏢 PUBLISHER_DEBUG: Field structure:', field);
 
             // Check if any option has a database recommendation
             const hasRecommendation = options.some(option => option.recommended);
-            console.log('🏢 Has recommendation:', hasRecommendation);
+            console.log('🏢 PUBLISHER_DEBUG: Has recommendation:', hasRecommendation);
+
+            // Debug each option
+            options.forEach((option, index) => {
+                console.log(`🏢 PUBLISHER_DEBUG: Option ${index}:`, {
+                    value: option.value,
+                    recommended: option.recommended,
+                    recommendation_confidence: option.recommendation_confidence,
+                    match_type: option.match_type
+                });
+            });
 
             if (hasRecommendation) {
                 // Show the specific database recommendation

@@ -3,6 +3,67 @@
 if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
     window.dataEnrichmentModalLoaded = true;
 
+    /**
+     * Fetch ISBN data from database and update modal header
+     */
+    function fetchBookISBNsFromDatabase(bookId) {
+        if (!bookId) {
+            console.log('📚 No book ID provided for ISBN fetch');
+            return;
+        }
+
+        console.log('📚 Fetching ISBNs for book ID:', bookId);
+
+        $.ajax({
+            url: '/admin/content/book-import-validate/ajax/data-enrichment-ajax.php',
+            method: 'POST',
+            data: {
+                action: 'get_book_isbns',
+                book_id: bookId
+            },
+            dataType: 'json',
+            success: function(response) {
+                console.log('📚 ISBN fetch response:', response);
+                
+                if (response.success && response.data) {
+                    const data = response.data;
+                    
+                    // Update ISBN display in modal header
+                    $('#enrichment-isbn13').text(data.isbn13 || '-');
+                    $('#enrichment-isbn10').text(data.isbn10 || '-');
+                    
+                    // Show conversion info if available
+                    if (data.converted_info) {
+                        $('#enrichment-isbn-converted').text(data.converted_info);
+                    } else {
+                        $('#enrichment-isbn-converted').text('-');
+                    }
+                    
+                    // Show the identifiers section
+                    $('#enrichment-book-identifiers').show();
+                    
+                    console.log('📚 ✅ ISBN data updated in modal header');
+                } else {
+                    console.log('📚 ⚠️ No ISBN data found or error:', response.message);
+                    // Still show the section but with dashes
+                    $('#enrichment-isbn13').text('-');
+                    $('#enrichment-isbn10').text('-');
+                    $('#enrichment-isbn-converted').text('-');
+                    $('#enrichment-book-identifiers').show();
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('📚 ❌ Error fetching ISBN data:', error);
+                console.error('📚 Response:', xhr.responseText);
+                // Still show the section but with dashes
+                $('#enrichment-isbn13').text('-');
+                $('#enrichment-isbn10').text('-');
+                $('#enrichment-isbn-converted').text('Error loading');
+                $('#enrichment-book-identifiers').show();
+            }
+        });
+    }
+
     // Global variables for enrichment modal - make them truly global
     window.currentEnrichmentData = null;
     window.currentBookId = null;
@@ -21,7 +82,8 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         });
 
         // Fetch and display ISBN values from database immediately
-        fetchBookISBNsFromDatabase(bookId, title);
+        // Fetch ISBN data from database for modal header
+        fetchBookISBNsFromDatabase(bookId);
 
         // Reset modal state
         $('#enrichment-loading').show();
@@ -1140,4 +1202,5 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
     window.createSingleSourceField = createSingleSourceField;
     window.updateStatusBadges = updateStatusBadges;
     window.autoSelectBeneficialFields = autoSelectBeneficialFields;
+    window.fetchBookISBNsFromDatabase = fetchBookISBNsFromDatabase;
 }

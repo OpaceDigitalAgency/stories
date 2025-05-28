@@ -336,13 +336,19 @@ if (typeof window.bookValidationLoaded === 'undefined') {
                 if (isValidFormat) {
                     // Only update if it's currently showing "Unknown" - don't overwrite "Valid" status
                     if ($statusElement.hasClass('badge-secondary') || $statusElement.text().includes('Checking...')) {
-                        $statusElement.html('<span class="badge badge-success">Valid</span>');
+                        // Update class and text without overwriting the entire element
+                        $statusElement.removeClass('badge-secondary badge-warning badge-info')
+                                    .addClass('badge-success')
+                                    .text('Valid');
                         console.log(`📚 ✅ Instant validation: Valid ISBN format for ${isbn}`);
                     }
                 } else {
                     // Only update if it's currently showing "Checking..." - don't overwrite existing status
                     if ($statusElement.text().includes('Checking...')) {
-                        $statusElement.html('<span class="badge badge-warning">Unknown</span>');
+                        // Update class and text without overwriting the entire element
+                        $statusElement.removeClass('badge-secondary badge-success badge-info')
+                                    .addClass('badge-warning')
+                                    .text('Unknown');
                         console.log(`📚 ⚠️ Instant validation: Invalid ISBN format for ${isbn}`);
                     }
                 }

@@ -115,27 +115,40 @@ try {
         // Silently fail
     }
 
-    // Get unique age ranges from books table
-    $ageRangeList = [];
-    try {
-        $ageRangeStmt = $db->query("SELECT DISTINCT age_range FROM books WHERE age_range IS NOT NULL AND age_range != '' ORDER BY age_range");
-        while ($row = $ageRangeStmt->fetch()) {
-            $ageRangeList[] = $row['age_range'];
-        }
-    } catch (PDOException $e) {
-        // Silently fail
-    }
+    // Standard age ranges based on UK education system - COMPLETE LIST
+    $ageRangeList = [
+        '0-12 months',
+        '12-24 months',
+        '2-3 years',
+        '3-4 years',
+        '4-5 years',
+        '5-6 years',
+        '6-7 years',
+        '7-8 years',
+        '8-9 years',
+        '9-10 years',
+        '10-11 years',
+        '11-14 years',
+        '14-16 years',
+        '16-18 years',
+        '18+ years',
+        'Unknown'
+    ];
 
-    // Get unique reading levels from books table
-    $readingLevelList = [];
-    try {
-        $readingLevelStmt = $db->query("SELECT DISTINCT reading_level FROM books WHERE reading_level IS NOT NULL AND reading_level != '' ORDER BY reading_level");
-        while ($row = $readingLevelStmt->fetch()) {
-            $readingLevelList[] = $row['reading_level'];
-        }
-    } catch (PDOException $e) {
-        // Silently fail
-    }
+    // Standard reading levels based on UK education system - COMPLETE LIST
+    $readingLevelList = [
+        'Pre-literacy (Sensory)',
+        'Pre-literacy (Naming)',
+        'Pre-literacy (Mimicry)',
+        'Early Pre-reader',
+        'Beginning Reader',
+        'Early Reader',
+        'Developing Reader',
+        'Transitional Reader',
+        'Fluent Reader',
+        'Advanced Reader',
+        'Proficient Reader'
+    ];
 
     // Get price ranges from price_ranges table
     $priceRanges = [];
@@ -1393,52 +1406,16 @@ if (isset($_SESSION['error'])) {
                                         <select id="age_range" name="book_age_range" class="form-control" onchange="syncReadingLevelFromAge()">
                                             <option value="">Select Age Range</option>
                                             <?php
-                                            // Use ONLY database age ranges - no hard-coded values
-                                            $allAgeRanges = [];
+                                            // Use standard age ranges - ALWAYS show complete list
                                             foreach ($ageRangeList as $ageRange) {
-                                                if (!isset($allAgeRanges[$ageRange])) {
-                                                    // Format the display name
-                                                    if (preg_match('/^\d+-\d+$/', $ageRange)) {
-                                                        $displayName = $ageRange . ' years';
-                                                    } elseif (preg_match('/^\d+\+$/', $ageRange)) {
-                                                        $displayName = $ageRange . ' years';
-                                                    } else {
-                                                        $displayName = ucwords(str_replace('-', ' ', $ageRange));
-                                                    }
-                                                    $allAgeRanges[$ageRange] = $displayName;
-                                                }
+                                                $selected = (isset($bookData['age_range']) && $bookData['age_range'] == $ageRange) ? 'selected' : '';
+                                                echo "<option value=\"" . htmlspecialchars($ageRange) . "\" $selected>" . htmlspecialchars($ageRange) . "</option>";
                                             }
 
-                                            // Add the current age range if it's not in the list
-                                            if (isset($bookData['age_range']) && !empty($bookData['age_range']) && !isset($allAgeRanges[$bookData['age_range']])) {
-                                                if (preg_match('/^\d+-\d+$/', $bookData['age_range'])) {
-                                                    $displayName = $bookData['age_range'] . ' years';
-                                                } elseif (preg_match('/^\d+\+$/', $bookData['age_range'])) {
-                                                    $displayName = $bookData['age_range'] . ' years';
-                                                } else {
-                                                    $displayName = ucwords(str_replace('-', ' ', $bookData['age_range']));
-                                                }
-                                                $allAgeRanges[$bookData['age_range']] = $displayName;
-                                            }
-
-                                            // Sort age ranges
-                                            uksort($allAgeRanges, function($a, $b) {
-                                                // Extract first number from range if possible
-                                                $aNum = intval($a);
-                                                $bNum = intval($b);
-
-                                                if ($aNum && $bNum) {
-                                                    return $aNum - $bNum;
-                                                }
-
-                                                // If not numeric, use alphabetical order
-                                                return strcmp($a, $b);
-                                            });
-
-                                            // Output all age range options
-                                            foreach ($allAgeRanges as $value => $label) {
-                                                $selected = (isset($bookData['age_range']) && $bookData['age_range'] == $value) ? 'selected' : '';
-                                                echo "<option value=\"" . htmlspecialchars($value) . "\" $selected>" . htmlspecialchars($label) . "</option>";
+                                            // Add current value if it's not in standard list (for legacy data)
+                                            if (isset($bookData['age_range']) && !empty($bookData['age_range']) && !in_array($bookData['age_range'], $ageRangeList)) {
+                                                $selected = 'selected';
+                                                echo "<option value=\"" . htmlspecialchars($bookData['age_range']) . "\" $selected>" . htmlspecialchars($bookData['age_range']) . " (legacy)</option>";
                                             }
                                             ?>
                                         </select>
@@ -1451,29 +1428,16 @@ if (isset($_SESSION['error'])) {
                                         <select id="reading_level" name="book_reading_level" class="form-control" onchange="syncAgeRangeFromReading()">
                                             <option value="">Select Reading Level</option>
                                             <?php
-                                            // Use ONLY database reading levels - no hard-coded values
-                                            $allReadingLevels = [];
+                                            // Use standard reading levels - ALWAYS show complete list
                                             foreach ($readingLevelList as $readingLevel) {
-                                                if (!isset($allReadingLevels[$readingLevel])) {
-                                                    // Format the display name
-                                                    $displayName = ucwords(str_replace('-', ' ', $readingLevel));
-                                                    $allReadingLevels[$readingLevel] = $displayName;
-                                                }
+                                                $selected = (isset($bookData['reading_level']) && $bookData['reading_level'] == $readingLevel) ? 'selected' : '';
+                                                echo "<option value=\"" . htmlspecialchars($readingLevel) . "\" $selected>" . htmlspecialchars($readingLevel) . "</option>";
                                             }
 
-                                            // Add the current reading level if it's not in the list
-                                            if (isset($bookData['reading_level']) && !empty($bookData['reading_level']) && !isset($allReadingLevels[$bookData['reading_level']])) {
-                                                $displayName = ucwords(str_replace('-', ' ', $bookData['reading_level']));
-                                                $allReadingLevels[$bookData['reading_level']] = $displayName;
-                                            }
-
-                                            // Sort reading levels alphabetically
-                                            asort($allReadingLevels);
-
-                                            // Output all reading level options
-                                            foreach ($allReadingLevels as $value => $label) {
-                                                $selected = (isset($bookData['reading_level']) && $bookData['reading_level'] == $value) ? 'selected' : '';
-                                                echo "<option value=\"" . htmlspecialchars($value) . "\" $selected>" . htmlspecialchars($label) . "</option>";
+                                            // Add current value if it's not in standard list (for legacy data)
+                                            if (isset($bookData['reading_level']) && !empty($bookData['reading_level']) && !in_array($bookData['reading_level'], $readingLevelList)) {
+                                                $selected = 'selected';
+                                                echo "<option value=\"" . htmlspecialchars($bookData['reading_level']) . "\" $selected>" . htmlspecialchars($bookData['reading_level']) . " (legacy)</option>";
                                             }
                                             ?>
                                         </select>
@@ -2320,7 +2284,7 @@ function syncReadingLevelFromAge() {
     const selectedAge = ageRangeSelect.value;
     console.log('Age range changed to:', selectedAge);
 
-    // Mapping from age ranges to reading levels based on UK education system
+    // COMPLETE mapping from age ranges to reading levels based on UK education system
     const ageToReadingMapping = {
         '0-12 months': 'Pre-literacy (Sensory)',
         '12-24 months': 'Pre-literacy (Naming)',
@@ -2336,7 +2300,8 @@ function syncReadingLevelFromAge() {
         '11-14 years': 'Advanced Reader',
         '14-16 years': 'Advanced Reader',
         '16-18 years': 'Advanced Reader',
-        '18+ years': 'Proficient Reader'
+        '18+ years': 'Proficient Reader',
+        'Unknown': '' // No automatic sync for unknown
     };
 
     const targetReading = ageToReadingMapping[selectedAge];
@@ -2361,7 +2326,7 @@ function syncAgeRangeFromReading() {
     const selectedReading = readingLevelSelect.value;
     console.log('Reading level changed to:', selectedReading);
 
-    // Mapping from reading levels to age ranges
+    // COMPLETE mapping from reading levels to age ranges
     const readingToAgeMapping = {
         'Pre-literacy (Sensory)': '0-12 months',
         'Pre-literacy (Naming)': '12-24 months',

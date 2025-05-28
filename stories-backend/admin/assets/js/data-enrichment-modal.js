@@ -9,8 +9,16 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
     window.currentBookISBN = null;
 
     function openDataEnrichmentModal(bookId, title, author, currentISBN = '') {
+        console.log('🚀 openDataEnrichmentModal called with:', { bookId, title, author, currentISBN, type: typeof currentISBN });
+
         window.currentBookId = bookId;
         window.currentBookISBN = String(currentISBN || ''); // Ensure it's always a string
+
+        console.log('🚀 Set global variables:', {
+            currentBookId: window.currentBookId,
+            currentBookISBN: window.currentBookISBN,
+            currentISBNType: typeof window.currentBookISBN
+        });
 
         // Update modal header with book information
         updateModalHeader(title, currentISBN);
@@ -36,48 +44,66 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         $('#enrichment-book-title').text(title || 'Unknown Title');
         console.log('📖 Updated book title to:', title || 'Unknown Title');
 
-        // Process ISBN information
+        // Process ISBN information - handle both string and object formats
         let isbn13 = '-', isbn10 = '-';
 
-        if (isbn && typeof isbn === 'string' && isbn.trim() !== '') {
-            console.log('📖 Processing ISBN string:', isbn);
-            const cleanISBN = isbn.replace(/[^0-9X]/gi, '');
-            console.log('📖 Cleaned ISBN:', cleanISBN, 'Length:', cleanISBN.length);
+        // Handle different ISBN input formats
+        if (isbn) {
+            // Handle object format from database (e.g., {isbn13: "...", isbn10: "..."})
+            if (typeof isbn === 'object' && isbn !== null) {
+                console.log('📖 Processing ISBN object:', isbn);
+                if (isbn.isbn13 && isbn.isbn13 !== '' && isbn.isbn13 !== '-') {
+                    isbn13 = formatISBN13(isbn.isbn13.replace(/[^0-9X]/gi, ''));
+                }
+                if (isbn.isbn10 && isbn.isbn10 !== '' && isbn.isbn10 !== '-') {
+                    isbn10 = formatISBN10(isbn.isbn10.replace(/[^0-9X]/gi, ''));
+                }
+            }
+            // Handle string format
+            else if (typeof isbn === 'string' && isbn.trim() !== '' && isbn !== '-') {
+                console.log('📖 Processing ISBN string:', isbn);
+                const cleanISBN = isbn.replace(/[^0-9X]/gi, '');
+                console.log('📖 Cleaned ISBN:', cleanISBN, 'Length:', cleanISBN.length);
 
-            if (cleanISBN.length === 13) {
-                isbn13 = formatISBN13(cleanISBN);
-                console.log('📖 Set ISBN-13:', isbn13);
-                // Try to convert to ISBN-10
-                if (cleanISBN.startsWith('978')) {
-                    const isbn10Digits = cleanISBN.substring(3, 12);
-                    let sum = 0;
-                    for (let i = 0; i < 9; i++) {
-                        sum += parseInt(isbn10Digits[i]) * (10 - i);
+                if (cleanISBN.length === 13) {
+                    isbn13 = formatISBN13(cleanISBN);
+                    console.log('📖 Set ISBN-13:', isbn13);
+                    // Try to convert to ISBN-10
+                    if (cleanISBN.startsWith('978')) {
+                        const isbn10Digits = cleanISBN.substring(3, 12);
+                        let sum = 0;
+                        for (let i = 0; i < 9; i++) {
+                            sum += parseInt(isbn10Digits[i]) * (10 - i);
+                        }
+                        const checkDigit = (11 - (sum % 11)) % 11;
+                        isbn10 = formatISBN10(isbn10Digits + (checkDigit === 10 ? 'X' : checkDigit));
+                        console.log('📖 Converted to ISBN-10:', isbn10);
                     }
-                    const checkDigit = (11 - (sum % 11)) % 11;
-                    isbn10 = formatISBN10(isbn10Digits + (checkDigit === 10 ? 'X' : checkDigit));
-                    console.log('📖 Converted to ISBN-10:', isbn10);
+                } else if (cleanISBN.length === 10) {
+                    isbn10 = formatISBN10(cleanISBN);
+                    console.log('📖 Set ISBN-10:', isbn10);
+                    // Convert to ISBN-13
+                    const isbn13Prefix = '978' + cleanISBN.substring(0, 9);
+                    let sum = 0;
+                    for (let i = 0; i < 12; i++) {
+                        sum += parseInt(isbn13Prefix[i]) * (i % 2 === 0 ? 1 : 3);
+                    }
+                    const checkDigit = (10 - (sum % 10)) % 10;
+                    isbn13 = formatISBN13(isbn13Prefix + checkDigit);
+                    console.log('📖 Converted to ISBN-13:', isbn13);
+                } else if (cleanISBN.length > 0) {
+                    console.log('📖 ISBN length not 10 or 13, using original value:', isbn);
+                    // Use original value if it's not standard length but not empty
+                    isbn13 = isbn;
+                    isbn10 = isbn;
+                } else {
+                    console.log('📖 Empty ISBN after cleaning, keeping as dashes');
                 }
-            } else if (cleanISBN.length === 10) {
-                isbn10 = formatISBN10(cleanISBN);
-                console.log('📖 Set ISBN-10:', isbn10);
-                // Convert to ISBN-13
-                const isbn13Prefix = '978' + cleanISBN.substring(0, 9);
-                let sum = 0;
-                for (let i = 0; i < 12; i++) {
-                    sum += parseInt(isbn13Prefix[i]) * (i % 2 === 0 ? 1 : 3);
-                }
-                const checkDigit = (10 - (sum % 10)) % 10;
-                isbn13 = formatISBN13(isbn13Prefix + checkDigit);
-                console.log('📖 Converted to ISBN-13:', isbn13);
             } else {
-                console.log('📖 ISBN length not 10 or 13, using original value:', isbn);
-                // Use original value if it's not standard length but not empty
-                isbn13 = isbn;
-                isbn10 = isbn;
+                console.log('📖 Empty or invalid ISBN provided, keeping as dashes');
             }
         } else {
-            console.log('📖 No valid ISBN provided, keeping as dashes');
+            console.log('📖 No ISBN provided, keeping as dashes');
         }
 
         // Update ISBN displays immediately
@@ -153,18 +179,22 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
 
     // Helper function to format ISBN-13 with dashes
     function formatISBN13(isbn) {
-        if (isbn.length === 13) {
-            return `${isbn.substring(0, 3)}-${isbn.substring(3, 4)}-${isbn.substring(4, 6)}-${isbn.substring(6, 12)}-${isbn.substring(12)}`;
+        if (!isbn) return '-';
+        const cleanISBN = isbn.replace(/[^0-9X]/gi, '');
+        if (cleanISBN.length === 13) {
+            return `${cleanISBN.substring(0, 3)}-${cleanISBN.substring(3, 4)}-${cleanISBN.substring(4, 6)}-${cleanISBN.substring(6, 12)}-${cleanISBN.substring(12)}`;
         }
-        return isbn;
+        return cleanISBN || '-';
     }
 
     // Helper function to format ISBN-10 with dashes
     function formatISBN10(isbn) {
-        if (isbn.length === 10) {
-            return `${isbn.substring(0, 1)}-${isbn.substring(1, 3)}-${isbn.substring(3, 9)}-${isbn.substring(9)}`;
+        if (!isbn) return '-';
+        const cleanISBN = isbn.replace(/[^0-9X]/gi, '');
+        if (cleanISBN.length === 10) {
+            return `${cleanISBN.substring(0, 1)}-${cleanISBN.substring(1, 3)}-${cleanISBN.substring(3, 9)}-${cleanISBN.substring(9)}`;
         }
-        return isbn;
+        return cleanISBN || '-';
     }
 
     // Helper function to convert ISBN-13 to ISBN-10
@@ -675,41 +705,75 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
 
     // Sync reading level field based on age range
     function syncReadingLevelField(expectedReading) {
+        console.log('🔄 syncReadingLevelField called with:', expectedReading);
         const readingField = window.currentEnrichmentData.fields['reading_level'];
-        if (!readingField) return;
+        if (!readingField) {
+            console.log('🔄 No reading_level field found');
+            return;
+        }
 
         // Check if we have options to select from
         if (readingField.new_data && readingField.new_data.options) {
+            console.log('🔄 Reading level has multiple options:', readingField.new_data.options);
             // Find matching option
             readingField.new_data.options.forEach((option, index) => {
                 if (option.value === expectedReading) {
+                    console.log(`🔄 Found matching reading level option at index ${index}:`, option.value);
                     $(`input[name="field_reading_level_option"][value="${index}"]`).prop('checked', true);
                     $(`input[name="field_reading_level"]`).prop('checked', true);
+
+                    // Update the visual display of the new value
+                    const $readingFieldDiv = $(`.enrichment-field[data-field="reading_level"]`);
+                    const $newValueDiv = $readingFieldDiv.find('.new-value, .mt-1').last();
+                    if ($newValueDiv.length > 0) {
+                        $newValueDiv.html(`<span class="badge badge-info">${expectedReading}</span>`);
+                        console.log('🔄 Updated reading level visual display');
+                    }
                 }
             });
         } else if (readingField.new_data && readingField.new_data.value === expectedReading) {
+            console.log('🔄 Single reading level option matches:', readingField.new_data.value);
             // Single option matches
             $(`input[name="field_reading_level"]`).prop('checked', true);
+        } else {
+            console.log('🔄 No matching reading level option found for:', expectedReading);
         }
     }
 
     // Sync age range field based on reading level
     function syncAgeRangeField(expectedAge) {
+        console.log('🔄 syncAgeRangeField called with:', expectedAge);
         const ageField = window.currentEnrichmentData.fields['age_range'];
-        if (!ageField) return;
+        if (!ageField) {
+            console.log('🔄 No age_range field found');
+            return;
+        }
 
         // Check if we have options to select from
         if (ageField.new_data && ageField.new_data.options) {
+            console.log('🔄 Age range has multiple options:', ageField.new_data.options);
             // Find matching option
             ageField.new_data.options.forEach((option, index) => {
                 if (option.value === expectedAge) {
+                    console.log(`🔄 Found matching age range option at index ${index}:`, option.value);
                     $(`input[name="field_age_range_option"][value="${index}"]`).prop('checked', true);
                     $(`input[name="field_age_range"]`).prop('checked', true);
+
+                    // Update the visual display of the new value
+                    const $ageFieldDiv = $(`.enrichment-field[data-field="age_range"]`);
+                    const $newValueDiv = $ageFieldDiv.find('.new-value, .mt-1').last();
+                    if ($newValueDiv.length > 0) {
+                        $newValueDiv.html(`<span class="badge badge-light">${expectedAge}</span>`);
+                        console.log('🔄 Updated age range visual display');
+                    }
                 }
             });
         } else if (ageField.new_data && ageField.new_data.value === expectedAge) {
+            console.log('🔄 Single age range option matches:', ageField.new_data.value);
             // Single option matches
             $(`input[name="field_age_range"]`).prop('checked', true);
+        } else {
+            console.log('🔄 No matching age range option found for:', expectedAge);
         }
     }
 

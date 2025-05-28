@@ -78,6 +78,8 @@ if (typeof window.bookValidationLoaded === 'undefined') {
             const author = $(this).data('author');
             const currentISBN = $(this).data('current-isbn');
 
+            console.log('📚 Enrich button clicked with data:', { bookId, bookTitle, author, currentISBN, type: typeof currentISBN });
+
             // Open the data enrichment modal
             openDataEnrichmentModal(bookId, bookTitle, author, currentISBN);
         });
@@ -394,10 +396,10 @@ if (typeof window.bookValidationLoaded === 'undefined') {
                             console.log('📚 Goodreads response for ISBN ' + isbnString + ':', response);
                             if (response.success && response.exists) {
                                 $statusElement.html('<span class="badge" style="background-color: #28a745; color: white; border: none;"><i class="fas fa-book"></i> Goodreads</span>');
-                                console.log('📚 ✅ Updated status to: Found on Goodreads');
+                                console.log('📚 ✅ Updated Goodreads status to: Found on Goodreads');
                             } else if (response.success) {
                                 $statusElement.html('<span class="badge" style="background-color: #dc3545; color: white; border: none;"><i class="fas fa-times"></i> Not on Goodreads</span>');
-                                console.log('📚 ❌ Updated status to: Not on Goodreads');
+                                console.log('📚 ❌ Updated Goodreads status to: Not on Goodreads');
                             } else {
                                 $statusElement.html('<span class="badge" style="background-color: #ffc107; color: white; border: none;"><i class="fas fa-exclamation-triangle"></i> Error</span>');
                                 console.error('📚 Goodreads validation error:', response.message);

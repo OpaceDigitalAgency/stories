@@ -239,16 +239,30 @@ function handleApplyEnrichment() {
     $bookId = $_POST['book_id'] ?? '';
     $fieldsJson = $_POST['fields'] ?? '';
 
+    // Enhanced debugging
+    error_log("=== APPLY ENRICHMENT DEBUG START ===");
+    error_log("Book ID: " . $bookId);
+    error_log("Fields JSON: " . $fieldsJson);
+    error_log("Raw POST data: " . json_encode($_POST));
+
     if (empty($bookId) || empty($fieldsJson)) {
-        echo json_encode(['success' => false, 'message' => 'Book ID and fields are required']);
+        $errorMsg = 'Book ID and fields are required';
+        error_log("ERROR: " . $errorMsg);
+        echo json_encode(['success' => false, 'message' => $errorMsg]);
         return;
     }
 
     $fields = json_decode($fieldsJson, true);
     if (!$fields) {
-        echo json_encode(['success' => false, 'message' => 'Invalid fields data']);
+        $errorMsg = 'Invalid fields data - JSON decode failed';
+        error_log("ERROR: " . $errorMsg);
+        error_log("JSON Error: " . json_last_error_msg());
+        echo json_encode(['success' => false, 'message' => $errorMsg]);
         return;
     }
+
+    error_log("Decoded fields: " . json_encode($fields));
+    error_log("Number of fields to process: " . count($fields));
 
     // Build update query
     $updateFields = [];
@@ -259,6 +273,9 @@ function handleApplyEnrichment() {
 
     foreach ($fields as $fieldName => $fieldData) {
         $value = $fieldData['value'];
+
+        error_log("Processing field: $fieldName with value: " . json_encode($value));
+        error_log("Field data structure: " . json_encode($fieldData));
 
         // Handle special field mappings
         switch ($fieldName) {
@@ -336,16 +353,32 @@ function handleApplyEnrichment() {
 
             default:
                 // Standard string fields - only update if the field exists in the books table
-                if (!empty($value) && columnExists('books', $fieldName)) {
+                $columnExistsResult = columnExists('books', $fieldName);
+                error_log("Column '$fieldName' exists in books table: " . ($columnExistsResult ? 'YES' : 'NO'));
+
+                if (!empty($value) && $columnExistsResult) {
                     $updateFields[] = "$fieldName = ?";
                     $params[] = $value;
+                    error_log("Added $fieldName to update: $value");
+                } else {
+                    if (empty($value)) {
+                        error_log("Skipping $fieldName - empty value");
+                    } else {
+                        error_log("Skipping $fieldName - column does not exist in books table");
+                    }
                 }
                 break;
         }
     }
 
+    error_log("Total update fields prepared: " . count($updateFields));
+    error_log("Update fields: " . json_encode($updateFields));
+    error_log("Update params: " . json_encode($params));
+
     if (empty($updateFields)) {
-        echo json_encode(['success' => false, 'message' => 'No valid fields to update']);
+        $errorMsg = 'No valid fields to update';
+        error_log("ERROR: $errorMsg");
+        echo json_encode(['success' => false, 'message' => $errorMsg]);
         return;
     }
 
@@ -359,8 +392,14 @@ function handleApplyEnrichment() {
     // Execute update
     $sql = "UPDATE books SET " . implode(', ', $updateFields) . " WHERE directory_item_id = ?";
 
+    error_log("Final SQL: $sql");
+    error_log("Final params: " . json_encode($params));
+
     $stmt = $db->prepare($sql);
     if ($stmt->execute($params)) {
+        error_log("SQL execution successful");
+        $affectedRows = $stmt->rowCount();
+        error_log("Affected rows: $affectedRows");
         // Process additional relationships and complex fields
         $additionalUpdates = [];
 
@@ -396,7 +435,9 @@ function handleApplyEnrichment() {
             'additional_updates' => $additionalUpdates
         ]);
     } else {
-        echo json_encode(['success' => false, 'message' => 'Database update failed']);
+        $errorInfo = $stmt->errorInfo();
+        error_log("SQL execution failed. Error info: " . json_encode($errorInfo));
+        echo json_encode(['success' => false, 'message' => 'Database update failed: ' . $errorInfo[2]]);
     }
 }
 

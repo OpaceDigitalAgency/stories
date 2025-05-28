@@ -1693,7 +1693,10 @@ function normalizePublisherName($publisherName) {
 function findBestPublisherMatch($publisherName) {
     global $db;
 
+    error_log("findBestPublisherMatch called with: '$publisherName'");
+
     if (empty($publisherName)) {
+        error_log("Publisher name is empty, returning null");
         return null;
     }
 
@@ -1710,11 +1713,17 @@ function findBestPublisherMatch($publisherName) {
         $stmt->execute();
         $existingPublishers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        error_log("Found " . count($existingPublishers) . " publishers in database");
+
         $bestMatch = null;
         $bestScore = 0;
 
         foreach ($existingPublishers as $publisher) {
             $similarity = calculateEnhancedPublisherSimilarity($publisherName, $publisher['name']);
+
+            if ($similarity > 50) { // Log any decent matches
+                error_log("Publisher similarity: '$publisherName' vs '{$publisher['name']}' = $similarity%");
+            }
 
             if ($similarity > $bestScore && $similarity >= 60) { // Lowered threshold to catch more matches
                 $bestMatch = [
@@ -1724,11 +1733,14 @@ function findBestPublisherMatch($publisherName) {
                     'match_type' => $similarity >= 90 ? 'exact' : ($similarity >= 80 ? 'partial' : 'fuzzy')
                 ];
                 $bestScore = $similarity;
+                error_log("New best match: " . json_encode($bestMatch));
             }
         }
 
         // Only return matches with confidence >= 60%
-        return ($bestScore >= 60) ? $bestMatch : null;
+        $result = ($bestScore >= 60) ? $bestMatch : null;
+        error_log("Final result for '$publisherName': " . json_encode($result));
+        return $result;
 
     } catch (Exception $e) {
         error_log("Error finding publisher match: " . $e->getMessage());

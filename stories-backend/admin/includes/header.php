@@ -684,6 +684,9 @@ $siteName = get_config('site.name', 'Stories From The Web');
                             <a href="<?php echo $isContentDir ? 'book-import-tool.php' : $contentPrefix . 'book-import-tool.php'; ?>" class="dropdown-item <?php echo $currentPage === 'book-import-tool' ? 'active' : ''; ?>">
                                 <i class="fas fa-book-reader" aria-hidden="true"></i> Book Import Tool
                             </a>
+                            <a href="<?php echo $isContentDir ? 'comprehensive-cleanup.php?stage=update' : $contentPrefix . 'comprehensive-cleanup.php?stage=update'; ?>" class="dropdown-item <?php echo $currentPage === 'comprehensive-cleanup' ? 'active' : ''; ?>">
+                                <i class="fas fa-broom" aria-hidden="true"></i> Duplicate Cleanup
+                            </a>
 
                             <?php if ($isPublicDir): ?>
                             <a href="../public/direct_import.php" class="dropdown-item <?php echo $currentPage === 'import' ? 'active' : ''; ?>">

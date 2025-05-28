@@ -75,26 +75,8 @@ function getTableInfo($table) {
     <div class="container-fluid">
         <!-- Main Header -->
         <div class="mb-4">
-            <h1 class="mb-3">🔧 Comprehensive Duplicate Cleanup Tool</h1>
-            <p class="text-muted">Analyzes and fixes all duplicates, similar values, and erroneous data across the database</p>
-
             <div class="alert alert-warning">
                 <strong>⚠️ Warning:</strong> This tool will modify your database. Make sure you have a backup before proceeding.
-            </div>
-
-            <div class="alert alert-info">
-                <strong>🎯 Features:</strong>
-                • Publisher group consolidation with master record selection
-                • Erroneous data detection and cleanup (author bios in series fields, etc.)
-                • Synchronized reading levels and age ranges
-                • Bulk operations with progress tracking
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="col-12">
-                <h2>📊 Comprehensive Data Analysis & Cleanup</h2>
-                <p>Scanning all lookup tables and text fields for duplicates, similar values, and erroneous data...</p>
             </div>
         </div>
 
@@ -173,15 +155,59 @@ function getTableInfo($table) {
                 echo '<h5 class="mt-4">🔍 Dynamic Publisher Similarity Detection:</h5>';
                 echo '<div class="alert alert-info">Using advanced algorithms to find ALL similar publishers without hard-coded rules</div>';
 
-                // Get all publishers
+                // Get ACTUAL publishers - combine from books.publisher field AND authors table publishers
+                // First get unique publishers from books table
                 $stmt = $db->query("
-                    SELECT id, name,
-                           (SELECT COUNT(*) FROM books WHERE publisher_id = authors.id) as book_count
-                    FROM authors
-                    WHERE name IS NOT NULL AND name != ''
-                    ORDER BY name
+                    SELECT DISTINCT publisher as name, COUNT(*) as book_count
+                    FROM books
+                    WHERE publisher IS NOT NULL AND publisher != ''
+                    GROUP BY publisher
+                    ORDER BY publisher
                 ");
-                $allPublishers = $stmt->fetchAll();
+                $bookPublishers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                // Then get publishers from authors table (those with publisher_id relationships)
+                $stmt = $db->query("
+                    SELECT DISTINCT a.id, a.name,
+                           (SELECT COUNT(*) FROM books WHERE publisher_id = a.id) as book_count
+                    FROM authors a
+                    WHERE a.id IN (SELECT DISTINCT publisher_id FROM books WHERE publisher_id IS NOT NULL)
+                    AND a.name IS NOT NULL AND a.name != ''
+                    ORDER BY a.name
+                ");
+                $authorPublishers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                // Combine and deduplicate
+                $allPublishers = [];
+                $seenNames = [];
+
+                // Add from books table (these are the actual publisher strings)
+                foreach ($bookPublishers as $pub) {
+                    $cleanName = trim($pub['name']);
+                    if (!in_array(strtolower($cleanName), $seenNames)) {
+                        $allPublishers[] = [
+                            'id' => 'book_' . count($allPublishers), // Temporary ID for book publishers
+                            'name' => $cleanName,
+                            'book_count' => $pub['book_count'],
+                            'source' => 'books_table'
+                        ];
+                        $seenNames[] = strtolower($cleanName);
+                    }
+                }
+
+                // Add from authors table (these have actual IDs)
+                foreach ($authorPublishers as $pub) {
+                    $cleanName = trim($pub['name']);
+                    if (!in_array(strtolower($cleanName), $seenNames)) {
+                        $allPublishers[] = [
+                            'id' => $pub['id'],
+                            'name' => $cleanName,
+                            'book_count' => $pub['book_count'],
+                            'source' => 'authors_table'
+                        ];
+                        $seenNames[] = strtolower($cleanName);
+                    }
+                }
 
                 // DEBUG: Show all publishers for troubleshooting
                 echo '<div class="alert alert-light border">';
@@ -221,43 +247,107 @@ function getTableInfo($table) {
                 echo '</div>';
                 echo '</div>';
 
-                // Function to calculate similarity between two strings
+                // Function to calculate similarity between two strings - ENHANCED for publisher matching
                 function calculateSimilarity($str1, $str2) {
+                    $original1 = $str1;
+                    $original2 = $str2;
+
                     $str1 = strtolower(trim($str1));
                     $str2 = strtolower(trim($str2));
 
-                    // Remove common suffixes/prefixes that don't affect publisher identity
-                    $commonWords = ['ltd', 'limited', 'plc', 'inc', 'books', 'publishing', 'publishers', 'press', 'children\'s', 'childrens', 'uk', 'usa', 'group', 'imprint'];
+                    // If identical, return 100%
+                    if ($str1 === $str2) return 100;
+
+                    // Create normalized versions for better matching
+                    $norm1 = $str1;
+                    $norm2 = $str2;
+
+                    // Remove common publisher suffixes/prefixes that don't affect identity
+                    $commonWords = [
+                        'ltd', 'limited', 'plc', 'inc', 'books', 'publishing', 'publishers', 'press',
+                        'children\'s', 'childrens', 'uk', 'usa', 'group', 'imprint', 'young', 'readers',
+                        'an', 'of', 'for', '&', 'and', 'the'
+                    ];
+
                     foreach ($commonWords as $word) {
-                        $str1 = preg_replace('/\b' . preg_quote($word) . '\b/', '', $str1);
-                        $str2 = preg_replace('/\b' . preg_quote($word) . '\b/', '', $str2);
+                        $norm1 = preg_replace('/\b' . preg_quote($word) . '\b/', '', $norm1);
+                        $norm2 = preg_replace('/\b' . preg_quote($word) . '\b/', '', $norm2);
                     }
 
-                    // Clean up extra spaces
-                    $str1 = preg_replace('/\s+/', ' ', trim($str1));
-                    $str2 = preg_replace('/\s+/', ' ', trim($str2));
+                    // Clean up extra spaces and punctuation
+                    $norm1 = preg_replace('/[^\w\s]/', '', $norm1);
+                    $norm2 = preg_replace('/[^\w\s]/', '', $norm2);
+                    $norm1 = preg_replace('/\s+/', ' ', trim($norm1));
+                    $norm2 = preg_replace('/\s+/', ' ', trim($norm2));
 
-                    // Calculate various similarity metrics
-                    $levenshtein = levenshtein($str1, $str2);
-                    $maxLen = max(strlen($str1), strlen($str2));
-                    $levenshteinSimilarity = $maxLen > 0 ? (1 - $levenshtein / $maxLen) * 100 : 0;
+                    // If normalized versions are identical, high score
+                    if ($norm1 === $norm2 && strlen($norm1) > 2) return 95;
 
-                    // Check for substring matches
-                    $substringMatch = 0;
-                    if (strlen($str1) > 3 && strlen($str2) > 3) {
-                        if (strpos($str1, $str2) !== false || strpos($str2, $str1) !== false) {
-                            $substringMatch = 80;
+                    // Special cases for known publisher patterns
+                    $specialCases = [
+                        // Harper Collins variations
+                        ['harper collins', 'harpercollins'],
+                        ['harper collins', 'harper collins children'],
+                        ['harpercollins', 'harpercollins children'],
+
+                        // Bloomsbury variations
+                        ['bloomsbury', 'bloomsbury publishing'],
+                        ['bloomsbury publishing', 'bloomsbury publishing plc'],
+
+                        // Simon & Schuster variations
+                        ['simon schuster', 'simon schuster children'],
+                        ['simon schuster', 'simon schuster young readers'],
+                    ];
+
+                    foreach ($specialCases as $case) {
+                        if ((strpos($norm1, $case[0]) !== false && strpos($norm2, $case[1]) !== false) ||
+                            (strpos($norm1, $case[1]) !== false && strpos($norm2, $case[0]) !== false)) {
+                            return 90;
                         }
                     }
 
-                    // Check for word overlap
-                    $words1 = explode(' ', $str1);
-                    $words2 = explode(' ', $str2);
-                    $commonWords = array_intersect($words1, $words2);
-                    $wordOverlap = count($commonWords) > 0 ? (count($commonWords) / max(count($words1), count($words2))) * 100 : 0;
+                    // Calculate various similarity metrics
+                    $scores = [];
+
+                    // 1. Levenshtein on normalized strings
+                    if (strlen($norm1) > 0 && strlen($norm2) > 0) {
+                        $levenshtein = levenshtein($norm1, $norm2);
+                        $maxLen = max(strlen($norm1), strlen($norm2));
+                        $scores[] = $maxLen > 0 ? (1 - $levenshtein / $maxLen) * 100 : 0;
+                    }
+
+                    // 2. Substring matching on original strings
+                    if (strlen($str1) > 3 && strlen($str2) > 3) {
+                        if (strpos($str1, $str2) !== false || strpos($str2, $str1) !== false) {
+                            $scores[] = 85;
+                        }
+                    }
+
+                    // 3. Word overlap on normalized strings
+                    $words1 = array_filter(explode(' ', $norm1));
+                    $words2 = array_filter(explode(' ', $norm2));
+                    if (count($words1) > 0 && count($words2) > 0) {
+                        $commonWords = array_intersect($words1, $words2);
+                        $wordOverlap = (count($commonWords) / max(count($words1), count($words2))) * 100;
+                        $scores[] = $wordOverlap;
+                    }
+
+                    // 4. Core publisher name matching (first significant word)
+                    $core1 = '';
+                    $core2 = '';
+                    if (count($words1) > 0) $core1 = $words1[0];
+                    if (count($words2) > 0) $core2 = $words2[0];
+
+                    if (strlen($core1) > 3 && strlen($core2) > 3) {
+                        if ($core1 === $core2) {
+                            $scores[] = 80;
+                        } elseif (strpos($core1, $core2) !== false || strpos($core2, $core1) !== false) {
+                            $scores[] = 70;
+                        }
+                    }
 
                     // Return the highest similarity score
-                    return max($levenshteinSimilarity, $substringMatch, $wordOverlap);
+                    return count($scores) > 0 ? max($scores) : 0;
                 }
 
                 // Find similar groups using clustering approach - finds ALL variations

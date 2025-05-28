@@ -39,10 +39,9 @@ echo '<h2>Database Publishers Check</h2>';
 try {
     // First, let's see what publishers are actually in the database
     $stmt = $db->prepare("
-        SELECT id, name, type
+        SELECT id, name
         FROM authors
-        WHERE (type = 'publisher' OR type IS NULL)
-        AND (name LIKE '%Harper%' OR name LIKE '%Collins%' OR name LIKE '%Bloomsbury%')
+        WHERE (name LIKE '%Harper%' OR name LIKE '%Collins%' OR name LIKE '%Bloomsbury%')
         ORDER BY name
     ");
     $stmt->execute();
@@ -52,27 +51,27 @@ try {
     if (empty($publishers)) {
         echo '<p style="color: red;">NO PUBLISHERS FOUND! This is the problem!</p>';
 
-        // Check if there are ANY publishers at all
-        $stmt = $db->prepare("SELECT COUNT(*) as count FROM authors WHERE type = 'publisher' OR type IS NULL");
+        // Check if there are ANY authors at all
+        $stmt = $db->prepare("SELECT COUNT(*) as count FROM authors");
         $stmt->execute();
         $totalCount = $stmt->fetch(PDO::FETCH_ASSOC);
-        echo '<p>Total publishers in database: ' . $totalCount['count'] . '</p>';
+        echo '<p>Total authors in database: ' . $totalCount['count'] . '</p>';
 
-        // Show first 10 publishers
-        $stmt = $db->prepare("SELECT id, name, type FROM authors WHERE type = 'publisher' OR type IS NULL LIMIT 10");
+        // Show first 10 authors
+        $stmt = $db->prepare("SELECT id, name FROM authors LIMIT 10");
         $stmt->execute();
-        $samplePublishers = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        echo '<h4>Sample publishers in database:</h4>';
+        $sampleAuthors = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        echo '<h4>Sample authors in database:</h4>';
         echo '<ul>';
-        foreach ($samplePublishers as $pub) {
-            echo '<li>ID: ' . $pub['id'] . ' - ' . htmlspecialchars($pub['name']) . ' (type: ' . ($pub['type'] ?? 'NULL') . ')</li>';
+        foreach ($sampleAuthors as $author) {
+            echo '<li>ID: ' . $author['id'] . ' - ' . htmlspecialchars($author['name']) . '</li>';
         }
         echo '</ul>';
 
     } else {
         echo '<ul>';
         foreach ($publishers as $pub) {
-            echo '<li>ID: ' . $pub['id'] . ' - ' . htmlspecialchars($pub['name']) . ' (type: ' . ($pub['type'] ?? 'NULL') . ')</li>';
+            echo '<li>ID: ' . $pub['id'] . ' - ' . htmlspecialchars($pub['name']) . '</li>';
         }
         echo '</ul>';
     }

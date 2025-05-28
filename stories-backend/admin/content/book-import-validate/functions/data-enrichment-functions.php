@@ -1736,12 +1736,11 @@ function findBestPublisherMatch($publisherName) {
     }
 
     try {
-        // Get all existing publishers from authors table (type = 'publisher' or null for legacy)
+        // Get all existing publishers from authors table (no type column exists)
         $stmt = $db->prepare("
             SELECT id, name
             FROM authors
-            WHERE (type = 'publisher' OR type IS NULL)
-            AND name IS NOT NULL
+            WHERE name IS NOT NULL
             AND name != ''
             ORDER BY name
         ");

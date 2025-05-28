@@ -63,14 +63,16 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
 
         // Apply exact match styling if found
         const exactMatchClass = hasExactMatch ? ' exact-match' : '';
+        const disabledClass = bestBenefitLevel === 'not_beneficial' ? ' disabled-field' : '';
+        const labelClass = bestBenefitLevel === 'not_beneficial' ? ' text-muted' : '';
 
         return `
             <div class="col-md-6 mb-3">
-                <div class="enrichment-field ${benefitBorder}${exactMatchClass}" data-field="${fieldName}">
+                <div class="enrichment-field ${benefitBorder}${exactMatchClass}${disabledClass}" data-field="${fieldName}">
                     <div class="form-check">
                         <input class="form-check-input field-checkbox" type="checkbox"
                                id="field_${fieldName}" name="fields[]" value="${fieldName}" ${bestBenefitLevel === 'not_beneficial' ? 'disabled' : ''}>
-                        <label class="form-check-label font-weight-bold" for="field_${fieldName}">
+                        <label class="form-check-label font-weight-bold${labelClass}" for="field_${fieldName}">
                             ${label}
                             <span class="badge badge-warning ml-2">Multiple Sources</span>
                             ${getBenefitIndicator(bestBenefitLevel)}

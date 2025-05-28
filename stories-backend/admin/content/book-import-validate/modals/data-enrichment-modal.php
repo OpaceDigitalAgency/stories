@@ -56,6 +56,11 @@
                         <span class="sr-only">Searching for book data...</span>
                     </div>
                     <p class="mt-2">Searching Google Books and OpenLibrary...</p>
+                    <div class="mt-3">
+                        <span id="google-books-status-badge" class="badge badge-info mr-2">Google Books - Checking...</span>
+                        <span id="open-library-status-badge" class="badge badge-info mr-2">OpenLibrary - Checking...</span>
+                        <span id="goodreads-status-badge" class="badge badge-info">Goodreads - Checking...</span>
+                    </div>
                 </div>
 
                 <!-- Results Container -->
@@ -233,6 +238,38 @@
     padding: 2px 6px;
     border-radius: 3px;
     border: 1px solid #28a745;
+}
+
+/* Styling for disabled fields to make them obviously non-interactive */
+.enrichment-field.disabled-field {
+    background-color: #f8f9fa !important;
+    opacity: 0.5;
+    border-color: #dee2e6 !important;
+    cursor: not-allowed;
+}
+
+.enrichment-field.disabled-field .field-checkbox {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.enrichment-field.disabled-field .form-check-label {
+    color: #6c757d !important;
+    cursor: not-allowed;
+}
+
+.enrichment-field.disabled-field .badge {
+    opacity: 0.6;
+}
+
+.enrichment-field.disabled-field .mt-2 {
+    background-color: #e9ecef !important;
+    border-color: #ced4da !important;
+    color: #6c757d !important;
+}
+
+.enrichment-field.disabled-field:hover {
+    box-shadow: none !important;
 }
 </style>
 

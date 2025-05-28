@@ -217,14 +217,21 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
 
                     // For publisher field, add recommended matches from existing database
                     if ($fieldName === 'publisher') {
+                        error_log("Processing publisher field with options: " . json_encode($options));
                         foreach ($options as &$option) {
+                            error_log("Looking for publisher match for: " . $option['value']);
                             $bestMatch = findBestPublisherMatch($option['value']);
+                            error_log("Publisher match result: " . json_encode($bestMatch));
                             if ($bestMatch && $bestMatch['confidence'] > 85) {
                                 $option['recommended'] = $bestMatch['name'];
                                 $option['recommendation_confidence'] = $bestMatch['confidence'];
                                 $option['match_type'] = $bestMatch['match_type'];
+                                error_log("Added recommendation: " . $bestMatch['name'] . " with confidence " . $bestMatch['confidence']);
+                            } else {
+                                error_log("No suitable match found (confidence too low or no match)");
                             }
                         }
+                        error_log("Final publisher options with recommendations: " . json_encode($options));
                     }
 
                     $combinedFields[$fieldName] = ['options' => $options];

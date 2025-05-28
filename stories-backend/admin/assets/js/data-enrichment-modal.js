@@ -166,6 +166,9 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         $('#confidence-details').text(`Based on ${data.sources_checked.join(', ')}`);
         $('#sources-checked').text(`Sources: ${data.sources_checked.join(', ')}`);
 
+        // Update status badges to show completion
+        updateStatusBadges(data.sources_checked);
+
         // Always show ISBN validation status for enrichment
         $('#isbn-validation-status').show();
 
@@ -185,6 +188,9 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
 
         // Display enrichment fields
         displayEnrichmentFields(data.fields);
+
+        // Auto-select fields with single source and beneficial updates
+        autoSelectBeneficialFields(data.fields);
 
         // Debug: Log all field names to see what's available
         console.log('📦 All available fields:', Object.keys(data.fields));
@@ -453,22 +459,32 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
 
         // Listen for changes in age range selections
         $(document).on('change', 'input[name="field_age_range_option"], input[name="field_age_range"]', function() {
+            console.log('Age range field changed:', $(this).attr('name'), $(this).val(), $(this).is(':checked'));
             if ($(this).is(':checked')) {
                 const selectedAgeRange = getSelectedFieldValue('age_range');
+                console.log('Selected age range:', selectedAgeRange);
                 if (selectedAgeRange && ageToReadingMap[selectedAgeRange]) {
                     const expectedReading = ageToReadingMap[selectedAgeRange];
+                    console.log('Expected reading level:', expectedReading);
                     syncReadingLevelField(expectedReading);
+                } else {
+                    console.log('No mapping found for age range:', selectedAgeRange);
                 }
             }
         });
 
         // Listen for changes in reading level selections
         $(document).on('change', 'input[name="field_reading_level_option"], input[name="field_reading_level"]', function() {
+            console.log('Reading level field changed:', $(this).attr('name'), $(this).val(), $(this).is(':checked'));
             if ($(this).is(':checked')) {
                 const selectedReadingLevel = getSelectedFieldValue('reading_level');
+                console.log('Selected reading level:', selectedReadingLevel);
                 if (selectedReadingLevel && readingToAgeMap[selectedReadingLevel]) {
                     const expectedAge = readingToAgeMap[selectedReadingLevel];
+                    console.log('Expected age range:', expectedAge);
                     syncAgeRangeField(expectedAge);
+                } else {
+                    console.log('No mapping found for reading level:', selectedReadingLevel);
                 }
             }
         });
@@ -476,21 +492,34 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
 
     // Get the currently selected value for a field
     function getSelectedFieldValue(fieldName) {
+        console.log('Getting selected value for field:', fieldName);
+
         const checkedOption = $(`input[name="field_${fieldName}_option"]:checked`);
+        console.log('Checked option elements found:', checkedOption.length);
+
         if (checkedOption.length > 0) {
             const optionIndex = parseInt(checkedOption.val());
+            console.log('Selected option index:', optionIndex);
+
             const fieldData = window.currentEnrichmentData.fields[fieldName];
             if (fieldData && fieldData.new_data && fieldData.new_data.options) {
-                return fieldData.new_data.options[optionIndex]?.value;
+                const value = fieldData.new_data.options[optionIndex]?.value;
+                console.log('Multi-option field value:', value);
+                return value;
             }
         }
 
         const checkedField = $(`input[name="field_${fieldName}"]:checked`);
+        console.log('Checked field elements found:', checkedField.length);
+
         if (checkedField.length > 0) {
             const fieldData = window.currentEnrichmentData.fields[fieldName];
-            return fieldData?.new_data?.value;
+            const value = fieldData?.new_data?.value;
+            console.log('Single field value:', value);
+            return value;
         }
 
+        console.log('No value found for field:', fieldName);
         return null;
     }
 
@@ -571,13 +600,17 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         const benefitClass = getBenefitColorClass(benefitLevel);
         const benefitBorder = getBenefitBorderClass(benefitLevel);
 
+        // Add disabled styling classes
+        const disabledClass = (isUnknown || isPendingAmazon || benefitLevel === 'not_beneficial') ? ' disabled-field' : '';
+        const labelClass = (isUnknown || isPendingAmazon || benefitLevel === 'not_beneficial') ? ' text-muted' : '';
+
         return `
             <div class="col-md-6 mb-3">
-                <div class="enrichment-field ${benefitBorder}${exactMatchClass}" data-field="${fieldName}">
+                <div class="enrichment-field ${benefitBorder}${exactMatchClass}${disabledClass}" data-field="${fieldName}">
                     <div class="form-check">
                         <input class="form-check-input field-checkbox" type="checkbox"
                                id="field_${fieldName}" name="fields[]" value="${fieldName}" ${isUnknown || isPendingAmazon || benefitLevel === 'not_beneficial' ? 'disabled' : ''}>
-                        <label class="form-check-label font-weight-bold" for="field_${fieldName}">
+                        <label class="form-check-label font-weight-bold${labelClass}" for="field_${fieldName}">
                             ${label}
                             <span class="badge badge-${sourceClass} ml-2">${displaySource}${isPendingAmazon ? ' (Loading...)' : ''}</span>
                             ${!isUnknown && !isPendingAmazon ? `<span class="badge badge-${confidenceClass} ml-1">(${confidence}%)</span>` : ''}
@@ -595,6 +628,48 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         `;
     }
 
+    // Update status badges to show completion instead of "Checking..."
+    function updateStatusBadges(sourcesChecked) {
+        // Update Google Books status
+        if (sourcesChecked.includes('google_books')) {
+            $('#google-books-status-badge').html('<span class="badge badge-success">✓ Google Books</span>');
+        } else {
+            $('#google-books-status-badge').html('<span class="badge badge-secondary">Google Books</span>');
+        }
+
+        // Update OpenLibrary status
+        if (sourcesChecked.includes('open_library')) {
+            $('#open-library-status-badge').html('<span class="badge badge-success">✓ OpenLibrary</span>');
+        } else {
+            $('#open-library-status-badge').html('<span class="badge badge-secondary">OpenLibrary</span>');
+        }
+    }
+
+    // Auto-select fields with single source and beneficial updates
+    function autoSelectBeneficialFields(fields) {
+        Object.keys(fields).forEach(fieldName => {
+            const field = fields[fieldName];
+
+            // Skip fields with no new data
+            if (!field.new_data) return;
+
+            // For single source fields, auto-select if beneficial
+            if (!field.new_data.options) {
+                const isUnknown = field.new_data.status === 'unknown';
+                const isPendingAmazon = field.new_data.status === 'pending_amazon_data';
+
+                if (!isUnknown && !isPendingAmazon) {
+                    const benefitLevel = determineBenefitLevel(field.current_value, field.new_data.value, false);
+
+                    // Auto-select beneficial fields or fields where current value is empty
+                    if (benefitLevel === 'beneficial' || isEmpty(field.current_value)) {
+                        $(`#field_${fieldName}`).prop('checked', true).trigger('change');
+                    }
+                }
+            }
+        });
+    }
+
     // Make functions globally available
     window.openDataEnrichmentModal = openDataEnrichmentModal;
     window.fetchEnrichmentData = fetchEnrichmentData;
@@ -603,4 +678,6 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
     window.updateEnrichmentDataWithAmazon = updateEnrichmentDataWithAmazon;
     window.displayEnrichmentFields = displayEnrichmentFields;
     window.createSingleSourceField = createSingleSourceField;
+    window.updateStatusBadges = updateStatusBadges;
+    window.autoSelectBeneficialFields = autoSelectBeneficialFields;
 }

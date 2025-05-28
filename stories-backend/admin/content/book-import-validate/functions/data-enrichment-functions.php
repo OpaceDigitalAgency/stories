@@ -252,7 +252,11 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
                         error_log("PUBLISHER_TEST: Final publisher options with recommendations: " . json_encode($options));
                     }
 
-                    $combinedFields[$fieldName] = ['options' => $options];
+                    $combinedFields[$fieldName] = [
+                        'current_value' => $currentValues[$fieldName] ?? null,
+                        'new_data' => ['options' => $options],
+                        'label' => $fieldConfig['label']
+                    ];
                 }
             } elseif (!in_array($fieldName, ['purchase_links', 'format', 'price_range'])) {
                 // Only one source has data (but don't override Amazon fields)

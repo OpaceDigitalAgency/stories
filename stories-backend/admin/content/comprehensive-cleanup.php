@@ -183,6 +183,44 @@ function getTableInfo($table) {
                 ");
                 $allPublishers = $stmt->fetchAll();
 
+                // DEBUG: Show all publishers for troubleshooting
+                echo '<div class="alert alert-light border">';
+                echo '<h6>🔍 DEBUG: All Publishers in Database (' . count($allPublishers) . ' total):</h6>';
+                echo '<div class="row">';
+                $publisherNames = array_column($allPublishers, 'name');
+                $harperPublishers = array_filter($publisherNames, function($name) {
+                    return stripos($name, 'harper') !== false || stripos($name, 'collins') !== false;
+                });
+                $bloomsburyPublishers = array_filter($publisherNames, function($name) {
+                    return stripos($name, 'bloomsbury') !== false;
+                });
+                $simonPublishers = array_filter($publisherNames, function($name) {
+                    return stripos($name, 'simon') !== false || stripos($name, 'schuster') !== false;
+                });
+
+                echo '<div class="col-md-4">';
+                echo '<strong>Harper/Collins Publishers:</strong><br>';
+                foreach ($harperPublishers as $name) {
+                    echo '• ' . htmlspecialchars($name) . '<br>';
+                }
+                echo '</div>';
+
+                echo '<div class="col-md-4">';
+                echo '<strong>Bloomsbury Publishers:</strong><br>';
+                foreach ($bloomsburyPublishers as $name) {
+                    echo '• ' . htmlspecialchars($name) . '<br>';
+                }
+                echo '</div>';
+
+                echo '<div class="col-md-4">';
+                echo '<strong>Simon & Schuster Publishers:</strong><br>';
+                foreach ($simonPublishers as $name) {
+                    echo '• ' . htmlspecialchars($name) . '<br>';
+                }
+                echo '</div>';
+                echo '</div>';
+                echo '</div>';
+
                 // Function to calculate similarity between two strings
                 function calculateSimilarity($str1, $str2) {
                     $str1 = strtolower(trim($str1));
@@ -222,28 +260,102 @@ function getTableInfo($table) {
                     return max($levenshteinSimilarity, $substringMatch, $wordOverlap);
                 }
 
-                // Find similar groups dynamically
+                // Find similar groups using clustering approach - finds ALL variations
                 $similarGroups = [];
                 $processed = [];
 
-                foreach ($allPublishers as $i => $publisher1) {
-                    if (in_array($publisher1['id'], $processed)) continue;
+                // First, create a similarity matrix for all publishers
+                $similarityMatrix = [];
+                $debugSimilarities = [];
 
-                    $group = [$publisher1];
-                    $processed[] = $publisher1['id'];
+                for ($i = 0; $i < count($allPublishers); $i++) {
+                    for ($j = $i + 1; $j < count($allPublishers); $j++) {
+                        $similarity = calculateSimilarity($allPublishers[$i]['name'], $allPublishers[$j]['name']);
 
-                    foreach ($allPublishers as $j => $publisher2) {
-                        if ($i >= $j || in_array($publisher2['id'], $processed)) continue;
+                        // Debug: collect interesting similarities
+                        if ($similarity >= 50) {
+                            $debugSimilarities[] = [
+                                'name1' => $allPublishers[$i]['name'],
+                                'name2' => $allPublishers[$j]['name'],
+                                'similarity' => $similarity
+                            ];
+                        }
 
-                        $similarity = calculateSimilarity($publisher1['name'], $publisher2['name']);
-
-                        if ($similarity >= 70) { // 70% similarity threshold
-                            $group[] = $publisher2;
-                            $processed[] = $publisher2['id'];
+                        if ($similarity >= 60) { // Lowered threshold from 70 to 60
+                            $similarityMatrix[] = [
+                                'pub1' => $i,
+                                'pub2' => $j,
+                                'similarity' => $similarity
+                            ];
                         }
                     }
+                }
 
-                    if (count($group) > 1) {
+                // DEBUG: Show similarity calculations
+                echo '<div class="alert alert-light border">';
+                echo '<h6>🔍 DEBUG: Similarity Calculations (50%+ matches):</h6>';
+                echo '<div class="table-responsive">';
+                echo '<table class="table table-sm">';
+                echo '<thead><tr><th>Publisher 1</th><th>Publisher 2</th><th>Similarity</th><th>Threshold Met</th></tr></thead>';
+                echo '<tbody>';
+                usort($debugSimilarities, function($a, $b) { return $b['similarity'] - $a['similarity']; });
+                foreach (array_slice($debugSimilarities, 0, 20) as $sim) {
+                    $thresholdMet = $sim['similarity'] >= 60 ? '✅ YES' : '❌ NO';
+                    echo '<tr>';
+                    echo '<td>' . htmlspecialchars($sim['name1']) . '</td>';
+                    echo '<td>' . htmlspecialchars($sim['name2']) . '</td>';
+                    echo '<td><span class="badge bg-info">' . round($sim['similarity'], 1) . '%</span></td>';
+                    echo '<td>' . $thresholdMet . '</td>';
+                    echo '</tr>';
+                }
+                echo '</tbody></table>';
+                echo '<small class="text-muted">Showing top 20 similarities. Threshold for grouping: 60%</small>';
+                echo '</div>';
+                echo '</div>';
+
+                // Group publishers using connected components approach
+                $groups = [];
+                $publisherToGroup = [];
+
+                foreach ($similarityMatrix as $match) {
+                    $pub1 = $match['pub1'];
+                    $pub2 = $match['pub2'];
+
+                    $group1 = $publisherToGroup[$pub1] ?? null;
+                    $group2 = $publisherToGroup[$pub2] ?? null;
+
+                    if ($group1 === null && $group2 === null) {
+                        // Create new group
+                        $newGroupId = count($groups);
+                        $groups[$newGroupId] = [$pub1, $pub2];
+                        $publisherToGroup[$pub1] = $newGroupId;
+                        $publisherToGroup[$pub2] = $newGroupId;
+                    } elseif ($group1 !== null && $group2 === null) {
+                        // Add pub2 to group1
+                        $groups[$group1][] = $pub2;
+                        $publisherToGroup[$pub2] = $group1;
+                    } elseif ($group1 === null && $group2 !== null) {
+                        // Add pub1 to group2
+                        $groups[$group2][] = $pub1;
+                        $publisherToGroup[$pub1] = $group2;
+                    } elseif ($group1 !== $group2) {
+                        // Merge groups
+                        $groups[$group1] = array_merge($groups[$group1], $groups[$group2]);
+                        foreach ($groups[$group2] as $pubIndex) {
+                            $publisherToGroup[$pubIndex] = $group1;
+                        }
+                        unset($groups[$group2]);
+                    }
+                }
+
+                // Convert groups to publisher data and sort
+                foreach ($groups as $groupIndices) {
+                    if (count($groupIndices) > 1) {
+                        $group = [];
+                        foreach ($groupIndices as $index) {
+                            $group[] = $allPublishers[$index];
+                        }
+
                         // Sort by book count descending to suggest best master
                         usort($group, function($a, $b) {
                             return $b['book_count'] - $a['book_count'];

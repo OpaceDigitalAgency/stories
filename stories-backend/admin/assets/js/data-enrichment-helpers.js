@@ -21,19 +21,38 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
         const benefitClass = getBenefitColorClass(bestBenefitLevel);
         const benefitBorder = getBenefitBorderClass(bestBenefitLevel);
 
-        options.forEach((option, index) => {
+        // Filter out options with "unknown" values
+        const validOptions = options.filter(option =>
+            option.value !== 'Unknown' &&
+            option.value !== 'unknown' &&
+            option.value !== null &&
+            option.value !== undefined &&
+            option.value !== ''
+        );
+
+        if (validOptions.length === 0) {
+            console.log(`📦 No valid options for ${fieldName} - all were unknown/empty`);
+            return '';
+        }
+
+        validOptions.forEach((option, index) => {
             const confidence = option.confidence || 0;
             const source = option.source || 'unknown';
             const displayValue = formatFieldValue(fieldName, option.value);
-            const confidenceClass = confidence >= 80 ? 'success' : confidence >= 60 ? 'warning' : confidence >= 30 ? 'info' : 'secondary';
-            const sourceClass = source === 'google_books' ? 'success' : 'info';
+
+            // Clean source display name
+            const sourceDisplayName = source === 'google_books' ? 'Google Books' :
+                                    source === 'open_library' ? 'OpenLibrary' :
+                                    source === 'amazon' ? 'Amazon' :
+                                    source === 'amazon_derived' ? 'Amazon' :
+                                    source === 'database_recommendation' ? 'Database Match' :
+                                    source.replace(/_/g, ' ');
 
             optionsHtml += `
                 <div class="form-check mt-2">
                     <input class="form-check-input" type="radio" name="field_${fieldName}_option" id="field_${fieldName}_${index}" value="${index}">
                     <label class="form-check-label" for="field_${fieldName}_${index}">
-                        <span class="badge badge-${sourceClass}">${source}</span>
-                        <span class="badge badge-${confidenceClass} ml-1">(${confidence}%)</span>
+                        <strong>${sourceDisplayName} (${confidence}%)</strong>
                         <div class="mt-1">${displayValue}</div>
                     </label>
                 </div>
@@ -119,6 +138,28 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
         const disabledClass = bestBenefitLevel === 'not_beneficial' ? ' disabled-field' : '';
         const labelClass = bestBenefitLevel === 'not_beneficial' ? ' text-muted' : '';
 
+        // Calculate combined confidence score from all valid sources
+        const totalConfidence = validOptions.reduce((sum, option) => sum + (option.confidence || 0), 0);
+        const avgConfidence = Math.round(totalConfidence / validOptions.length);
+
+        // Get unique sources for header display
+        const uniqueSources = [...new Set(validOptions.map(option => option.source || 'unknown'))];
+        const sourceDisplayNames = uniqueSources.map(source => {
+            switch(source) {
+                case 'google_books': return 'Google Books';
+                case 'open_library': return 'OpenLibrary';
+                case 'amazon': return 'Amazon';
+                case 'amazon_derived': return 'Amazon';
+                case 'database_recommendation': return 'Database';
+                default: return source.replace(/_/g, ' ');
+            }
+        });
+
+        // Create header with sources and combined confidence
+        const headerText = sourceDisplayNames.length > 1 ?
+            `${label} ${sourceDisplayNames.join(' + ')} (${avgConfidence}%)` :
+            `${label} ${sourceDisplayNames[0]} (${avgConfidence}%)`;
+
         return `
             <div class="col-md-6 mb-3">
                 <div class="enrichment-field ${benefitBorder}${exactMatchClass}${disabledClass}" data-field="${fieldName}">
@@ -126,8 +167,7 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
                         <input class="form-check-input field-checkbox" type="checkbox"
                                id="field_${fieldName}" name="fields[]" value="${fieldName}" ${bestBenefitLevel === 'not_beneficial' ? 'disabled' : ''}>
                         <label class="form-check-label font-weight-bold${labelClass}" for="field_${fieldName}">
-                            ${label}
-                            <span class="badge badge-warning ml-2">Multiple Sources</span>
+                            ${headerText}
                             ${getBenefitIndicator(bestBenefitLevel)}
                         </label>
                     </div>

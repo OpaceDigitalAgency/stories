@@ -538,6 +538,12 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     existingField: existingField
                 });
 
+                // Skip Amazon data with "unknown" values - don't process these at all
+                if (amazonFieldData.new_data.value === 'Unknown' || amazonFieldData.new_data.value === 'unknown') {
+                    console.log(`📦 Skipping Amazon field ${fieldName} - value is unknown`);
+                    return;
+                }
+
                 if (existingField && existingField.new_data) {
                     // Field already exists with data from other sources - merge Amazon as third source
                     console.log(`📦 Merging Amazon data with existing field: ${fieldName}`);
@@ -585,6 +591,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 } else {
                     // Field doesn't exist or has no data - add Amazon data as new field
                     console.log(`📦 Adding new Amazon field: ${fieldName}`);
+
                     window.currentEnrichmentData.fields[fieldName] = {
                         label: amazonFieldData.label || fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
                         current_value: existingField?.current_value || null,

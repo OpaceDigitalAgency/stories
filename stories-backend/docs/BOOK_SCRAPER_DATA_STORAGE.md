@@ -13,7 +13,9 @@ The system enriches book data using multiple data sources with a **two-phase loa
 - **Open Library API**: `https://openlibrary.org/search.json?q={ISBN}&fields=*,availability&limit=1`
 
 ### Phase 2: Scraping Services (Asynchronous)
-- **Amazon UK Scraping**: Real-time price and format data from `https://www.amazon.co.uk/dp/{ISBN}`
+- **Amazon UK Scraping**: Real-time price, format, and enhanced metadata from `https://www.amazon.co.uk/dp/{ISBN}`
+  - **Purchase data**: Buying options, prices, format availability
+  - **Enhanced metadata**: Reading age, grade level, publisher details, publication date, page count, ISBN verification
 - **Goodreads Scraping**: Reviews, ratings, and metadata from `https://www.goodreads.com/book/isbn/{ISBN}`
 
 This approach ensures **fast initial loading** with API data, followed by **enhanced data** from scraping services without blocking the user interface.
@@ -89,18 +91,18 @@ Each book record is imported or enriched by matching ISBNs and retrieving releva
 | directory_items          | isbn                      | industryIdentifiers[type=ISBN_10]         | isbn[] (10-digit)                         | (used for lookup)                         |
 | directory_items          | isbn13                    | industryIdentifiers[type=ISBN_13]         | isbn[] (13-digit)                         | (converted to ISBN-10 for lookup)        |
 | directory_items          | author                    | volumeInfo.authors[0]                     | author_name[0]                            | (not available)                           |
-| directory_items          | publisher                 | volumeInfo.publisher                      | publisher[0]                              | (not available)                           |
-| directory_items          | publication_date          | volumeInfo.publishedDate                  | first_publish_year / publish_date[0]      | (not available)                           |
-| directory_items          | page_count                | volumeInfo.pageCount                      | number_of_pages_median                    | (not available)                           |
+| directory_items          | publisher                 | volumeInfo.publisher                      | publisher[0]                              | detailBullets: "Publisher: HarperCollins" |
+| directory_items          | publication_date          | volumeInfo.publishedDate                  | first_publish_year / publish_date[0]      | detailBullets: "Publication date: 2 Feb. 2012" |
+| directory_items          | page_count                | volumeInfo.pageCount                      | number_of_pages_median                    | detailBullets: "Print length: 160 pages"  |
 | directory_items          | price_range               | saleInfo.listPrice.amount (if for sale)   | (not available)                           | calculated from selected_price            |
-| directory_items          | age_range                 | maturityRating → inferred                 | subject_facet → e.g. "Ages 9-12"          | (not available)                           |
-| directory_items          | reading_level             | (not available)                           | lexile[]                                  | (not available)                           |
-| directory_items          | language                  | volumeInfo.language                       | language[]                                | (not available)                           |
+| directory_items          | age_range                 | maturityRating → inferred                 | subject_facet → e.g. "Ages 9-12"          | detailBullets: "Reading age: 8-11 years"  |
+| directory_items          | reading_level             | (not available)                           | lexile[]                                  | derived from "Grade level: 2-3"           |
+| directory_items          | language                  | volumeInfo.language                       | language[]                                | detailBullets: "Language: English"        |
 | directory_items          | format                    | printType                                 | format[]                                  | selected_format (Hardcover/Kindle/etc)   |
 | directory_items          | cover_url                 | imageLinks.thumbnail                      | covers.openlibrary.org via cover_i        | (not available)                           |
 | directory_items          | purchase_links            | constructed from ISBN (Amazon, etc)       | constructed from ISBN                     | JSON: buying_options with URLs & prices  |
 | directory_items          | preview_link              | volumeInfo.previewLink                    | availability.is_previewable + work link   | (not available)                           |
-| directory_items          | metadata                  | entire Google response                    | entire Open Library response              | buying_options + selected data            |
+| directory_items          | metadata                  | entire Google response                    | entire Open Library response              | buying_options + enhanced metadata        |
 | directory_items          | series                    | (not available)                           | (not available)                           | (not available)                           |
 | directory_items          | publisher_id              | (internal mapping, not in API)            | (not in API)                              | (not available)                           |
 | directory_items          | internet_archive_id       | (not available)                           | lending_identifier_s or ia[0]             | (not available)                           |
@@ -163,7 +165,9 @@ The system scrapes live Amazon UK data for:
 
 ### Amazon HTML Structure Targeting
 
-The scraper targets the following HTML elements:
+The scraper targets multiple HTML sections for comprehensive data extraction:
+
+#### 1. Purchase Options (Format Grid)
 ```html
 <div id="tmm-grid-swatch-HARDCOVER" class="...selected...">
   <a href="javascript:void(0)" role="radio" aria-checked="true">
@@ -177,8 +181,36 @@ The scraper targets the following HTML elements:
 </div>
 ```
 
+#### 2. Enhanced Metadata (Detail Bullets)
+```html
+<div id="detailBullets_feature_div">
+  <ul class="a-unordered-list a-nostyle a-vertical a-spacing-none detail-bullet-list">
+    <li><span class="a-text-bold">Publisher:</span> <span>Frances Lincoln Children's Books</span></li>
+    <li><span class="a-text-bold">Publication date:</span> <span>2 Feb. 2012</span></li>
+    <li><span class="a-text-bold">Edition:</span> <span>1st</span></li>
+    <li><span class="a-text-bold">Language:</span> <span>English</span></li>
+    <li><span class="a-text-bold">Print length:</span> <span>160 pages</span></li>
+    <li><span class="a-text-bold">ISBN-10:</span> <span>1847802257</span></li>
+    <li><span class="a-text-bold">ISBN-13:</span> <span>978-1847802255</span></li>
+    <li><span class="a-text-bold">Reading age:</span> <span>8 - 11 years</span></li>
+    <li><span class="a-text-bold">Grade level:</span> <span>2 - 3</span></li>
+    <li><span class="a-text-bold">Dimensions:</span> <span>12.7 x 1.27 x 19.69 cm</span></li>
+    <li><span class="a-text-bold">Item weight:</span> <span>128 g</span></li>
+  </ul>
+</div>
+```
+
+#### 3. Alternative Metadata (Carousel Format)
+```html
+<ol class="a-carousel">
+  <li><span>Reading age</span><span>8 - 11 years</span></li>
+  <li><span>Grade level</span><span>2 - 3</span></li>
+</ol>
+```
+
 ### Regex Patterns Used
 
+#### Purchase Options Extraction
 ```php
 // Individual format extraction
 $patterns = [
@@ -192,6 +224,29 @@ $patterns = [
 foreach ($formatChecks as $formatKey => $formatName) {
     $pattern = '/id="tmm-grid-swatch-' . $formatKey . '"[^>]*class="[^"]*selected[^"]*".*?href="javascript:void\(0\)".*?aria-label="£(\d+\.\d{2})"/is';
 }
+```
+
+#### Enhanced Metadata Extraction
+```php
+// Detail bullets section extraction
+$bulletPatterns = [
+    'reading_age' => '/<span[^>]*class="a-text-bold"[^>]*>Reading age[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
+    'grade_level' => '/<span[^>]*class="a-text-bold"[^>]*>Grade level[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
+    'publisher' => '/<span[^>]*class="a-text-bold"[^>]*>Publisher[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
+    'publication_date' => '/<span[^>]*class="a-text-bold"[^>]*>Publication date[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
+    'language' => '/<span[^>]*class="a-text-bold"[^>]*>Language[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
+    'print_length' => '/<span[^>]*class="a-text-bold"[^>]*>Print length[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
+    'isbn_10' => '/<span[^>]*class="a-text-bold"[^>]*>ISBN-10[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
+    'isbn_13' => '/<span[^>]*class="a-text-bold"[^>]*>ISBN-13[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
+    'dimensions' => '/<span[^>]*class="a-text-bold"[^>]*>Dimensions[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
+    'item_weight' => '/<span[^>]*class="a-text-bold"[^>]*>Item weight[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
+];
+
+// Carousel format fallback patterns
+$carouselPatterns = [
+    'reading_age' => '/<span>Reading age<\/span>.*?<span[^>]*>([^<]+)<\/span>/is',
+    'grade_level' => '/<span>Grade level<\/span>.*?<span[^>]*>([^<]+)<\/span>/is',
+];
 ```
 
 ### Purchase Link Generation
@@ -219,6 +274,7 @@ Amazon data is fetched fresh on each request since:
 
 ### Amazon Data Structure
 
+#### Complete Amazon Response (Enhanced)
 ```json
 {
   "buying_options": {
@@ -244,9 +300,108 @@ Amazon data is fetched fresh on each request since:
     }
   },
   "selected_format": "Hardcover",
-  "selected_price": "£13.70"
+  "selected_price": "£13.70",
+  "metadata": {
+    "reading_age": "8 - 11 years",
+    "grade_level": "2 - 3",
+    "publisher": "Frances Lincoln Children's Books",
+    "publication_date": "2 Feb. 2012",
+    "language": "English",
+    "print_length": "160 pages",
+    "isbn_10": "1847802257",
+    "isbn_13": "978-1847802255",
+    "dimensions": "12.7 x 1.27 x 19.69 cm",
+    "item_weight": "128 g"
+  },
+  "enrichment_fields": {
+    "age_range": {
+      "label": "Age Range",
+      "new_data": {
+        "value": "8-9 years",
+        "source": "amazon",
+        "confidence": 0.9,
+        "status": "available",
+        "original_value": "8 - 11 years"
+      }
+    },
+    "reading_level": {
+      "label": "Reading Level",
+      "new_data": {
+        "value": "Developing Reader",
+        "source": "amazon",
+        "confidence": 0.85,
+        "status": "available"
+      }
+    },
+    "publisher": {
+      "label": "Publisher",
+      "new_data": {
+        "value": "Frances Lincoln Children's Books",
+        "source": "amazon",
+        "confidence": 0.9,
+        "status": "available"
+      }
+    },
+    "page_count": {
+      "label": "Page Count",
+      "new_data": {
+        "value": "160",
+        "source": "amazon",
+        "confidence": 0.9,
+        "status": "available"
+      }
+    }
+  }
 }
 ```
+
+### Age Range Standardization & Mapping
+
+#### Amazon Age Range Processing
+Amazon provides age ranges in various formats that need to be mapped to our standardized system:
+
+**Amazon Input Examples:**
+- `"8 - 11 years"` → Standardized: `"8-9 years"`
+- `"2 - 3"` (grade level) → Standardized: `"Developing Reader"` (reading level)
+- `"12+ years"` → Standardized: `"11-14 years"`
+
+**Standardized Age Ranges (Database Values):**
+```php
+$standardRanges = [
+    '0-12 months', '12-24 months', '2-3 years', '3-4 years', '4-5 years',
+    '5-6 years', '6-7 years', '7-8 years', '8-9 years', '9-10 years',
+    '10-11 years', '11-14 years', '14-16 years', '16-18 years', '18+ years'
+];
+```
+
+**Mapping Logic:**
+1. **Direct Mapping**: Exact matches for common Amazon formats
+2. **Range Parsing**: Extract numeric ranges and find closest standard range
+3. **Midpoint Calculation**: Use average of range to determine best fit
+4. **Grade Level Conversion**: Map Amazon grade levels to reading levels
+
+**Key Functions:**
+- `mapAmazonAgeRangeToStandard()` - Converts Amazon age ranges to standardized values
+- `mapGradeLevelToReadingLevel()` - Converts grade levels to reading levels
+- `mapMaturityToAgeRange()` - Handles Google Books maturity ratings
+
+#### Reading Level Synchronization
+The system maintains bidirectional synchronization between age ranges and reading levels:
+
+**Age Range → Reading Level Mapping:**
+```php
+$ageToReadingMap = [
+    '5-6 years' => 'Early Reader',
+    '8-9 years' => 'Fluent Reader',
+    '11-14 years' => 'Advanced Reader',
+    // ... complete mapping
+];
+```
+
+**Benefits:**
+- **Consistent Data**: Ensures age range and reading level always match
+- **User-Friendly**: Selecting either field automatically updates the other
+- **Source Integration**: Works with data from Google Books, OpenLibrary, and Amazon
 
 ---
 
@@ -372,7 +527,7 @@ This approach ensures users see **immediate results** from APIs while **enhanced
 **Action**: `get_amazon_data`
 **Parameters**: `isbn` (ISBN-10 or ISBN-13)
 
-**Amazon Response Format**:
+**Amazon Response Format (Enhanced)**:
 ```json
 {
   "success": true,
@@ -400,6 +555,56 @@ This approach ensures users see **immediate results** from APIs while **enhanced
         "confidence": 90,
         "status": "ready"
       }
+    },
+    "age_range": {
+      "new_data": {
+        "value": "8-9 years",
+        "source": "amazon",
+        "confidence": 90,
+        "status": "available",
+        "original_value": "8 - 11 years"
+      }
+    },
+    "reading_level": {
+      "new_data": {
+        "value": "Fluent Reader",
+        "source": "amazon",
+        "confidence": 85,
+        "status": "available"
+      }
+    },
+    "publisher": {
+      "new_data": {
+        "value": "Frances Lincoln Children's Books",
+        "source": "amazon",
+        "confidence": 90,
+        "status": "available"
+      }
+    },
+    "publication_date": {
+      "new_data": {
+        "value": "2012-02-02",
+        "source": "amazon",
+        "confidence": 90,
+        "status": "available",
+        "original_value": "2 Feb. 2012"
+      }
+    },
+    "page_count": {
+      "new_data": {
+        "value": "160",
+        "source": "amazon",
+        "confidence": 90,
+        "status": "available"
+      }
+    },
+    "language": {
+      "new_data": {
+        "value": "English",
+        "source": "amazon",
+        "confidence": 90,
+        "status": "available"
+      }
     }
   },
   "debug": {
@@ -408,6 +613,9 @@ This approach ensures users see **immediate results** from APIs while **enhanced
     "options_count": 4,
     "selected_format": "Hardcover",
     "selected_price": "£13.70",
+    "metadata_fields_extracted": 8,
+    "age_range_mapping": "8 - 11 years → 8-9 years",
+    "grade_level_mapping": "2 - 3 → Fluent Reader",
     "raw_amazon_payload": { ... }
   }
 }

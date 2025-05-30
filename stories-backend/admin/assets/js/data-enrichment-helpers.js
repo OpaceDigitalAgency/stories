@@ -14,10 +14,14 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
             const benefitLevel = determineBenefitLevel(field.current_value, option.value, false);
             if (benefitLevel === 'exact_match') {
                 hasExactMatch = true;
-                bestBenefitLevel = 'exact_match';
-            } else if (benefitLevel === 'beneficial' && bestBenefitLevel !== 'exact_match') {
+                // For UI purposes, treat exact match as not beneficial (disabled/greyed)
+                // but don't override beneficial or questionable levels
+                if (bestBenefitLevel === 'not_beneficial') {
+                    bestBenefitLevel = 'exact_match';
+                }
+            } else if (benefitLevel === 'beneficial') {
                 bestBenefitLevel = 'beneficial';
-            } else if (benefitLevel === 'questionable' && bestBenefitLevel !== 'beneficial' && bestBenefitLevel !== 'exact_match') {
+            } else if (benefitLevel === 'questionable' && bestBenefitLevel !== 'beneficial') {
                 bestBenefitLevel = 'questionable';
             }
         });
@@ -38,6 +42,13 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
             console.log(`📦 No valid options for ${fieldName} - all were unknown/empty`);
             return '';
         }
+
+        console.log(`📦 Creating multi-source field for ${fieldName}:`, {
+            totalOptions: options.length,
+            validOptions: validOptions.length,
+            bestBenefitLevel: bestBenefitLevel,
+            hasExactMatch: hasExactMatch
+        });
 
         validOptions.forEach((option, index) => {
             const confidence = option.confidence || 0;

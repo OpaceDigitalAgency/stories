@@ -876,6 +876,8 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             console.log('🔍 DEBUG: Reading level field structure:', window.currentEnrichmentData?.fields?.reading_level);
             console.log('🔍 DEBUG: All age range inputs in DOM:', $('input[name*="age_range"]').length);
             console.log('🔍 DEBUG: All reading level inputs in DOM:', $('input[name*="reading_level"]').length);
+            console.log('🔍 DEBUG: Total enrichment fields in DOM:', $('.enrichment-field').length);
+            console.log('🔍 DEBUG: Container HTML length:', $('#enrichment-fields').html()?.length || 0);
         }, 1000);
     }
 

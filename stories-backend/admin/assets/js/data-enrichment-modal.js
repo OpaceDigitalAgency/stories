@@ -842,9 +842,10 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
 
         // FIXED: Ensure both fields have synchronized source options before setting up sync
         // Only run if both fields exist and have data
-        setTimeout(() => {
-            ensureSynchronizedSourceOptions();
-        }, 500);
+        // TEMPORARILY DISABLED to debug empty modal issue
+        // setTimeout(() => {
+        //     ensureSynchronizedSourceOptions();
+        // }, 500);
 
         // Debug: Show what fields are actually available
         setTimeout(() => {

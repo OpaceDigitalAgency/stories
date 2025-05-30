@@ -1157,91 +1157,54 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
             break;
 
         case 'age_range':
-            // CRITICAL DEBUG: Log all input data for age range extraction
-            error_log("GOOGLE_BOOKS_AGE_DEBUG: Starting age range extraction for match: " . json_encode($match));
-
+            // REMOVED: All maturity rating processing to eliminate 12+ issue
+            // Google Books age range extraction - only from categories and subject_facet
             $ageRange = null;
 
-            // First check Google Books categories for age-related information
+            // Check Google Books categories for explicit age patterns
             if (isset($match['categories']) && is_array($match['categories'])) {
-                error_log("GOOGLE_BOOKS_AGE_DEBUG: Found categories: " . json_encode($match['categories']));
                 foreach ($match['categories'] as $category) {
                     if (is_string($category)) {
-                        error_log("GOOGLE_BOOKS_AGE_DEBUG: Processing category: '$category'");
-                        // Look for age patterns in categories
-                        if (preg_match('/(\d+)\s*\+/i', $category, $matches)) {
-                            $rawAgeRange = $matches[0]; // e.g., "12+"
+                        // Look for explicit age patterns in categories
+                        if (preg_match('/(\d+)\s*-\s*(\d+)\s*years?/i', $category, $matches)) {
+                            $rawAgeRange = $matches[0]; // e.g., "8-12 years"
                             $ageRange = mapAmazonAgeRangeToStandard($rawAgeRange);
-                            error_log("GOOGLE_BOOKS_CATEGORY_AGE: Found '$rawAgeRange' in category '$category', mapped to '$ageRange'");
-                            if ($ageRange) break;
-                        } elseif (preg_match('/(\d+)\s*-\s*(\d+)/i', $category, $matches)) {
-                            $rawAgeRange = $matches[0]; // e.g., "8-12"
-                            $ageRange = mapAmazonAgeRangeToStandard($rawAgeRange . ' years');
-                            error_log("GOOGLE_BOOKS_CATEGORY_AGE: Found '$rawAgeRange' in category '$category', mapped to '$ageRange'");
                             if ($ageRange) break;
                         } elseif (stripos($category, 'young adult') !== false) {
                             $ageRange = '14-16 years';
-                            error_log("GOOGLE_BOOKS_CATEGORY_AGE: Found 'young adult' in category '$category', mapped to '$ageRange'");
                             break;
                         } elseif (stripos($category, 'teen') !== false) {
                             $ageRange = '11-14 years';
-                            error_log("GOOGLE_BOOKS_CATEGORY_AGE: Found 'teen' in category '$category', mapped to '$ageRange'");
                             break;
                         }
                     }
                 }
-            } else {
-                error_log("GOOGLE_BOOKS_AGE_DEBUG: No categories found in match data");
             }
 
             // Check if there's a direct age_range field (unlikely but possible)
             if (!$ageRange && isset($match['age_range']) && !empty($match['age_range'])) {
                 $rawAgeRange = $match['age_range'];
                 $ageRange = mapAmazonAgeRangeToStandard($rawAgeRange);
-                error_log("GOOGLE_BOOKS_DIRECT_AGE: Mapped '$rawAgeRange' to '$ageRange'");
             }
 
             // Open Library subject_facet[] contains specific patterns
             if (!$ageRange && isset($match['subject_facet']) && is_array($match['subject_facet'])) {
                 foreach ($match['subject_facet'] as $subject) {
                     if (stripos($subject, "Children's Books/Ages 9-12 Fiction") !== false) {
-                        $ageRange = '9-10 years'; // Use standard synchronized value
+                        $ageRange = '9-10 years';
                         break;
                     } elseif (stripos($subject, 'Tweens') !== false) {
-                        $ageRange = '8-9 years'; // Use standard synchronized value
+                        $ageRange = '8-9 years';
                         break;
                     } elseif (stripos($subject, 'Young Adult Fiction') !== false) {
-                        $ageRange = '11-14 years'; // Use standard synchronized value
+                        $ageRange = '11-14 years';
                         break;
                     }
                 }
             }
 
-            // Fallback from maturity_rating - but map it properly
-            if (!$ageRange && isset($match['maturity_rating'])) {
-                $maturityRating = $match['maturity_rating'];
-                error_log("GOOGLE_BOOKS_MATURITY_DEBUG: Processing maturity rating: '$maturityRating'");
-
-                if ($maturityRating === 'NOT_MATURE') {
-                    $ageRange = '5-6 years'; // Use standard value for general children's books
-                    error_log("GOOGLE_BOOKS_MATURITY_DEBUG: NOT_MATURE mapped to '$ageRange'");
-                } elseif ($maturityRating === 'MATURE') {
-                    $ageRange = '18+ years'; // Use standard synchronized value
-                    error_log("GOOGLE_BOOKS_MATURITY_DEBUG: MATURE mapped to '$ageRange'");
-                } else {
-                    // Try to map any other maturity rating value
-                    $mappedAge = mapAmazonAgeRangeToStandard($maturityRating);
-                    if ($mappedAge) {
-                        $ageRange = $mappedAge;
-                        error_log("GOOGLE_BOOKS_MATURITY_DEBUG: Other maturity rating '$maturityRating' mapped to '$ageRange'");
-                    } else {
-                        error_log("GOOGLE_BOOKS_MATURITY_DEBUG: Could not map maturity rating '$maturityRating'");
-                    }
-                }
-            }
-
-            error_log("GOOGLE_BOOKS_AGE_FINAL: Final age range result: " . ($ageRange ?? 'NULL'));
-
+            // NO MATURITY RATING PROCESSING - this was causing the 12+ issue
+            // Return null if no age range found from explicit sources
             return $ageRange;
 
         case 'reading_level':

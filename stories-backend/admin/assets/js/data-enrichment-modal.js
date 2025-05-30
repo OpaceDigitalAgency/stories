@@ -687,6 +687,13 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                         if (!currentSources.includes('amazon')) {
                             existingField.new_data.source = currentSources + ' + amazon';
                         }
+                    } else if (existingField.new_data.status === 'pending_amazon_data') {
+                        // CRITICAL FIX: Field was pending Amazon data - replace with actual Amazon data
+                        console.log(`📦 URGENT_FIX: Field ${fieldName} was pending Amazon data - replacing with Amazon data`);
+                        existingField.new_data = {
+                            ...amazonFieldData.new_data,
+                            status: 'ready' // CRITICAL FIX: Set status to ready when Amazon data arrives
+                        };
                     } else {
                         // Field has single source - convert to multi-source with Amazon
                         console.log(`📦 Converting single-source field to multi-source: ${fieldName}`);

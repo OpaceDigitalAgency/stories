@@ -138,6 +138,14 @@ try {
                     ];
                 }
 
+                // Add enrichment fields from Amazon metadata (age range, reading level, etc.)
+                if (!empty($amazonPayload['enrichment_fields'])) {
+                    foreach ($amazonPayload['enrichment_fields'] as $fieldName => $fieldData) {
+                        $structuredData[$fieldName] = $fieldData;
+                        error_log("Added Amazon enrichment field: $fieldName = " . json_encode($fieldData));
+                    }
+                }
+
                 echo json_encode([
                     'success' => true,
                     'data' => $structuredData,
@@ -973,10 +981,10 @@ function mapMaturityToAgeRangeFromTable($maturityRating) {
             return mapMaturityToAgeRange($maturityRating);
         }
 
-        // Map maturity rating to age range names in the database
+        // Map maturity rating to standardized age range names in the database
         $mappings = [
-            'NOT_MATURE' => ['All Ages', '0-12', '0-18', 'Children', 'Young Adult'],
-            'MATURE' => ['18+', 'Adult', 'Mature']
+            'NOT_MATURE' => ['8-9 years', '9-10 years', '10-11 years', '11-14 years', '7-8 years', '5-6 years', '6-7 years'],
+            'MATURE' => ['18+ years', '16-18 years', '14-16 years']
         ];
 
         $searchTerms = $mappings[strtoupper($maturityRating)] ?? [];
@@ -1013,9 +1021,9 @@ function mapMaturityToAgeRangeFromTable($maturityRating) {
 function mapMaturityToAgeRange($maturityRating) {
     switch (strtoupper($maturityRating)) {
         case 'NOT_MATURE':
-            return 'All Ages';
+            return '8-9 years'; // Default to a common children's age range
         case 'MATURE':
-            return '18+';
+            return '18+ years';
         default:
             return null;
     }

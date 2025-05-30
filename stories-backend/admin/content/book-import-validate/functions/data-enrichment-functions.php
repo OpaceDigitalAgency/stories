@@ -2007,7 +2007,7 @@ function validateCombinedISBN($combinedFields, $currentISBN) {
 }
 
 /**
- * Scrape Amazon buying options (Hardcover, Paperback, Kindle, Audio CD) with debugging output
+ * Scrape Amazon buying options AND metadata (age range, reading level, etc.) with debugging output
  */
 function scrapeAmazonBuyingOptions($isbn) {
     // Define AMAZON_DEBUG if not already defined
@@ -2164,7 +2164,91 @@ function scrapeAmazonBuyingOptions($isbn) {
         }
     }
 
-    return $buyingOptions;
+    // Extract additional metadata from detail bullets section
+    $metadata = extractAmazonMetadata($responses);
+
+    if (AMAZON_DEBUG && !empty($metadata)) {
+        echo "<h4>📊 Amazon Metadata Found:</h4>\n";
+        foreach ($metadata as $key => $value) {
+            echo "<p><strong>$key:</strong> $value</p>\n";
+        }
+    }
+
+    return [
+        'buying_options' => $buyingOptions,
+        'metadata' => $metadata
+    ];
+}
+
+/**
+ * Extract metadata from Amazon detail bullets section
+ */
+function extractAmazonMetadata($responses) {
+    $metadata = [];
+
+    foreach ($responses as $response) {
+        if (empty($response)) continue;
+
+        // Extract from detail bullets section
+        if (preg_match('/<div[^>]*id="detailBullets_feature_div"[^>]*>(.*?)<\/div>/is', $response, $bulletMatch)) {
+            $bulletContent = $bulletMatch[1];
+
+            // Extract individual bullet points
+            $bulletPatterns = [
+                'reading_age' => '/<span[^>]*class="a-text-bold"[^>]*>Reading age[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
+                'grade_level' => '/<span[^>]*class="a-text-bold"[^>]*>Grade level[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
+                'publisher' => '/<span[^>]*class="a-text-bold"[^>]*>Publisher[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
+                'publication_date' => '/<span[^>]*class="a-text-bold"[^>]*>Publication date[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
+                'language' => '/<span[^>]*class="a-text-bold"[^>]*>Language[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
+                'print_length' => '/<span[^>]*class="a-text-bold"[^>]*>Print length[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
+                'isbn_10' => '/<span[^>]*class="a-text-bold"[^>]*>ISBN-10[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
+                'isbn_13' => '/<span[^>]*class="a-text-bold"[^>]*>ISBN-13[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
+                'dimensions' => '/<span[^>]*class="a-text-bold"[^>]*>Dimensions[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
+                'item_weight' => '/<span[^>]*class="a-text-bold"[^>]*>Item weight[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
+            ];
+
+            foreach ($bulletPatterns as $key => $pattern) {
+                if (preg_match($pattern, $bulletContent, $matches)) {
+                    $value = trim(strip_tags($matches[1]));
+                    // Clean up whitespace and special characters
+                    $value = preg_replace('/\s+/', ' ', $value);
+                    $value = trim($value, " \t\n\r\0\x0B\xE2\x80\x8F\xE2\x80\x8E"); // Remove Unicode directional marks
+
+                    if (!empty($value)) {
+                        $metadata[$key] = $value;
+                    }
+                }
+            }
+        }
+
+        // Also try the carousel format for reading age and grade level
+        if (preg_match('/<ol[^>]*class="a-carousel"[^>]*>(.*?)<\/ol>/is', $response, $carouselMatch)) {
+            $carouselContent = $carouselMatch[1];
+
+            // Extract reading age from carousel
+            if (preg_match('/<span>Reading age<\/span>.*?<span[^>]*>([^<]+)<\/span>/is', $carouselContent, $readingMatch)) {
+                $readingAge = trim(strip_tags($readingMatch[1]));
+                if (!empty($readingAge) && !isset($metadata['reading_age'])) {
+                    $metadata['reading_age'] = $readingAge;
+                }
+            }
+
+            // Extract grade level from carousel
+            if (preg_match('/<span>Grade level<\/span>.*?<span[^>]*>([^<]+)<\/span>/is', $carouselContent, $gradeMatch)) {
+                $gradeLevel = trim(strip_tags($gradeMatch[1]));
+                if (!empty($gradeLevel) && !isset($metadata['grade_level'])) {
+                    $metadata['grade_level'] = $gradeLevel;
+                }
+            }
+        }
+
+        // If we found some metadata, we can break early
+        if (!empty($metadata)) {
+            break;
+        }
+    }
+
+    return $metadata;
 }
 
 /**
@@ -2311,10 +2395,13 @@ function getAmazonEnrichmentData($isbn) {
     // Log the request for debugging
     error_log("getAmazonEnrichmentData called with ISBN: $isbn, cleaned: $cleanISBN");
 
-    // Fetch raw buying options (no caching since prices change frequently)
-    $options = scrapeAmazonBuyingOptions($cleanISBN);
+    // Fetch raw buying options and metadata (no caching since prices change frequently)
+    $amazonData = scrapeAmazonBuyingOptions($cleanISBN);
 
-    error_log("scrapeAmazonBuyingOptions returned: " . json_encode($options));
+    error_log("scrapeAmazonBuyingOptions returned: " . json_encode($amazonData));
+
+    $options = $amazonData['buying_options'] ?? [];
+    $amazonMetadata = $amazonData['metadata'] ?? [];
 
     $selectedFormat = null;
     $selectedPrice = null;
@@ -2336,13 +2423,159 @@ function getAmazonEnrichmentData($isbn) {
         }
     }
 
+    // Convert Amazon metadata to enrichment fields
+    $enrichmentFields = [];
+
+    if (!empty($amazonMetadata)) {
+        // Map Amazon reading age to our age_range field
+        if (isset($amazonMetadata['reading_age'])) {
+            $enrichmentFields['age_range'] = [
+                'label' => 'Age Range',
+                'new_data' => [
+                    'value' => $amazonMetadata['reading_age'],
+                    'source' => 'amazon',
+                    'confidence' => 0.9, // Amazon data is usually very accurate
+                    'status' => 'available'
+                ]
+            ];
+        }
+
+        // Map Amazon grade level to our reading_level field (we can derive reading level from grade)
+        if (isset($amazonMetadata['grade_level'])) {
+            $readingLevel = mapGradeLevelToReadingLevel($amazonMetadata['grade_level']);
+            if ($readingLevel) {
+                $enrichmentFields['reading_level'] = [
+                    'label' => 'Reading Level',
+                    'new_data' => [
+                        'value' => $readingLevel,
+                        'source' => 'amazon',
+                        'confidence' => 0.85, // Derived from grade level, slightly lower confidence
+                        'status' => 'available'
+                    ]
+                ];
+            }
+        }
+
+        // Map other Amazon fields
+        $fieldMappings = [
+            'publisher' => 'Publisher',
+            'publication_date' => 'Publication Date',
+            'language' => 'Language',
+            'print_length' => 'Page Count'
+        ];
+
+        foreach ($fieldMappings as $amazonField => $label) {
+            if (isset($amazonMetadata[$amazonField])) {
+                $value = $amazonMetadata[$amazonField];
+
+                // Clean up page count to just the number
+                if ($amazonField === 'print_length') {
+                    $value = preg_replace('/[^0-9]/', '', $value);
+                    if (empty($value)) continue;
+                }
+
+                $enrichmentFields[$amazonField === 'print_length' ? 'page_count' : $amazonField] = [
+                    'label' => $label,
+                    'new_data' => [
+                        'value' => $value,
+                        'source' => 'amazon',
+                        'confidence' => 0.9,
+                        'status' => 'available'
+                    ]
+                ];
+            }
+        }
+    }
+
     $payload = [
         'buying_options'   => $options,
         'selected_format'  => $selectedFormat,
         'selected_price'   => $selectedPrice,
+        'enrichment_fields' => $enrichmentFields,
+        'raw_metadata' => $amazonMetadata
     ];
 
     error_log("Final Amazon payload: " . json_encode($payload));
 
     return $payload;
+}
+
+/**
+ * Map Amazon grade level to reading level
+ */
+function mapGradeLevelToReadingLevel($gradeLevel) {
+    // Clean up the grade level string
+    $gradeLevel = trim(strtolower($gradeLevel));
+
+    // Map grade levels to reading levels based on UK education system
+    $mappings = [
+        // Early years
+        'pre-k' => 'Pre-literacy (Sensory)',
+        'nursery' => 'Pre-literacy (Naming)',
+        'reception' => 'Beginning Reader',
+
+        // Primary grades (US system)
+        'k' => 'Beginning Reader',
+        'kindergarten' => 'Beginning Reader',
+        '1' => 'Early Reader',
+        '2' => 'Developing Reader',
+        '3' => 'Transitional Reader',
+        '4' => 'Fluent Reader',
+        '5' => 'Fluent Reader',
+        '6' => 'Fluent Reader',
+
+        // Range mappings
+        '1 - 2' => 'Early Reader',
+        '2 - 3' => 'Developing Reader',
+        '3 - 4' => 'Transitional Reader',
+        '4 - 5' => 'Fluent Reader',
+        '5 - 6' => 'Fluent Reader',
+        '6 - 7' => 'Advanced Reader',
+        '7 - 8' => 'Advanced Reader',
+        '8 - 9' => 'Advanced Reader',
+        '9+' => 'Advanced Reader',
+
+        // Secondary
+        '7' => 'Advanced Reader',
+        '8' => 'Advanced Reader',
+        '9' => 'Advanced Reader',
+        '10' => 'Advanced Reader',
+        '11' => 'Advanced Reader',
+        '12' => 'Proficient Reader',
+    ];
+
+    // Try exact match first
+    if (isset($mappings[$gradeLevel])) {
+        return $mappings[$gradeLevel];
+    }
+
+    // Try to extract numbers and map ranges
+    if (preg_match('/(\d+)\s*-\s*(\d+)/', $gradeLevel, $matches)) {
+        $start = intval($matches[1]);
+        $end = intval($matches[2]);
+
+        // Use the middle of the range
+        $middle = ($start + $end) / 2;
+
+        if ($middle <= 1) return 'Early Reader';
+        if ($middle <= 2) return 'Developing Reader';
+        if ($middle <= 3) return 'Transitional Reader';
+        if ($middle <= 6) return 'Fluent Reader';
+        if ($middle <= 11) return 'Advanced Reader';
+        return 'Proficient Reader';
+    }
+
+    // Try single number
+    if (preg_match('/(\d+)/', $gradeLevel, $matches)) {
+        $grade = intval($matches[1]);
+
+        if ($grade <= 1) return 'Early Reader';
+        if ($grade <= 2) return 'Developing Reader';
+        if ($grade <= 3) return 'Transitional Reader';
+        if ($grade <= 6) return 'Fluent Reader';
+        if ($grade <= 11) return 'Advanced Reader';
+        return 'Proficient Reader';
+    }
+
+    return null; // Unable to map
 }

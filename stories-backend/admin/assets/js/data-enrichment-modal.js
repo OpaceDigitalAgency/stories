@@ -711,6 +711,12 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             '14-16 years': 'Advanced Reader',
             '16-18 years': 'Advanced Reader',
             '18+ years': 'Proficient Reader',
+            // Amazon-style age ranges
+            '8-11 years': 'Fluent Reader',
+            '8 - 11 years': 'Fluent Reader',
+            // Legacy values that might still exist
+            '12+': 'Advanced Reader',
+            '12+ years': 'Advanced Reader',
             // Common variations that might come from APIs
             '5-6 years': 'Early Reader',
             'All Ages': 'Early Reader'

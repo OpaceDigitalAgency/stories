@@ -1357,7 +1357,7 @@ require_once '../includes/header.php';
                                 <div class="card-body">
                                     <p>Enter a URL from a book recommendation website to discover and import books.</p>
                                     
-                                    <form method="post" action="book-discovery-process-enhanced.php">
+                                    <form method="post" action="book-discovery-modern.php">
                                         <div class="form-group">
                                             <label for="discovery_url">Website URL</label>
                                             <input type="url" class="form-control" id="discovery_url" name="discovery_url"

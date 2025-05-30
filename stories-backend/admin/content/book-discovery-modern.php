@@ -31,6 +31,19 @@ $currentPage = 'book-import-tool';
 
 // Include header
 include_once '../includes/header.php';
+
+// Handle form submission from Discovery tab
+$initialUrl = '';
+$initialAgeFilter = '';
+$initialAutoEnrich = false;
+$initialImportToDb = false;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $initialUrl = $_POST['discovery_url'] ?? '';
+    $initialAgeFilter = $_POST['age_filter'] ?? '';
+    $initialAutoEnrich = isset($_POST['auto_enrich']);
+    $initialImportToDb = isset($_POST['import_to_db']);
+}
 ?>
 
 <div class="container-fluid">
@@ -48,27 +61,30 @@ include_once '../includes/header.php';
                         <div class="form-group">
                             <label for="discovery_url">Website URL</label>
                             <select class="form-control" id="discovery_url" name="discovery_url">
-                                <option value="https://www.booktrust.org.uk/booklists/0-5-years/">BookTrust 0-5 years</option>
-                                <option value="https://www.booktrust.org.uk/booklists/5-8-years/">BookTrust 5-8 years</option>
-                                <option value="https://www.booktrust.org.uk/booklists/8-12-years/">BookTrust 8-12 years</option>
+                                <option value="https://www.booktrust.org.uk/booklists/0-5-years/" <?php echo $initialUrl === 'https://www.booktrust.org.uk/booklists/0-5-years/' ? 'selected' : ''; ?>>BookTrust 0-5 years</option>
+                                <option value="https://www.booktrust.org.uk/booklists/5-8-years/" <?php echo $initialUrl === 'https://www.booktrust.org.uk/booklists/5-8-years/' ? 'selected' : ''; ?>>BookTrust 5-8 years</option>
+                                <option value="https://www.booktrust.org.uk/booklists/8-12-years/" <?php echo $initialUrl === 'https://www.booktrust.org.uk/booklists/8-12-years/' ? 'selected' : ''; ?>>BookTrust 8-12 years</option>
+                                <?php if ($initialUrl && !in_array($initialUrl, ['https://www.booktrust.org.uk/booklists/0-5-years/', 'https://www.booktrust.org.uk/booklists/5-8-years/', 'https://www.booktrust.org.uk/booklists/8-12-years/'])): ?>
+                                    <option value="<?php echo htmlspecialchars($initialUrl); ?>" selected><?php echo htmlspecialchars($initialUrl); ?></option>
+                                <?php endif; ?>
                             </select>
                         </div>
                         
                         <div class="form-group">
                             <label for="age_filter">Age Range Filter</label>
                             <select class="form-control" id="age_filter" name="age_filter">
-                                <option value="">All ages</option>
-                                <option value="0-2">0-2 years</option>
-                                <option value="3-5">3-5 years</option>
-                                <option value="5-8">5-8 years</option>
-                                <option value="8-12">8-12 years</option>
-                                <option value="12+">12+ years</option>
+                                <option value="" <?php echo $initialAgeFilter === '' ? 'selected' : ''; ?>>All ages</option>
+                                <option value="0-2" <?php echo $initialAgeFilter === '0-2' ? 'selected' : ''; ?>>0-2 years</option>
+                                <option value="3-5" <?php echo $initialAgeFilter === '3-5' ? 'selected' : ''; ?>>3-5 years</option>
+                                <option value="5-8" <?php echo $initialAgeFilter === '5-8' ? 'selected' : ''; ?>>5-8 years</option>
+                                <option value="8-12" <?php echo $initialAgeFilter === '8-12' ? 'selected' : ''; ?>>8-12 years</option>
+                                <option value="12+" <?php echo $initialAgeFilter === '12+' ? 'selected' : ''; ?>>12+ years</option>
                             </select>
                         </div>
                         
                         <div class="form-group">
                             <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="auto_enrich" name="auto_enrich">
+                                <input class="form-check-input" type="checkbox" id="auto_enrich" name="auto_enrich" <?php echo $initialAutoEnrich ? 'checked' : ''; ?>>
                                 <label class="form-check-label" for="auto_enrich">
                                     <strong>Auto-enrich with APIs (slower but more data)</strong>
                                 </label>
@@ -80,7 +96,7 @@ include_once '../includes/header.php';
                         
                         <div class="form-group">
                             <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="import_to_db" name="import_to_db">
+                                <input class="form-check-input" type="checkbox" id="import_to_db" name="import_to_db" <?php echo $initialImportToDb ? 'checked' : ''; ?>>
                                 <label class="form-check-label" for="import_to_db">
                                     <strong>Import directly to database</strong>
                                 </label>
@@ -156,6 +172,19 @@ class ModernBookDiscovery {
         this.cancelled = false;
         
         this.initEventListeners();
+<?php if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($initialUrl)): ?>
+<script>
+// Auto-start discovery if form was submitted
+document.addEventListener('DOMContentLoaded', function() {
+    // Small delay to ensure everything is loaded
+    setTimeout(function() {
+        if (discovery && typeof discovery.startDiscovery === 'function') {
+            discovery.startDiscovery();
+        }
+    }, 500);
+});
+</script>
+<?php endif; ?>
     }
     
     initEventListeners() {

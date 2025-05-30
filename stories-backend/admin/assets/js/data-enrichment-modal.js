@@ -662,7 +662,8 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                             source: amazonFieldData.new_data.source,
                             confidence: amazonFieldData.new_data.confidence,
                             label: amazonFieldData.label || existingField.label,
-                            original_value: amazonFieldData.new_data.original_value
+                            original_value: amazonFieldData.new_data.original_value,
+                            status: 'ready' // CRITICAL FIX: Set status to ready for Amazon options
                         });
 
                         // Update source to include Amazon
@@ -688,7 +689,8 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                                     source: amazonFieldData.new_data.source,
                                     confidence: amazonFieldData.new_data.confidence,
                                     label: amazonFieldData.label || existingField.label,
-                                    original_value: amazonFieldData.new_data.original_value
+                                    original_value: amazonFieldData.new_data.original_value,
+                                    status: 'ready' // CRITICAL FIX: Set status to ready for Amazon options
                                 }
                             ],
                             source: (originalData.source || 'unknown') + ' + amazon'
@@ -707,7 +709,10 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     window.currentEnrichmentData.fields[fieldName] = {
                         label: amazonFieldData.label || fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
                         current_value: existingField?.current_value || null,
-                        new_data: amazonFieldData.new_data
+                        new_data: {
+                            ...amazonFieldData.new_data,
+                            status: 'ready' // CRITICAL FIX: Set status to ready when Amazon data arrives
+                        }
                     };
                 }
 

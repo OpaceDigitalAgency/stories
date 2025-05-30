@@ -539,20 +539,20 @@ function handleApplyEnrichment() {
                 break;
 
             case 'maturity_rating':
-                // Store the raw maturity rating if field exists
-                $columnExists = columnExists('books', 'maturity_rating');
-                error_log("Maturity rating field: value='$value', empty=" . (empty($value) ? 'YES' : 'NO') . ", column_exists=" . ($columnExists ? 'YES' : 'NO'));
+                // Map maturity rating to age_range since maturity_rating column doesn't exist
+                error_log("Maturity rating field: value='$value', mapping to age_range");
 
-                if (!empty($value) && $columnExists) {
-                    $updateFields[] = "maturity_rating = ?";
-                    $params[] = $value;
-                    error_log("Added maturity_rating to update: $value");
-                } else {
-                    if (empty($value)) {
-                        error_log("Skipping maturity_rating - empty value");
+                if (!empty($value)) {
+                    $mappedAgeRange = mapMaturityRatingToAgeRange($value);
+                    if ($mappedAgeRange && columnExists('books', 'age_range')) {
+                        $updateFields[] = "age_range = ?";
+                        $params[] = $mappedAgeRange;
+                        error_log("Mapped maturity_rating '$value' to age_range '$mappedAgeRange'");
                     } else {
-                        error_log("Skipping maturity_rating - column does not exist in books table");
+                        error_log("Failed to map maturity_rating '$value' to age_range");
                     }
+                } else {
+                    error_log("Skipping maturity_rating - empty value");
                 }
                 break;
 
@@ -813,7 +813,7 @@ function filterRelevantFields($fields, $currentBookData) {
         'characters' => 'Characters',
         'settings' => 'Settings',
         'tags' => 'Genres', // Special case - uses directory_item_tags junction table
-        'maturity_rating' => 'Maturity Rating',
+        'maturity_rating' => 'Maturity Rating', // Special case - mapped to age_range during save
         'average_rating' => 'Average Rating',
         'rating_count' => 'Rating Count',
         'internet_archive_id' => 'Internet Archive ID',
@@ -830,6 +830,9 @@ function filterRelevantFields($fields, $currentBookData) {
             // Special handling for tags (displayed as genres)
             $currentValue = isset($currentBookData['current_tags']) ?
                 array_column($currentBookData['current_tags'], 'name') : [];
+        } elseif ($fieldName === 'maturity_rating') {
+            // Special handling for maturity_rating - show current age_range as current value
+            $currentValue = $currentBookData['age_range'] ?? null;
         } else {
             $currentValue = $currentBookData[$fieldName] ?? null;
         }
@@ -996,6 +999,73 @@ function mapMaturityToAgeRange($maturityRating) {
             return '18+';
         default:
             return null;
+    }
+}
+
+/**
+ * Map maturity rating to appropriate age range using database values
+ */
+function mapMaturityRatingToAgeRange($maturityRating) {
+    global $db;
+
+    try {
+        // Get available age ranges from database
+        $stmt = $db->query("SELECT range_name FROM age_ranges ORDER BY id ASC");
+        $ageRanges = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        if (empty($ageRanges)) {
+            // Fallback to hardcoded mapping if no database ranges
+            return mapMaturityToAgeRange($maturityRating);
+        }
+
+        $maturity = strtoupper(trim($maturityRating));
+
+        // Map based on maturity rating
+        switch ($maturity) {
+            case 'NOT_MATURE':
+            case 'EVERYONE':
+            case 'ALL_AGES':
+                // Find the most general/youngest age range
+                foreach (['All Ages', '0-2', '3-5', '6-8'] as $preferred) {
+                    if (in_array($preferred, $ageRanges)) {
+                        return $preferred;
+                    }
+                }
+                return $ageRanges[0]; // First available
+
+            case 'MATURE':
+            case 'ADULT':
+            case '18+':
+                // Find adult age ranges
+                foreach (['18+', '16+', '14+'] as $preferred) {
+                    if (in_array($preferred, $ageRanges)) {
+                        return $preferred;
+                    }
+                }
+                return end($ageRanges); // Last available (likely highest age)
+
+            default:
+                // Try to extract age from the rating string
+                if (preg_match('/(\d+)\+?/', $maturity, $matches)) {
+                    $age = intval($matches[1]);
+
+                    // Find closest age range
+                    foreach ($ageRanges as $range) {
+                        if (preg_match('/(\d+)/', $range, $rangeMatches)) {
+                            $rangeAge = intval($rangeMatches[1]);
+                            if ($rangeAge >= $age) {
+                                return $range;
+                            }
+                        }
+                    }
+                }
+
+                return null; // No suitable mapping found
+        }
+
+    } catch (Exception $e) {
+        error_log("Error mapping maturity rating '$maturityRating': " . $e->getMessage());
+        return mapMaturityToAgeRange($maturityRating); // Fallback
     }
 }
 

@@ -503,6 +503,10 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                         const $fieldDiv = $(`.enrichment-field[data-field="${fieldName}"]`);
                         const $badge = $fieldDiv.find('.badge:contains("Amazon")');
                         $badge.removeClass('badge-info').addClass('badge-secondary').text('Amazon (No data)');
+
+                        // Update the "New Value" text to show no data found
+                        const $newValueDiv = $fieldDiv.find('.new-value');
+                        $newValueDiv.text('No Amazon data found');
                     }
                 });
             }
@@ -526,6 +530,10 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
 
     function updateEnrichmentDataWithAmazon(amazonData) {
         console.log('📦 updateEnrichmentDataWithAmazon called with:', amazonData);
+        console.log('📦 Amazon data keys:', Object.keys(amazonData));
+        console.log('📦 Looking for format and price_range fields...');
+        console.log('📦 Format field in Amazon data:', amazonData.format);
+        console.log('📦 Price Range field in Amazon data:', amazonData.price_range);
 
         // Merge Amazon data into the current enrichment data
         if (window.currentEnrichmentData && window.currentEnrichmentData.fields) {

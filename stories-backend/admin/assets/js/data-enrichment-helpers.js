@@ -9,11 +9,15 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
 
         // Determine overall benefit level for multi-source field
         let bestBenefitLevel = 'not_beneficial';
+        let hasExactMatch = false;
         options.forEach((option) => {
             const benefitLevel = determineBenefitLevel(field.current_value, option.value, false);
-            if (benefitLevel === 'beneficial') {
+            if (benefitLevel === 'exact_match') {
+                hasExactMatch = true;
+                bestBenefitLevel = 'exact_match';
+            } else if (benefitLevel === 'beneficial' && bestBenefitLevel !== 'exact_match') {
                 bestBenefitLevel = 'beneficial';
-            } else if (benefitLevel === 'questionable' && bestBenefitLevel !== 'beneficial') {
+            } else if (benefitLevel === 'questionable' && bestBenefitLevel !== 'beneficial' && bestBenefitLevel !== 'exact_match') {
                 bestBenefitLevel = 'questionable';
             }
         });
@@ -134,9 +138,9 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
         });
 
         // Apply exact match styling if found
-        const exactMatchClass = hasExactMatch ? ' exact-match' : '';
-        const disabledClass = bestBenefitLevel === 'not_beneficial' ? ' disabled-field' : '';
-        const labelClass = bestBenefitLevel === 'not_beneficial' ? ' text-muted' : '';
+        const exactMatchClass = (hasExactMatch || bestBenefitLevel === 'exact_match') ? ' exact-match' : '';
+        const disabledClass = (bestBenefitLevel === 'not_beneficial' || bestBenefitLevel === 'exact_match') ? ' disabled-field' : '';
+        const labelClass = (bestBenefitLevel === 'not_beneficial' || bestBenefitLevel === 'exact_match') ? ' text-muted' : '';
 
         // Calculate combined confidence score from all valid sources
         const totalConfidence = validOptions.reduce((sum, option) => sum + (option.confidence || 0), 0);
@@ -165,7 +169,7 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
                 <div class="enrichment-field ${benefitBorder}${exactMatchClass}${disabledClass}" data-field="${fieldName}">
                     <div class="form-check">
                         <input class="form-check-input field-checkbox" type="checkbox"
-                               id="field_${fieldName}" name="fields[]" value="${fieldName}" ${bestBenefitLevel === 'not_beneficial' ? 'disabled' : ''}>
+                               id="field_${fieldName}" name="fields[]" value="${fieldName}" ${(bestBenefitLevel === 'not_beneficial' || bestBenefitLevel === 'exact_match') ? 'disabled' : ''}>
                         <label class="form-check-label font-weight-bold${labelClass}" for="field_${fieldName}">
                             ${headerText}
                             ${getBenefitIndicator(bestBenefitLevel)}

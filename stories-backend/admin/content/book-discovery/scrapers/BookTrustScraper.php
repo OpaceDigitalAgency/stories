@@ -139,12 +139,32 @@ class BookTrustScraper {
         
         // Title and URL
         $titleNode = $xpath->query('.//h3[@class="heading-s"]//a', $item)->item(0);
+        error_log("BookTrustScraper: parseBookItem - Looking for h3.heading-s//a, found: " . ($titleNode ? 'YES' : 'NO'));
+        
         if ($titleNode) {
             $book['title'] = $this->cleanText($titleNode->textContent);
             $href = $titleNode->getAttribute('href');
+            error_log("BookTrustScraper: parseBookItem - Title: '{$book['title']}', href: '{$href}'");
             if ($href) {
                 $book['detail_url'] = $this->base_url . $href;
             }
+        } else {
+            // Try alternative selectors for debugging
+            $allH3 = $xpath->query('.//h3', $item);
+            error_log("BookTrustScraper: parseBookItem - No h3.heading-s//a found, trying any h3: found " . $allH3->length);
+            
+            if ($allH3->length > 0) {
+                for ($i = 0; $i < min(3, $allH3->length); $i++) {
+                    $h3 = $allH3->item($i);
+                    $class = $h3->getAttribute('class');
+                    $text = trim($h3->textContent);
+                    error_log("BookTrustScraper: parseBookItem - h3 #{$i} class: '{$class}', text: '" . substr($text, 0, 50) . "'");
+                }
+            }
+            
+            // Try finding any links
+            $allLinks = $xpath->query('.//a', $item);
+            error_log("BookTrustScraper: parseBookItem - Found " . $allLinks->length . " total links in item");
         }
         
         // Author - remove "by " prefix

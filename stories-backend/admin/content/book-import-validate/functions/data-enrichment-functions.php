@@ -1157,13 +1157,17 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
             break;
 
         case 'age_range':
-            // CRITICAL FIX: Extract age range from Google Books categories and map properly
+            // CRITICAL DEBUG: Log all input data for age range extraction
+            error_log("GOOGLE_BOOKS_AGE_DEBUG: Starting age range extraction for match: " . json_encode($match));
+
             $ageRange = null;
 
             // First check Google Books categories for age-related information
             if (isset($match['categories']) && is_array($match['categories'])) {
+                error_log("GOOGLE_BOOKS_AGE_DEBUG: Found categories: " . json_encode($match['categories']));
                 foreach ($match['categories'] as $category) {
                     if (is_string($category)) {
+                        error_log("GOOGLE_BOOKS_AGE_DEBUG: Processing category: '$category'");
                         // Look for age patterns in categories
                         if (preg_match('/(\d+)\s*\+/i', $category, $matches)) {
                             $rawAgeRange = $matches[0]; // e.g., "12+"
@@ -1186,6 +1190,8 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
                         }
                     }
                 }
+            } else {
+                error_log("GOOGLE_BOOKS_AGE_DEBUG: No categories found in match data");
             }
 
             // Check if there's a direct age_range field (unlikely but possible)
@@ -1214,19 +1220,27 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
             // Fallback from maturity_rating - but map it properly
             if (!$ageRange && isset($match['maturity_rating'])) {
                 $maturityRating = $match['maturity_rating'];
+                error_log("GOOGLE_BOOKS_MATURITY_DEBUG: Processing maturity rating: '$maturityRating'");
+
                 if ($maturityRating === 'NOT_MATURE') {
                     $ageRange = '5-6 years'; // Use standard value for general children's books
+                    error_log("GOOGLE_BOOKS_MATURITY_DEBUG: NOT_MATURE mapped to '$ageRange'");
                 } elseif ($maturityRating === 'MATURE') {
                     $ageRange = '18+ years'; // Use standard synchronized value
+                    error_log("GOOGLE_BOOKS_MATURITY_DEBUG: MATURE mapped to '$ageRange'");
                 } else {
                     // Try to map any other maturity rating value
                     $mappedAge = mapAmazonAgeRangeToStandard($maturityRating);
                     if ($mappedAge) {
                         $ageRange = $mappedAge;
-                        error_log("GOOGLE_BOOKS_MATURITY: Mapped maturity rating '$maturityRating' to '$ageRange'");
+                        error_log("GOOGLE_BOOKS_MATURITY_DEBUG: Other maturity rating '$maturityRating' mapped to '$ageRange'");
+                    } else {
+                        error_log("GOOGLE_BOOKS_MATURITY_DEBUG: Could not map maturity rating '$maturityRating'");
                     }
                 }
             }
+
+            error_log("GOOGLE_BOOKS_AGE_FINAL: Final age range result: " . ($ageRange ?? 'NULL'));
 
             return $ageRange;
 

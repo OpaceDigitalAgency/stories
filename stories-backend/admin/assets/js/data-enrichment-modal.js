@@ -952,6 +952,9 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         $(document).on('change', 'input[type="radio"][name*="age_range"]', function() {
             console.log('🔄 Age range source changed:', $(this).val(), $(this).attr('name'));
 
+            // Update the age range field display immediately
+            updateFieldDisplay('age_range');
+
             // Always sync reading level when age range source changes (regardless of checkbox state)
             setTimeout(() => {
                 const selectedAgeRange = getSelectedFieldValue('age_range');
@@ -960,9 +963,8 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 if (selectedAgeRange && ageToReadingMap[selectedAgeRange]) {
                     const expectedReading = ageToReadingMap[selectedAgeRange];
                     console.log('🔄 Syncing reading level to:', expectedReading);
-
-                    // Just log for now - don't try to update display
-                    console.log('🔄 Would update reading level to:', expectedReading);
+                    // Update reading level display to show mapped value
+                    updateFieldDisplay('reading_level', expectedReading);
                 } else {
                     console.log('🔄 No mapping found for age range:', selectedAgeRange);
                 }
@@ -1064,6 +1066,22 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 console.log('🔄 Synced age range radio selection to option:', optionIndex);
             }
         });
+
+        // Listen for checkbox changes on any field to update display
+        $(document).on('change', 'input[type="checkbox"].field-checkbox', function() {
+            const fieldName = $(this).val();
+            console.log('🔄 Field checkbox changed:', fieldName, 'checked:', $(this).is(':checked'));
+            updateFieldDisplay(fieldName);
+        });
+
+        // Listen for radio button changes on any field to update display
+        $(document).on('change', 'input[type="radio"][name*="field_"][name*="_option"]', function() {
+            const fieldName = $(this).attr('name').match(/field_(.+)_option/)?.[1];
+            if (fieldName) {
+                console.log('🔄 Field radio changed:', fieldName, 'option:', $(this).val());
+                updateFieldDisplay(fieldName);
+            }
+        });
     }
 
     // Get the currently selected value for a field
@@ -1110,6 +1128,75 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         console.log('🔍 No value found for field:', fieldName);
         console.log('🔍 Field data structure:', fieldData);
         return null;
+    }
+
+    /**
+     * Update the visual display of a field when source selection changes
+     * @param {string} fieldName - The field name to update
+     * @param {string} overrideValue - Optional value to use instead of getting from selection
+     */
+    function updateFieldDisplay(fieldName, overrideValue = null) {
+        console.log('🎨 Updating field display for:', fieldName, 'override:', overrideValue);
+
+        const fieldContainer = $(`.enrichment-field[data-field="${fieldName}"]`);
+        if (!fieldContainer.length) {
+            console.log('🎨 Field container not found for:', fieldName);
+            return;
+        }
+
+        // Get the value to display
+        const displayValue = overrideValue || getSelectedFieldValue(fieldName);
+        const fieldData = window.currentEnrichmentData?.fields?.[fieldName];
+
+        if (!fieldData) {
+            console.log('🎨 No field data for:', fieldName);
+            return;
+        }
+
+        // Check if field is enabled
+        const fieldCheckbox = $(`input[type="checkbox"][value="${fieldName}"]`);
+        const isEnabled = !fieldCheckbox.length || fieldCheckbox.is(':checked');
+
+        console.log('🎨 Field enabled state:', isEnabled, 'display value:', displayValue);
+
+        // Update the "New Value" display
+        const newValueElement = fieldContainer.find('.new-value');
+        if (newValueElement.length && displayValue) {
+            newValueElement.text(displayValue);
+            console.log('🎨 Updated new value display to:', displayValue);
+        }
+
+        // Update database state and styling
+        const currentValue = fieldData.current_value;
+        const databaseState = determineDatabaseState(currentValue, displayValue, 'selected', null, fieldName);
+
+        // Remove existing state classes
+        fieldContainer.removeClass('disabled-field matches-database database-wrong database-empty');
+
+        if (!isEnabled) {
+            fieldContainer.addClass('disabled-field');
+            console.log('🎨 Added disabled-field class');
+        } else if (databaseState === 'matches_database') {
+            fieldContainer.addClass('matches-database disabled-field');
+            console.log('🎨 Added matches-database and disabled-field classes');
+        } else if (databaseState === 'database_wrong') {
+            fieldContainer.addClass('database-wrong');
+            console.log('🎨 Added database-wrong class');
+        } else if (databaseState === 'database_empty') {
+            fieldContainer.addClass('database-empty');
+            console.log('🎨 Added database-empty class');
+        }
+
+        // Update confidence badge
+        const confidenceBadge = fieldContainer.find('.badge-info, .badge-success, .badge-warning, .badge-danger');
+        if (confidenceBadge.length) {
+            if (databaseState === 'matches_database') {
+                confidenceBadge.removeClass('badge-info badge-warning badge-danger').addClass('badge-success').text('100%');
+            } else {
+                confidenceBadge.removeClass('badge-success badge-warning badge-danger').addClass('badge-info').text('New');
+            }
+            console.log('🎨 Updated confidence badge for database state:', databaseState);
+        }
     }
 
     // FIXED: Ensure both age_range and reading_level show the same source options

@@ -28,8 +28,8 @@ ini_set('output_buffering', 'off');
 ini_set('implicit_flush', true);
 ob_implicit_flush(true);
 
-// Function to flush output
-function flushOutput() {
+// Function to flush output for discovery process
+function flushDiscoveryOutput() {
     if (ob_get_level() > 0) {
         ob_flush();
     }
@@ -64,19 +64,19 @@ include_once '../includes/header.php';
                             }
                             
                             echo "<h3>Discovering books from: " . htmlspecialchars($url) . "</h3>";
-                            flushOutput();
+                            flushDiscoveryOutput();
                             
                             // Initialize discovery engine
                             $discoveryEngine = new BookDiscoveryEngine($db);
                             
                             // Discover books
                             echo "<p>Starting discovery process...</p>";
-                            flushOutput();
+                            flushDiscoveryOutput();
                             
                             $books = $discoveryEngine->discoverFromURL($url);
                             
                             echo "<p class='text-success'>Found " . count($books) . " books</p>";
-                            flushOutput();
+                            flushDiscoveryOutput();
                             
                             // Filter by age if specified
                             if ($ageFilter) {
@@ -90,7 +90,7 @@ include_once '../includes/header.php';
                                 
                                 if ($originalCount > count($books)) {
                                     echo "<p>Filtered to " . count($books) . " books matching age range: {$ageFilter}</p>";
-                                    flushOutput();
+                                    flushDiscoveryOutput();
                                 }
                             }
                             
@@ -186,7 +186,7 @@ include_once '../includes/header.php';
                                     
                                     // Flush output periodically
                                     if ($index % 5 == 0) {
-                                        flushOutput();
+                                        flushDiscoveryOutput();
                                     }
                                 }
                                 
@@ -211,7 +211,7 @@ include_once '../includes/header.php';
                         } elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['discover_sources'])) {
                             // Automated source discovery
                             echo "<h3>Discovering New Book Sources</h3>";
-                            flushOutput();
+                            flushDiscoveryOutput();
                             
                             $discoveryEngine = new BookDiscoveryEngine($db);
                             $sources = $discoveryEngine->discoverNewSources();

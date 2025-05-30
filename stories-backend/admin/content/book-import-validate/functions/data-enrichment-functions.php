@@ -2427,17 +2427,21 @@ function getAmazonEnrichmentData($isbn) {
     $enrichmentFields = [];
 
     if (!empty($amazonMetadata)) {
-        // Map Amazon reading age to our age_range field
+        // Map Amazon reading age to our standardized age_range field
         if (isset($amazonMetadata['reading_age'])) {
-            $enrichmentFields['age_range'] = [
-                'label' => 'Age Range',
-                'new_data' => [
-                    'value' => $amazonMetadata['reading_age'],
-                    'source' => 'amazon',
-                    'confidence' => 0.9, // Amazon data is usually very accurate
-                    'status' => 'available'
-                ]
-            ];
+            $standardizedAgeRange = mapAmazonAgeRangeToStandard($amazonMetadata['reading_age']);
+            if ($standardizedAgeRange) {
+                $enrichmentFields['age_range'] = [
+                    'label' => 'Age Range',
+                    'new_data' => [
+                        'value' => $standardizedAgeRange,
+                        'source' => 'amazon',
+                        'confidence' => 0.9, // Amazon data is usually very accurate
+                        'status' => 'available',
+                        'original_value' => $amazonMetadata['reading_age'] // Keep original for reference
+                    ]
+                ];
+            }
         }
 
         // Map Amazon grade level to our reading_level field (we can derive reading level from grade)
@@ -2461,7 +2465,9 @@ function getAmazonEnrichmentData($isbn) {
             'publisher' => 'Publisher',
             'publication_date' => 'Publication Date',
             'language' => 'Language',
-            'print_length' => 'Page Count'
+            'print_length' => 'Page Count',
+            'isbn_10' => 'ISBN-10',
+            'isbn_13' => 'ISBN-13'
         ];
 
         foreach ($fieldMappings as $amazonField => $label) {
@@ -2474,13 +2480,21 @@ function getAmazonEnrichmentData($isbn) {
                     if (empty($value)) continue;
                 }
 
-                $enrichmentFields[$amazonField === 'print_length' ? 'page_count' : $amazonField] = [
+                // Clean up publication date
+                if ($amazonField === 'publication_date') {
+                    $value = formatPublicationDate($value);
+                    if (empty($value)) continue;
+                }
+
+                $fieldKey = $amazonField === 'print_length' ? 'page_count' : $amazonField;
+                $enrichmentFields[$fieldKey] = [
                     'label' => $label,
                     'new_data' => [
                         'value' => $value,
                         'source' => 'amazon',
                         'confidence' => 0.9,
-                        'status' => 'available'
+                        'status' => 'available',
+                        'original_value' => $amazonMetadata[$amazonField] // Keep original for reference
                     ]
                 ];
             }
@@ -2578,4 +2592,120 @@ function mapGradeLevelToReadingLevel($gradeLevel) {
     }
 
     return null; // Unable to map
+}
+
+/**
+ * Map Amazon age range to our standardized age ranges
+ */
+function mapAmazonAgeRangeToStandard($amazonAgeRange) {
+    // Clean up the Amazon age range
+    $amazonAgeRange = trim($amazonAgeRange);
+
+    // Our standardized age ranges (from debug-age-ranges.php)
+    $standardRanges = [
+        '0-12 months', '12-24 months', '2-3 years', '3-4 years', '4-5 years',
+        '5-6 years', '6-7 years', '7-8 years', '8-9 years', '9-10 years',
+        '10-11 years', '11-14 years', '14-16 years', '16-18 years', '18+ years'
+    ];
+
+    // Direct mappings for common Amazon formats
+    $directMappings = [
+        // Exact matches
+        '8-9 years' => '8-9 years',
+        '9-10 years' => '9-10 years',
+        '10-11 years' => '10-11 years',
+        '11-14 years' => '11-14 years',
+
+        // Amazon variations with spaces
+        '8 - 9 years' => '8-9 years',
+        '9 - 10 years' => '9-10 years',
+        '10 - 11 years' => '10-11 years',
+        '11 - 14 years' => '11-14 years',
+
+        // Common Amazon ranges that need mapping
+        '8-11 years' => '8-9 years',    // Map to closest standard range
+        '8 - 11 years' => '8-9 years',  // With spaces
+        '7-10 years' => '7-8 years',    // Map to closest standard range
+        '7 - 10 years' => '7-8 years',  // With spaces
+        '9-12 years' => '9-10 years',   // Map to closest standard range
+        '9 - 12 years' => '9-10 years', // With spaces
+
+        // Early years
+        '0-3 years' => '2-3 years',
+        '3-5 years' => '3-4 years',
+        '5-7 years' => '5-6 years',
+
+        // Teen/adult
+        '12+ years' => '11-14 years',
+        '12+' => '11-14 years',
+        '13+ years' => '11-14 years',
+        '14+ years' => '14-16 years',
+        '15+ years' => '14-16 years',
+        '16+ years' => '16-18 years',
+        '18+ years' => '18+ years',
+        'Adult' => '18+ years',
+        'Young Adult' => '14-16 years',
+        'Teen' => '11-14 years'
+    ];
+
+    // Try direct mapping first
+    if (isset($directMappings[$amazonAgeRange])) {
+        return $directMappings[$amazonAgeRange];
+    }
+
+    // Try case-insensitive mapping
+    $lowerAmazonRange = strtolower($amazonAgeRange);
+    foreach ($directMappings as $key => $value) {
+        if (strtolower($key) === $lowerAmazonRange) {
+            return $value;
+        }
+    }
+
+    // Try to parse numeric ranges and find best fit
+    if (preg_match('/(\d+)\s*[-–]\s*(\d+)\s*years?/i', $amazonAgeRange, $matches)) {
+        $startAge = intval($matches[1]);
+        $endAge = intval($matches[2]);
+        $midAge = ($startAge + $endAge) / 2;
+
+        // Find the best matching standard range based on midpoint
+        if ($midAge <= 0.5) return '0-12 months';
+        if ($midAge <= 1.5) return '12-24 months';
+        if ($midAge <= 2.5) return '2-3 years';
+        if ($midAge <= 3.5) return '3-4 years';
+        if ($midAge <= 4.5) return '4-5 years';
+        if ($midAge <= 5.5) return '5-6 years';
+        if ($midAge <= 6.5) return '6-7 years';
+        if ($midAge <= 7.5) return '7-8 years';
+        if ($midAge <= 8.5) return '8-9 years';
+        if ($midAge <= 9.5) return '9-10 years';
+        if ($midAge <= 10.5) return '10-11 years';
+        if ($midAge <= 12.5) return '11-14 years';
+        if ($midAge <= 15) return '14-16 years';
+        if ($midAge <= 17) return '16-18 years';
+        return '18+ years';
+    }
+
+    // Try single age parsing
+    if (preg_match('/(\d+)\+?\s*years?/i', $amazonAgeRange, $matches)) {
+        $age = intval($matches[1]);
+
+        if ($age <= 1) return '0-12 months';
+        if ($age <= 2) return '2-3 years';
+        if ($age <= 3) return '3-4 years';
+        if ($age <= 4) return '4-5 years';
+        if ($age <= 5) return '5-6 years';
+        if ($age <= 6) return '6-7 years';
+        if ($age <= 7) return '7-8 years';
+        if ($age <= 8) return '8-9 years';
+        if ($age <= 9) return '9-10 years';
+        if ($age <= 10) return '10-11 years';
+        if ($age <= 12) return '11-14 years';
+        if ($age <= 15) return '14-16 years';
+        if ($age <= 17) return '16-18 years';
+        return '18+ years';
+    }
+
+    // If no mapping found, return null
+    error_log("Unable to map Amazon age range '$amazonAgeRange' to standard range");
+    return null;
 }

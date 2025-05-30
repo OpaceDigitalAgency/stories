@@ -1226,9 +1226,28 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             console.log('🔍 PUBLISHER_DEBUG: Extracted actual value from recommendation:', newValue, '→', actualNewValue);
         }
 
-        // Check for exact matches first
+        // Special handling for tags/genres - use proper comparison
+        if (Array.isArray(currentValue) && typeof actualNewValue === 'string') {
+            // Current value is array of tags, new value is comma-separated string
+            const currentTags = currentValue.map(tag => tag.toLowerCase().trim()).sort();
+            const newTags = actualNewValue.split(',').map(tag => tag.toLowerCase().trim()).sort();
+
+            console.log('🏷️ TAG_DEBUG: Comparing tags:', {
+                current: currentTags,
+                new: newTags,
+                currentString: currentTags.join(','),
+                newString: newTags.join(',')
+            });
+
+            if (currentTags.join(',') === newTags.join(',')) {
+                console.log('🏷️ TAG_DEBUG: Tags match exactly');
+                return 'matches_database';
+            }
+        }
+
+        // Check for exact matches first (for non-tag fields)
         if (isExactMatch(currentValue, actualNewValue)) {
-            console.log('🔍 PUBLISHER_DEBUG: Exact match found:', currentValue, '===', actualNewValue);
+            console.log('🔍 EXACT_MATCH_DEBUG: Exact match found:', currentValue, '===', actualNewValue);
             return 'matches_database';
         }
 
@@ -1240,7 +1259,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         // Check if both sources agree but differ from database
         if (source === 'google_books + open_library' && !isEmpty(currentValue) && !isEmpty(actualNewValue)) {
             if (!isExactMatch(currentValue, actualNewValue)) {
-                console.log('🔍 PUBLISHER_DEBUG: Database wrong detected:', currentValue, '!==', actualNewValue);
+                console.log('🔍 DATABASE_WRONG_DEBUG: Database wrong detected:', currentValue, '!==', actualNewValue);
                 return 'database_wrong';
             }
         }

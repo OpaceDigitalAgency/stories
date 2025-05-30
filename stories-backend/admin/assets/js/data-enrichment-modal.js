@@ -840,6 +840,9 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         // Set up age range and reading level synchronization
         setupAgeRangeReadingLevelSync();
 
+        // FIXED: Ensure both fields have synchronized source options before setting up sync
+        ensureSynchronizedSourceOptions();
+
         // Debug: Show what fields are actually available
         setTimeout(() => {
             console.log('🔍 DEBUG: All enrichment fields available:', Object.keys(window.currentEnrichmentData?.fields || {}));
@@ -1018,6 +1021,45 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 }
             }, 100);
         });
+
+        // FIXED: Add radio button synchronization for multi-source fields
+        $(document).on('change', 'input[type="radio"][name*="age_range"]', function() {
+            if (!$(this).is(':checked')) return;
+
+            console.log('🔄 Age range radio changed:', $(this).attr('name'), $(this).val());
+
+            // Extract source from radio button name (e.g., "field_age_range_option_0" -> get option index)
+            const radioName = $(this).attr('name');
+            const optionIndex = radioName.split('_').pop();
+
+            // Find corresponding reading level radio button and select it
+            const readingRadioName = radioName.replace('age_range', 'reading_level');
+            const readingRadio = $(`input[type="radio"][name="${readingRadioName}"]`);
+
+            if (readingRadio.length > 0) {
+                readingRadio.prop('checked', true);
+                console.log('🔄 Synced reading level radio selection to option:', optionIndex);
+            }
+        });
+
+        $(document).on('change', 'input[type="radio"][name*="reading_level"]', function() {
+            if (!$(this).is(':checked')) return;
+
+            console.log('🔄 Reading level radio changed:', $(this).attr('name'), $(this).val());
+
+            // Extract source from radio button name
+            const radioName = $(this).attr('name');
+            const optionIndex = radioName.split('_').pop();
+
+            // Find corresponding age range radio button and select it
+            const ageRadioName = radioName.replace('reading_level', 'age_range');
+            const ageRadio = $(`input[type="radio"][name="${ageRadioName}"]`);
+
+            if (ageRadio.length > 0) {
+                ageRadio.prop('checked', true);
+                console.log('🔄 Synced age range radio selection to option:', optionIndex);
+            }
+        });
     }
 
     // Get the currently selected value for a field
@@ -1066,74 +1108,103 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         return null;
     }
 
-    // FIXED: Simple function to update reading level display based on age range
-    function updateReadingLevelDisplay(expectedReading) {
-        console.log('🔄 updateReadingLevelDisplay called with:', expectedReading);
+    // FIXED: Ensure both age_range and reading_level show the same source options
+    function ensureSynchronizedSourceOptions() {
+        console.log('🔄 ensureSynchronizedSourceOptions called');
 
-        // Update the reading level field's "New Value" to show the mapped reading level
-        const readingField = window.currentEnrichmentData?.fields?.['reading_level'];
-        if (!readingField) {
-            console.log('🔄 No reading_level field found');
-            return;
-        }
-
-        // Update the new_data value to reflect the mapped reading level
-        if (readingField.new_data) {
-            readingField.new_data.value = expectedReading;
-            readingField.new_data.source = 'synchronized_from_age_range';
-            readingField.new_data.confidence = 95;
-        } else {
-            readingField.new_data = {
-                value: expectedReading,
-                source: 'synchronized_from_age_range',
-                confidence: 95,
-                status: 'ready'
-            };
-        }
-
-        // Re-render just the reading level field
-        const readingLevelContainer = $('[data-field="reading_level"]').parent();
-        if (readingLevelContainer.length > 0) {
-            const newHtml = createSingleSourceField('reading_level', readingField, 'Reading Level', false, false);
-            readingLevelContainer.html(newHtml);
-        }
-
-        console.log('🔄 Updated reading level display to:', expectedReading);
-    }
-
-    // FIXED: Simple function to update age range display based on reading level
-    function updateAgeRangeDisplay(expectedAge) {
-        console.log('🔄 updateAgeRangeDisplay called with:', expectedAge);
-
-        // Update the age range field's "New Value" to show the mapped age range
         const ageField = window.currentEnrichmentData?.fields?.['age_range'];
-        if (!ageField) {
-            console.log('🔄 No age_range field found');
+        const readingField = window.currentEnrichmentData?.fields?.['reading_level'];
+
+        if (!ageField || !readingField) {
+            console.log('🔄 Missing age_range or reading_level field');
             return;
         }
 
-        // Update the new_data value to reflect the mapped age range
-        if (ageField.new_data) {
-            ageField.new_data.value = expectedAge;
-            ageField.new_data.source = 'synchronized_from_reading_level';
-            ageField.new_data.confidence = 95;
-        } else {
-            ageField.new_data = {
-                value: expectedAge,
-                source: 'synchronized_from_reading_level',
-                confidence: 95,
-                status: 'ready'
-            };
+        // Collect all available source options from both fields
+        let allSourceOptions = [];
+
+        // Get options from age_range field
+        if (ageField.new_data?.options) {
+            allSourceOptions = [...ageField.new_data.options];
+        } else if (ageField.new_data) {
+            allSourceOptions.push({
+                value: ageField.new_data.value,
+                source: ageField.new_data.source,
+                confidence: ageField.new_data.confidence,
+                label: ageField.label || 'Age Range'
+            });
         }
 
-        // Re-render just the age range field
-        const ageRangeContainer = $('[data-field="age_range"]').parent();
-        if (ageRangeContainer.length > 0) {
-            const newHtml = createSingleSourceField('age_range', ageField, 'Age Range', false, false);
-            ageRangeContainer.html(newHtml);
+        // Get options from reading_level field and merge
+        if (readingField.new_data?.options) {
+            // Merge reading level options, but map their values to corresponding age ranges
+            readingField.new_data.options.forEach(option => {
+                const mappedAge = readingToAgeMap[option.value];
+                if (mappedAge) {
+                    // Check if we already have this source
+                    const existingOption = allSourceOptions.find(opt => opt.source === option.source);
+                    if (!existingOption) {
+                        allSourceOptions.push({
+                            value: mappedAge,
+                            source: option.source,
+                            confidence: option.confidence,
+                            label: 'Age Range'
+                        });
+                    }
+                }
+            });
+        } else if (readingField.new_data) {
+            const mappedAge = readingToAgeMap[readingField.new_data.value];
+            if (mappedAge) {
+                const existingOption = allSourceOptions.find(opt => opt.source === readingField.new_data.source);
+                if (!existingOption) {
+                    allSourceOptions.push({
+                        value: mappedAge,
+                        source: readingField.new_data.source,
+                        confidence: readingField.new_data.confidence,
+                        label: 'Age Range'
+                    });
+                }
+            }
         }
 
-        console.log('🔄 Updated age range display to:', expectedAge);
+        // Now ensure both fields have the same source options
+        if (allSourceOptions.length > 1) {
+            // Create multi-source structure for age_range
+            ageField.new_data = { options: allSourceOptions };
+
+            // Create corresponding reading level options
+            const readingOptions = allSourceOptions.map(option => ({
+                value: ageToReadingMap[option.value] || option.value,
+                source: option.source,
+                confidence: option.confidence,
+                label: 'Reading Level'
+            }));
+
+            readingField.new_data = { options: readingOptions };
+
+            console.log('🔄 Created synchronized multi-source options:', {
+                age_options: allSourceOptions,
+                reading_options: readingOptions
+            });
+
+            // Re-render both fields to show the synchronized options
+            const container = $('#enrichment-fields');
+            const ageContainer = container.find('[data-field="age_range"]').parent();
+            const readingContainer = container.find('[data-field="reading_level"]').parent();
+
+            if (ageContainer.length > 0) {
+                const ageHtml = createMultiSourceField('age_range', ageField, 'Age Range');
+                ageContainer.html(ageHtml);
+            }
+
+            if (readingContainer.length > 0) {
+                const readingHtml = createMultiSourceField('reading_level', readingField, 'Reading Level');
+                readingContainer.html(readingHtml);
+            }
+
+            console.log('🔄 Re-rendered both fields with synchronized options');
+        }
     }
 
     // Legacy function - keeping for compatibility but simplified

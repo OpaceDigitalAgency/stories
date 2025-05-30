@@ -120,40 +120,60 @@ try {
         // Silently fail
     }
 
-    // Standard age ranges based on UK education system - COMPLETE LIST
-    $ageRangeList = [
-        '0-12 months',
-        '12-24 months',
-        '2-3 years',
-        '3-4 years',
-        '4-5 years',
-        '5-6 years',
-        '6-7 years',
-        '7-8 years',
-        '8-9 years',
-        '9-10 years',
-        '10-11 years',
-        '11-14 years',
-        '14-16 years',
-        '16-18 years',
-        '18+ years',
-        'Unknown'
-    ];
+    // Get standard age ranges from standard_reading_levels table
+    $ageRangeList = [];
+    try {
+        $ageRangeStmt = $db->query("SELECT age_group FROM standard_reading_levels ORDER BY sort_order ASC");
+        while ($row = $ageRangeStmt->fetch()) {
+            $ageRangeList[] = $row['age_group'];
+        }
+        // Add Unknown as fallback option
+        $ageRangeList[] = 'Unknown';
+    } catch (PDOException $e) {
+        // Fallback to hardcoded list if table doesn't exist
+        $ageRangeList = [
+            '0-12 months',
+            '12-24 months',
+            '2-3 years',
+            '3-4 years',
+            '4-5 years',
+            '5-6 years',
+            '6-7 years',
+            '7-8 years',
+            '8-9 years',
+            '9-10 years',
+            '10-11 years',
+            '11-14 years',
+            '14-16 years',
+            '16-18 years',
+            '18+ years',
+            'Unknown'
+        ];
+    }
 
-    // Standard reading levels based on UK education system - COMPLETE LIST
-    $readingLevelList = [
-        'Pre-literacy (Sensory)',
-        'Pre-literacy (Naming)',
-        'Pre-literacy (Mimicry)',
-        'Early Pre-reader',
-        'Beginning Reader',
-        'Early Reader',
-        'Developing Reader',
-        'Transitional Reader',
-        'Fluent Reader',
-        'Advanced Reader',
-        'Proficient Reader'
-    ];
+    // Get standard reading levels from standard_reading_levels table
+    $readingLevelList = [];
+    try {
+        $readingLevelStmt = $db->query("SELECT reading_stage FROM standard_reading_levels ORDER BY sort_order ASC");
+        while ($row = $readingLevelStmt->fetch()) {
+            $readingLevelList[] = $row['reading_stage'];
+        }
+    } catch (PDOException $e) {
+        // Fallback to hardcoded list if table doesn't exist
+        $readingLevelList = [
+            'Pre-literacy (Sensory)',
+            'Pre-literacy (Naming)',
+            'Pre-literacy (Mimicry)',
+            'Early Pre-reader',
+            'Beginning Reader',
+            'Early Reader',
+            'Developing Reader',
+            'Transitional Reader',
+            'Fluent Reader',
+            'Advanced Reader',
+            'Proficient Reader'
+        ];
+    }
 
     // Get price ranges from price_ranges table
     $priceRanges = [];

@@ -1003,20 +1003,20 @@ function columnExists($table, $column) {
 }
 
 /**
- * Map Google Books maturity rating to age range using actual age_ranges table
+ * Map Google Books maturity rating to age range using standard_reading_levels table
  */
 function mapMaturityToAgeRangeFromTable($maturityRating) {
     global $db;
 
     try {
-        // Check if age_ranges table exists
-        $stmt = $db->query("SHOW TABLES LIKE 'age_ranges'");
+        // Check if standard_reading_levels table exists
+        $stmt = $db->query("SHOW TABLES LIKE 'standard_reading_levels'");
         if ($stmt->rowCount() === 0) {
             // Fallback to simple mapping if table doesn't exist
             return mapMaturityToAgeRange($maturityRating);
         }
 
-        // Map maturity rating to standardized age range names in the database
+        // Map maturity rating to standardized age group names from standard_reading_levels
         $mappings = [
             'NOT_MATURE' => ['8-9 years', '9-10 years', '10-11 years', '11-14 years', '7-8 years', '5-6 years', '6-7 years'],
             'MATURE' => ['18+ years', '16-18 years', '14-16 years']
@@ -1025,24 +1025,27 @@ function mapMaturityToAgeRangeFromTable($maturityRating) {
         $searchTerms = $mappings[strtoupper($maturityRating)] ?? [];
 
         foreach ($searchTerms as $term) {
-            $stmt = $db->prepare("SELECT range_name FROM age_ranges WHERE range_name LIKE ? LIMIT 1");
-            $stmt->execute(["%$term%"]);
+            $stmt = $db->prepare("SELECT age_group FROM standard_reading_levels WHERE age_group = ? LIMIT 1");
+            $stmt->execute([$term]);
             $result = $stmt->fetch();
 
             if ($result) {
-                return $result['range_name'];
+                return $result['age_group'];
             }
         }
 
-        // If no match found, return the first available age range for the category
+        // If no exact match found, return a suitable default for the category
         if (strtoupper($maturityRating) === 'NOT_MATURE') {
-            $stmt = $db->query("SELECT range_name FROM age_ranges ORDER BY id ASC LIMIT 1");
+            // For children's books, default to a middle-range age group
+            $stmt = $db->prepare("SELECT age_group FROM standard_reading_levels WHERE age_group IN ('7-8 years', '8-9 years', '9-10 years') ORDER BY sort_order ASC LIMIT 1");
         } else {
-            $stmt = $db->query("SELECT range_name FROM age_ranges ORDER BY id DESC LIMIT 1");
+            // For mature content, default to adult age group
+            $stmt = $db->prepare("SELECT age_group FROM standard_reading_levels WHERE age_group = '18+ years' LIMIT 1");
         }
 
+        $stmt->execute();
         $result = $stmt->fetch();
-        return $result ? $result['range_name'] : null;
+        return $result ? $result['age_group'] : null;
 
     } catch (Exception $e) {
         error_log("Error mapping maturity rating: " . $e->getMessage());

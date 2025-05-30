@@ -555,9 +555,11 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     existingField: existingField
                 });
 
-                // Skip Amazon data with "unknown" values - don't process these at all
-                if (amazonFieldData.new_data.value === 'Unknown' || amazonFieldData.new_data.value === 'unknown') {
-                    console.log(`📦 Skipping Amazon field ${fieldName} - value is unknown`);
+                // Skip Amazon data with "unknown" values or "12+" values - don't process these at all
+                if (amazonFieldData.new_data.value === 'Unknown' ||
+                    amazonFieldData.new_data.value === 'unknown' ||
+                    (typeof amazonFieldData.new_data.value === 'string' && amazonFieldData.new_data.value.includes('12+'))) {
+                    console.log(`📦 Skipping Amazon field ${fieldName} - value is unknown or contains 12+:`, amazonFieldData.new_data.value);
                     return;
                 }
 
@@ -857,7 +859,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             '2-3 years': 'Pre-literacy (Mimicry)',
             '3-4 years': 'Early Pre-reader',
             '4-5 years': 'Beginning Reader',
-            '5-6 years': 'Developing Reader',
+            '5-6 years': 'Early Reader',
             '6-7 years': 'Developing Reader',
             '7-8 years': 'Transitional Reader',
             '8-9 years': 'Fluent Reader',
@@ -870,9 +872,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             // Amazon-style age ranges
             '8-11 years': 'Fluent Reader',
             '8 - 11 years': 'Fluent Reader',
-            // Legacy values that might still exist
-            '12+': 'Advanced Reader',
-            '12+ years': 'Advanced Reader',
+            // Legacy values that might still exist - REMOVED 12+ mappings to prevent them appearing
             // Common variations that might come from APIs
             '5-6 years': 'Early Reader',
             'All Ages': 'Early Reader'
@@ -898,68 +898,51 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             'All Ages': '5-6 years'
         };
 
-        // Listen for changes in age range selections - ENHANCED event handling for source switching
-        $(document).on('change', 'input[type="checkbox"][value="age_range"], input[type="radio"][name*="age_range"]', function() {
-            console.log('🔄 Age range field changed:', $(this).attr('name'), $(this).val(), $(this).is(':checked'));
-
-            // Handle both checkbox (field selection) and radio (source selection) changes
-            const isFieldCheckbox = $(this).attr('type') === 'checkbox' && $(this).val() === 'age_range';
-            const isSourceRadio = $(this).attr('type') === 'radio' && $(this).attr('name').includes('age_range');
-
-            // For field checkboxes, only proceed if being checked
-            if (isFieldCheckbox && !$(this).is(':checked')) {
-                console.log('🔄 Age range field unchecked, skipping sync');
-                return;
-            }
-
-            // For source radios, always proceed when selected
-            if (isSourceRadio && !$(this).is(':checked')) {
-                console.log('🔄 Age range source not selected, skipping sync');
-                return;
-            }
-
-            // Debug: Show all age range related inputs
-            console.log('🔄 All age range inputs found:', $('input[name*="age_range"]').map(function() {
-                return {
-                    name: $(this).attr('name'),
-                    value: $(this).val(),
-                    checked: $(this).is(':checked'),
-                    type: $(this).attr('type')
-                };
-            }).get());
+        // Listen for age range field checkbox changes (field selection)
+        $(document).on('change', 'input[type="checkbox"][value="age_range"]', function() {
+            console.log('🔄 Age range field checkbox changed:', $(this).is(':checked'));
 
             if ($(this).is(':checked')) {
+                // Field selected - sync with current source
                 const selectedAgeRange = getSelectedFieldValue('age_range');
-                console.log('🔄 Selected age range:', selectedAgeRange);
-                console.log('🔄 Available mappings:', Object.keys(ageToReadingMap));
+                console.log('🔄 Age range field selected, syncing with:', selectedAgeRange);
 
                 if (selectedAgeRange && ageToReadingMap[selectedAgeRange]) {
                     const expectedReading = ageToReadingMap[selectedAgeRange];
-                    console.log('🔄 Expected reading level:', expectedReading);
+                    console.log('🔄 Syncing to reading level:', expectedReading);
                     syncReadingLevelField(expectedReading);
-                } else {
-                    console.log('🔄 No mapping found for age range:', selectedAgeRange);
-                    console.log('🔄 Exact match check:', ageToReadingMap[selectedAgeRange]);
-                    console.log('🔄 Trying partial matches...');
-
-                    // Try partial matching for common variations
-                    Object.keys(ageToReadingMap).forEach(key => {
-                        if (selectedAgeRange && selectedAgeRange.includes(key) || key.includes(selectedAgeRange)) {
-                            console.log('🔄 Partial match found:', key, '→', ageToReadingMap[key]);
-                        }
-                    });
                 }
             } else {
-                // When unchecked, revert to current value mapping
-                console.log('🔄 Age range unchecked, reverting to current value mapping');
-                const currentAgeRange = window.currentEnrichmentData.fields['age_range']?.current_value;
+                // Field unselected - revert to current database value
+                console.log('🔄 Age range field unselected, reverting to current value');
+                const currentAgeRange = window.currentEnrichmentData?.fields?.age_range?.current_value;
+
                 if (currentAgeRange && ageToReadingMap[currentAgeRange]) {
                     const expectedReading = ageToReadingMap[currentAgeRange];
                     console.log('🔄 Reverting to reading level:', expectedReading);
-                    syncReadingLevelField(expectedReading, true); // true = revert mode
-                } else {
-                    console.log('🔄 No current age range to revert to or no mapping found');
+                    syncReadingLevelField(expectedReading, true);
                 }
+            }
+        });
+
+        // Listen for age range source changes (radio buttons)
+        $(document).on('change', 'input[type="radio"][name*="age_range"]', function() {
+            console.log('🔄 Age range source changed:', $(this).val());
+
+            // Only sync if the age range field is currently selected
+            const ageRangeFieldSelected = $('input[type="checkbox"][value="age_range"]').is(':checked');
+            if (!ageRangeFieldSelected) {
+                console.log('🔄 Age range field not selected, skipping sync');
+                return;
+            }
+
+            const selectedAgeRange = getSelectedFieldValue('age_range');
+            console.log('🔄 New age range source value:', selectedAgeRange);
+
+            if (selectedAgeRange && ageToReadingMap[selectedAgeRange]) {
+                const expectedReading = ageToReadingMap[selectedAgeRange];
+                console.log('🔄 Syncing to reading level:', expectedReading);
+                syncReadingLevelField(expectedReading);
             }
         });
 

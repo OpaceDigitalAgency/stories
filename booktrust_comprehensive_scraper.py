@@ -11,6 +11,7 @@ import time
 import re
 from urllib.parse import urljoin
 import hashlib
+import html
 
 class BookTrustComprehensiveScraper:
     def __init__(self):
@@ -96,6 +97,30 @@ class BookTrustComprehensiveScraper:
                 
         return None
     
+    def clean_text(self, text):
+        """Clean text by removing special characters and fixing encoding issues"""
+        if not text:
+            return text
+        # Decode HTML entities
+        text = html.unescape(text)
+        # Fix common encoding issues
+        replacements = {
+            ''': "'",
+            ''': "'",
+            '"': '"',
+            '"': '"',
+            '–': '-',
+            '—': '-',
+            '…': '...',
+            '\u200b': '',  # Zero-width space
+            '\xa0': ' ',   # Non-breaking space
+        }
+        for old, new in replacements.items():
+            text = text.replace(old, new)
+        # Remove any remaining non-ASCII characters that might cause issues
+        text = text.encode('ascii', 'ignore').decode('ascii')
+        return text.strip()
+    
     def parse_book_from_li(self, li_element, default_age_range):
         """Parse book information from an li element"""
         book = {
@@ -114,7 +139,7 @@ class BookTrustComprehensiveScraper:
         if title_elem:
             link = title_elem.find('a')
             if link:
-                book['title'] = link.get_text(strip=True)
+                book['title'] = self.clean_text(link.get_text(strip=True))
                 book['detail_url'] = urljoin(self.base_url, link.get('href', ''))
         
         # Extract author
@@ -123,7 +148,7 @@ class BookTrustComprehensiveScraper:
             author_text = author_elem.get_text(strip=True)
             # Clean up author text
             author_text = author_text.replace('by ', '').strip()
-            book['author'] = author_text
+            book['author'] = self.clean_text(author_text)
         
         # Extract year and age range from the metadata line
         metadata_elem = li_element.find('p', class_='body-xxs')
@@ -146,14 +171,14 @@ class BookTrustComprehensiveScraper:
         tags_container = li_element.find('ul', class_='bt-tags')
         if tags_container:
             tags = tags_container.find_all('li', class_='tag')
-            book['tags'] = [tag.get_text(strip=True) for tag in tags]
+            book['tags'] = [self.clean_text(tag.get_text(strip=True)) for tag in tags]
         
         # Extract description
         synopsis_div = li_element.find('div', class_='short-synopsis')
         if synopsis_div:
             desc_elem = synopsis_div.find('p')
             if desc_elem:
-                book['description'] = desc_elem.get_text(strip=True)
+                book['description'] = self.clean_text(desc_elem.get_text(strip=True))
         
         return book
     

@@ -873,42 +873,45 @@ function getTableInfo($table) {
             echo '<div class="card-body">';
 
             try {
-                // Check both age_ranges table and books.age_range field
-                $hasAgeRangesTable = getTableInfo('age_ranges');
+                // Check standard_reading_levels table and books.age_range field
+                $hasStandardReadingLevels = getTableInfo('standard_reading_levels');
+                $hasOldAgeRangesTable = getTableInfo('age_ranges');
                 $hasBooksAgeRange = columnExists('books', 'age_range');
 
                 echo '<div class="debug-output">';
                 echo "Age range sources:\n";
-                echo "- age_ranges table exists: " . ($hasAgeRangesTable ? 'YES' : 'NO') . "\n";
+                echo "- standard_reading_levels table exists: " . ($hasStandardReadingLevels ? 'YES' : 'NO') . "\n";
+                echo "- old age_ranges table exists: " . ($hasOldAgeRangesTable ? 'YES (DEPRECATED)' : 'NO') . "\n";
                 echo "- books.age_range column exists: " . ($hasBooksAgeRange ? 'YES' : 'NO') . "\n";
                 echo '</div>';
 
-                if ($hasAgeRangesTable) {
-                    $sql = "
-                        SELECT
-                            MIN(range_name) as range_name,
-                            COUNT(*) as count,
-                            GROUP_CONCAT(id) as ids
-                        FROM age_ranges
-                        GROUP BY LOWER(TRIM(range_name))
-                        HAVING count > 1
-                        ORDER BY count DESC, MIN(range_name)
-                    ";
+                if ($hasOldAgeRangesTable) {
+                    echo '<div class="alert alert-warning">⚠️ <strong>DEPRECATED TABLE FOUND:</strong> The old <code>age_ranges</code> table still exists but should no longer be used. All age range data should now come from <code>standard_reading_levels</code> table.</div>';
+                }
+
+                if ($hasStandardReadingLevels) {
+                    echo '<div class="alert alert-success">✅ Using standardized reading levels system with synchronized age groups</div>';
+
+                    // Show current standard age groups
+                    $sql = "SELECT age_group, reading_stage, sort_order FROM standard_reading_levels ORDER BY sort_order ASC";
                     $stmt = $db->query($sql);
-                    $duplicateAgeRanges = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    $standardAgeGroups = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-                    if (empty($duplicateAgeRanges)) {
-                        echo '<div class="alert alert-success">✅ No duplicate age ranges in table</div>';
-                    } else {
-                        echo '<div class="alert alert-warning">⚠️ Found ' . count($duplicateAgeRanges) . ' groups of duplicate age ranges:</div>';
-
-                        foreach ($duplicateAgeRanges as $group) {
-                            echo '<div class="duplicate-group">';
-                            echo '<strong>' . htmlspecialchars($group['range_name']) . '</strong> (' . $group['count'] . ' duplicates)<br>';
-                            echo 'IDs: ' . $group['ids'] . '<br>';
-                            echo '</div>';
-                        }
+                    echo '<h5>Current Standard Age Groups:</h5>';
+                    echo '<div class="table-responsive">';
+                    echo '<table class="table table-sm">';
+                    echo '<thead><tr><th>Age Group</th><th>Reading Stage</th></tr></thead>';
+                    echo '<tbody>';
+                    foreach ($standardAgeGroups as $group) {
+                        echo '<tr>';
+                        echo '<td>' . htmlspecialchars($group['age_group']) . '</td>';
+                        echo '<td>' . htmlspecialchars($group['reading_stage']) . '</td>';
+                        echo '</tr>';
                     }
+                    echo '</tbody></table>';
+                    echo '</div>';
+                } else {
+                    echo '<div class="alert alert-danger">❌ <strong>MISSING:</strong> The <code>standard_reading_levels</code> table does not exist. This is required for the standardized age range system.</div>';
                 }
 
                 if ($hasBooksAgeRange) {

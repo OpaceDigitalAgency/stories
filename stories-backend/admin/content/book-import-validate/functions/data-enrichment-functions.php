@@ -1184,7 +1184,12 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
             // Check if there's a direct age_range field (unlikely but possible)
             if (!$ageRange && isset($match['age_range']) && !empty($match['age_range'])) {
                 $rawAgeRange = $match['age_range'];
-                $ageRange = mapAmazonAgeRangeToStandard($rawAgeRange);
+                // FILTER OUT PROBLEMATIC VALUES
+                if (strpos($rawAgeRange, '12+') !== false || strpos($rawAgeRange, 'unknown') !== false) {
+                    // Skip problematic values - don't process them
+                } else {
+                    $ageRange = mapAmazonAgeRangeToStandard($rawAgeRange);
+                }
             }
 
             // Open Library subject_facet[] contains specific patterns
@@ -1203,6 +1208,12 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
                 }
             }
 
+            // FINAL FILTER: Remove any remaining problematic values
+            if ($ageRange && (strpos($ageRange, '12+') !== false || strpos($ageRange, 'unknown') !== false)) {
+                error_log("FILTERED OUT problematic age range value: '$ageRange'");
+                return null;
+            }
+
             // NO MATURITY RATING PROCESSING - this was causing the 12+ issue
             // Return null if no age range found from explicit sources
             return $ageRange;
@@ -1211,11 +1222,19 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
             // Open Library: use lexile[] with conversion to readable format
             if (isset($match['lexile']) && is_array($match['lexile']) && !empty($match['lexile'])) {
                 $lexileValue = $match['lexile'][0];
-                return convertLexileToReadingLevel($lexileValue);
+                $readingLevel = convertLexileToReadingLevel($lexileValue);
+                // FILTER OUT UNKNOWN VALUES
+                if ($readingLevel && stripos($readingLevel, 'unknown') === false) {
+                    return $readingLevel;
+                }
             }
             // Also check if lexile is a direct value
             elseif (isset($match['lexile']) && is_numeric($match['lexile'])) {
-                return convertLexileToReadingLevel($match['lexile']);
+                $readingLevel = convertLexileToReadingLevel($match['lexile']);
+                // FILTER OUT UNKNOWN VALUES
+                if ($readingLevel && stripos($readingLevel, 'unknown') === false) {
+                    return $readingLevel;
+                }
             }
             break;
 

@@ -630,10 +630,16 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                         amazonValue: amazonFieldData.new_data.value
                     });
 
-                    // Skip if Amazon value is the same as current value (no point adding duplicate)
-                    if (existingField.current_value === amazonFieldData.new_data.value) {
-                        console.log(`📦 Skipping Amazon field ${fieldName} - same as current value`);
-                        return;
+                    // CRITICAL FIX: For ISBN fields, ALWAYS add Amazon as validation source even if values match
+                    if (fieldName === 'isbn' || fieldName === 'isbn13') {
+                        console.log(`📦 AMAZON_VALIDATION: Processing ${fieldName} field - always add Amazon as validation source`);
+                        // Continue processing - don't skip even if values match
+                    } else {
+                        // For non-ISBN fields, skip if Amazon value is the same as current value
+                        if (existingField.current_value === amazonFieldData.new_data.value) {
+                            console.log(`📦 Skipping Amazon field ${fieldName} - same as current value`);
+                            return;
+                        }
                     }
 
                     if (existingField.new_data) {
@@ -704,7 +710,11 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             displayEnrichmentFields(window.currentEnrichmentData.fields);
 
             // CRITICAL FIX: Update Amazon status badge to show completion
-            $('#amazon-status-badge').html('<span class="badge badge-success">✓ Amazon</span>');
+            $('#amazon-status-badge')
+                .removeClass('badge-info badge-warning badge-danger')
+                .addClass('badge-success')
+                .html('✓ Amazon - Data Found')
+                .show();
             console.log('✅ Updated Amazon status to success');
 
             // Restore checkbox states after re-rendering

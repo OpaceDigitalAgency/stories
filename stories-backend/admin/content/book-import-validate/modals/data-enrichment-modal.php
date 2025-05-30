@@ -60,7 +60,7 @@
                         <span id="google-books-status-badge" class="badge badge-info mr-2">Google Books - Checking...</span>
                         <span id="open-library-status-badge" class="badge badge-info mr-2">OpenLibrary - Checking...</span>
                         <span id="goodreads-status-badge" class="badge badge-info mr-2">Goodreads - Checking...</span>
-                        <span id="amazon-status-badge" class="badge badge-info mr-2" style="display: inline-block !important; visibility: visible !important;">Amazon - Checking...</span>
+                        <span id="amazon-status-badge" class="badge badge-info mr-2">Amazon - Checking...</span>
                     </div>
                 </div>
 
@@ -303,25 +303,5 @@ if (!$dataEnrichmentScriptsLoaded) {
 
 // All JavaScript functionality has been moved to external files for better performance
 
-// DEBUGGING: Force Amazon badge to be visible and log status
-$(document).ready(function() {
-    console.log('🚨 AMAZON_DEBUG: Modal loaded, checking Amazon badge...');
-
-    // Force Amazon badge to be visible
-    const $amazonBadge = $('#amazon-status-badge');
-    console.log('🚨 AMAZON_DEBUG: Amazon badge found:', $amazonBadge.length);
-    console.log('🚨 AMAZON_DEBUG: Amazon badge HTML:', $amazonBadge.html());
-    console.log('🚨 AMAZON_DEBUG: Amazon badge visible:', $amazonBadge.is(':visible'));
-    console.log('🚨 AMAZON_DEBUG: Amazon badge CSS display:', $amazonBadge.css('display'));
-    console.log('🚨 AMAZON_DEBUG: Amazon badge CSS visibility:', $amazonBadge.css('visibility'));
-
-    // Force it to be visible
-    $amazonBadge.show().css({
-        'display': 'inline-block !important',
-        'visibility': 'visible !important',
-        'opacity': '1 !important'
-    });
-
-    console.log('🚨 AMAZON_DEBUG: After forcing visibility - visible:', $amazonBadge.is(':visible'));
-});
+// Amazon integration is now working - debugging code removed
 </script>

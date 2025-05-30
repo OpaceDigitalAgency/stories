@@ -137,9 +137,9 @@ class BookTrustScraper {
             'isbn13' => ''
         ];
         
-        // Title and URL
-        $titleNode = $xpath->query('.//h3[@class="heading-s"]//a', $item)->item(0);
-        error_log("BookTrustScraper: parseBookItem - Looking for h3.heading-s//a, found: " . ($titleNode ? 'YES' : 'NO'));
+        // Title and URL (updated to use contains() for class matching)
+        $titleNode = $xpath->query('.//h3[contains(@class, "heading-s")]//a', $item)->item(0);
+        error_log("BookTrustScraper: parseBookItem - Looking for h3[contains(@class, \"heading-s\")]//a, found: " . ($titleNode ? 'YES' : 'NO'));
         
         if ($titleNode) {
             $book['title'] = $this->cleanText($titleNode->textContent);
@@ -167,15 +167,15 @@ class BookTrustScraper {
             error_log("BookTrustScraper: parseBookItem - Found " . $allLinks->length . " total links in item");
         }
         
-        // Author - remove "by " prefix
-        $authorNode = $xpath->query('.//p[@class="body-xs"]', $item)->item(0);
+        // Author - remove "by " prefix (updated to use contains())
+        $authorNode = $xpath->query('.//p[contains(@class, "body-xs")]', $item)->item(0);
         if ($authorNode) {
             $authorText = $this->cleanText($authorNode->textContent);
             $book['author'] = preg_replace('/^by\s+/i', '', $authorText);
         }
         
-        // Metadata (year and age range)
-        $metaNode = $xpath->query('.//p[@class="body-xxs"]', $item)->item(0);
+        // Metadata (year and age range) (updated to use contains())
+        $metaNode = $xpath->query('.//p[contains(@class, "body-xxs")]', $item)->item(0);
         if ($metaNode) {
             $metaText = $this->cleanText($metaNode->textContent);
             
@@ -190,8 +190,8 @@ class BookTrustScraper {
             }
         }
         
-        // Tags
-        $tagNodes = $xpath->query('.//ul[@class="bt-tags"]//li[@class="tag"]', $item);
+        // Tags (updated to use contains())
+        $tagNodes = $xpath->query('.//ul[contains(@class, "bt-tags")]//li[contains(@class, "tag")]', $item);
         foreach ($tagNodes as $tag) {
             $tagText = $this->cleanText($tag->textContent);
             if ($tagText) {
@@ -199,8 +199,8 @@ class BookTrustScraper {
             }
         }
         
-        // Description
-        $descNode = $xpath->query('.//div[@class="short-synopsis"]//p', $item)->item(0);
+        // Description (updated to use contains())
+        $descNode = $xpath->query('.//div[contains(@class, "short-synopsis")]//p', $item)->item(0);
         if ($descNode) {
             $book['description'] = $this->cleanText($descNode->textContent);
         }

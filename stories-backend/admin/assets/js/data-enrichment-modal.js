@@ -1090,8 +1090,23 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         // Listen for checkbox changes on any field to update display
         $(document).on('change', 'input[type="checkbox"].field-checkbox', function() {
             const fieldName = $(this).val();
-            console.log('🔄 Field checkbox changed:', fieldName, 'checked:', $(this).is(':checked'));
-            updateFieldDisplay(fieldName);
+            const isChecked = $(this).is(':checked');
+            console.log('🔄 Field checkbox changed:', fieldName, 'checked:', isChecked);
+
+            // CRITICAL FIX: Handle age range unchecking to revert reading level
+            if (fieldName === 'age_range' && !isChecked) {
+                console.log('🔄 Age range unchecked - reverting reading level to original state');
+                // Uncheck reading level checkbox
+                const readingLevelCheckbox = $('input[type="checkbox"][value="reading_level"]');
+                readingLevelCheckbox.prop('checked', false);
+                // Clear any selected radio buttons for age range
+                $('input[name*="age_range"][type="radio"]').prop('checked', false);
+                // Update both displays
+                updateFieldDisplay('age_range');
+                updateFieldDisplay('reading_level');
+            } else {
+                updateFieldDisplay(fieldName);
+            }
         });
 
         // Listen for radio button changes on any field to update display
@@ -1309,6 +1324,10 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             console.log('🎨 Field unchecked - added disabled-field and matches-database classes');
         } else {
             // Checkbox checked - field is enabled, remove disabled styling
+            // CRITICAL FIX: Remove all disabled styling when checkbox is checked
+            fieldContainer.find('.text-muted').removeClass('text-muted');
+            fieldContainer.find('.disabled-field').removeClass('disabled-field');
+
             if (databaseState === 'matches_database') {
                 fieldContainer.addClass('matches-database');
                 console.log('🎨 Field checked and matches database');
@@ -1319,10 +1338,16 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 fieldContainer.addClass('database-empty');
                 console.log('🎨 Field checked - database empty');
             }
+            console.log('🎨 Field enabled - removed all disabled styling');
         }
 
-        // Update confidence badge in the label
-        const confidenceBadge = fieldContainer.find('.form-check-label .badge-info, .form-check-label .badge-success').last();
+        // Update confidence badge in the label - find the LAST badge (confidence percentage)
+        const allBadges = fieldContainer.find('.form-check-label .badge');
+        const confidenceBadge = allBadges.filter(function() {
+            const text = $(this).text();
+            return text.includes('%') || text.includes('Wrong') || text.includes('New');
+        }).last();
+
         if (confidenceBadge.length) {
             if (databaseState === 'matches_database') {
                 confidenceBadge.removeClass('badge-info badge-warning badge-danger').addClass('badge-success').text('(100%)');

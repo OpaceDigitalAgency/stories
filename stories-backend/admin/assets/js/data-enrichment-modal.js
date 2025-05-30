@@ -1322,18 +1322,30 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             let currentTags = [];
             let newTags = [];
 
-            // Handle current value
+            // Handle current value - it might be a concatenated string without separators
             if (Array.isArray(currentValue)) {
                 currentTags = currentValue.map(tag => tag.toLowerCase().trim()).sort();
             } else if (typeof currentValue === 'string') {
-                currentTags = currentValue.split(',').map(tag => tag.toLowerCase().trim()).sort();
+                // Check if it's a concatenated string like "AfricaAlgeriaBerbersChildren's Fiction..."
+                if (currentValue.includes(',')) {
+                    currentTags = currentValue.split(',').map(tag => tag.toLowerCase().trim()).sort();
+                } else {
+                    // This might be a concatenated string - try to split it intelligently
+                    // For now, treat it as a single tag for comparison
+                    currentTags = [currentValue.toLowerCase().trim()];
+                }
             }
 
             // Handle new value
             if (Array.isArray(actualNewValue)) {
                 newTags = actualNewValue.map(tag => tag.toLowerCase().trim()).sort();
             } else if (typeof actualNewValue === 'string') {
-                newTags = actualNewValue.split(',').map(tag => tag.toLowerCase().trim()).sort();
+                if (actualNewValue.includes(',')) {
+                    newTags = actualNewValue.split(',').map(tag => tag.toLowerCase().trim()).sort();
+                } else {
+                    // Single tag or concatenated string
+                    newTags = [actualNewValue.toLowerCase().trim()];
+                }
             }
 
             console.log('🏷️ TAG_DEBUG: Normalized tags for comparison:', {
@@ -1342,6 +1354,40 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 currentLength: currentTags.length,
                 newLength: newTags.length
             });
+
+            // For concatenated strings, try a different approach - check if they contain the same content
+            if (currentTags.length === 1 && newTags.length === 1) {
+                const currentStr = currentTags[0];
+                const newStr = newTags[0];
+
+                // If both are long strings, they might be concatenated tags
+                if (currentStr.length > 50 && newStr.length > 50) {
+                    console.log('🏷️ TAG_DEBUG: Detected concatenated tag strings, checking content similarity');
+
+                    // Simple check - if they contain similar content (allowing for different order)
+                    const currentWords = currentStr.split(/(?=[A-Z])/).filter(w => w.length > 2).map(w => w.toLowerCase());
+                    const newWords = newStr.split(/(?=[A-Z])/).filter(w => w.length > 2).map(w => w.toLowerCase());
+
+                    console.log('🏷️ TAG_DEBUG: Extracted words:', {
+                        currentWords: currentWords,
+                        newWords: newWords
+                    });
+
+                    // Check if most words are present in both
+                    const commonWords = currentWords.filter(word => newWords.includes(word));
+                    const similarity = commonWords.length / Math.max(currentWords.length, newWords.length);
+
+                    console.log('🏷️ TAG_DEBUG: Word similarity:', {
+                        commonWords: commonWords,
+                        similarity: similarity
+                    });
+
+                    if (similarity > 0.8) {
+                        console.log('🏷️ TAG_DEBUG: High similarity detected - treating as match');
+                        return 'matches_database';
+                    }
+                }
+            }
 
             // Compare arrays element by element
             const arraysEqual = currentTags.length === newTags.length &&

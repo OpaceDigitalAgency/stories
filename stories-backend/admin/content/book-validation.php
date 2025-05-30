@@ -550,7 +550,7 @@ if (!$bookValidationScriptLoaded) {
                 <div id="enrichment-results" style="display: none;">
                     <!-- Source Status Cards -->
                     <div class="row mb-3">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <div class="card border-info">
                                 <div class="card-body text-center py-2">
                                     <h6 class="card-title mb-1">
@@ -562,7 +562,7 @@ if (!$bookValidationScriptLoaded) {
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <div class="card border-warning">
                                 <div class="card-body text-center py-2">
                                     <h6 class="card-title mb-1">
@@ -574,13 +574,25 @@ if (!$bookValidationScriptLoaded) {
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <div class="card border-success">
                                 <div class="card-body text-center py-2">
                                     <h6 class="card-title mb-1">
                                         <i class="fab fa-goodreads"></i> Goodreads
                                     </h6>
                                     <div id="goodreads-status-badge">
+                                        <span class="badge badge-secondary">Checking...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card border-primary">
+                                <div class="card-body text-center py-2">
+                                    <h6 class="card-title mb-1">
+                                        <i class="fab fa-amazon"></i> Amazon
+                                    </h6>
+                                    <div id="amazon-status-badge">
                                         <span class="badge badge-secondary">Checking...</span>
                                     </div>
                                 </div>

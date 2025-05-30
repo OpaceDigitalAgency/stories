@@ -574,6 +574,10 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     existingField: existingField
                 });
 
+                // URGENT DEBUG: Check field status before and after update
+                console.log(`📦 URGENT_DEBUG: ${fieldName} field status BEFORE update:`, existingField?.new_data?.status);
+                console.log(`📦 URGENT_DEBUG: ${fieldName} Amazon data status:`, amazonFieldData?.new_data?.status);
+
                 // Skip Amazon data with "unknown" values or "12+" values - don't process these at all
                 if (amazonFieldData.new_data.value === 'Unknown' ||
                     amazonFieldData.new_data.value === 'unknown' ||
@@ -731,6 +735,9 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 }
 
                 console.log(`📦 Final field structure for ${fieldName}:`, window.currentEnrichmentData.fields[fieldName]);
+
+                // URGENT DEBUG: Check field status after update
+                console.log(`📦 URGENT_DEBUG: ${fieldName} field status AFTER update:`, window.currentEnrichmentData.fields[fieldName]?.new_data?.status);
             });
 
             // Re-render the enrichment fields to include the new Amazon data

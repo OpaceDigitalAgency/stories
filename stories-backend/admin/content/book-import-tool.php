@@ -1793,19 +1793,38 @@ $(document).ready(function() {
 
     $('#discoveryForm').on('submit', function(e) {
         e.preventDefault();
+        console.log('Discovery form submitted');
         startDiscovery();
     });
 
     async function startDiscovery() {
-        const form = document.getElementById('discoveryForm');
-        const formData = new FormData(form);
+        console.log('startDiscovery() called');
         
-        discoveryAutoEnrich = document.getElementById('auto_enrich').checked;
-        discoveryImportToDb = document.getElementById('import_to_db').checked;
-        
-        // Show progress section
-        document.getElementById('progressSection').style.display = 'block';
-        document.getElementById('resultsSection').style.display = 'none';
+        try {
+            const form = document.getElementById('discoveryForm');
+            if (!form) {
+                console.error('Discovery form not found');
+                alert('Error: Discovery form not found');
+                return;
+            }
+            
+            const formData = new FormData(form);
+            
+            discoveryAutoEnrich = document.getElementById('auto_enrich').checked;
+            discoveryImportToDb = document.getElementById('import_to_db').checked;
+            
+            console.log('Form data prepared, showing progress section');
+            
+            // Show progress section
+            const progressSection = document.getElementById('progressSection');
+            if (!progressSection) {
+                console.error('Progress section not found');
+                alert('Error: Progress section not found');
+                return;
+            }
+            
+            progressSection.style.display = 'block';
+            document.getElementById('resultsSection').style.display = 'none';
         
         // Reset counters
         discoveryCurrentIndex = 0;
@@ -1823,6 +1842,7 @@ $(document).ready(function() {
         
         try {
             // Step 1: Discover all books
+            console.log('Updating progress to 0%');
             updateDiscoveryProgress(0, 'Discovering books from website...');
             
             const discoverData = new FormData();
@@ -1830,15 +1850,36 @@ $(document).ready(function() {
             discoverData.append('url', formData.get('discovery_url'));
             discoverData.append('age_filter', formData.get('age_filter'));
             
+            console.log('Making AJAX request to book-discovery-ajax.php');
+            console.log('URL:', formData.get('discovery_url'));
+            
             const response = await fetch('book-discovery-ajax.php', {
                 method: 'POST',
                 body: discoverData
             });
             
-            const result = await response.json();
+            console.log('Response status:', response.status);
+            console.log('Response ok:', response.ok);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const responseText = await response.text();
+            console.log('Raw response:', responseText);
+            
+            let result;
+            try {
+                result = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error('JSON parse error:', parseError);
+                throw new Error('Invalid JSON response from server');
+            }
+            
+            console.log('Parsed result:', result);
             
             if (!result.success) {
-                throw new Error(result.error);
+                throw new Error(result.error || 'Unknown error from server');
             }
             
             discoveryBooks = result.books;
@@ -1946,8 +1987,20 @@ $(document).ready(function() {
     }
 
     function updateDiscoveryProgress(percentage, message, type = 'info') {
+        console.log(`updateDiscoveryProgress called: ${percentage}% - ${message}`);
+        
         const progressBar = document.getElementById('progressBar');
         const progressMessage = document.getElementById('progressMessage');
+        
+        if (!progressBar) {
+            console.error('Progress bar element not found');
+            return;
+        }
+        
+        if (!progressMessage) {
+            console.error('Progress message element not found');
+            return;
+        }
         
         progressBar.style.width = percentage + '%';
         progressBar.setAttribute('aria-valuenow', percentage);
@@ -1955,6 +2008,8 @@ $(document).ready(function() {
         
         progressMessage.textContent = message;
         progressMessage.className = `alert alert-${type}`;
+        
+        console.log('Progress updated successfully');
     }
 
     function getCurrentDiscoveryProgress(currentIndex) {

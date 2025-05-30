@@ -328,7 +328,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         console.log('Fetching enrichment data for:', { title, author, currentISBN, bookId: window.currentBookId });
 
         $.ajax({
-            url: '/admin/content/book-import-validate/ajax/data-enrichment-ajax.php',
+            url: 'book-import-validate/ajax/data-enrichment-ajax.php',
             method: 'POST',
             data: {
                 action: 'get_enrichment_data',
@@ -1165,7 +1165,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         const benefitBorder = getBenefitBorderClass(benefitLevel);
 
         // Determine database state first
-        const databaseState = determineDatabaseState(field.current_value, newData.value, source, newData);
+        const databaseState = determineDatabaseState(field.current_value, newData.value, source, newData, fieldName);
 
         // Add disabled styling classes - exact matches should be disabled
         const shouldDisable = isUnknown || isPendingAmazon || benefitLevel === 'not_beneficial' || benefitLevel === 'exact_match' || databaseState === 'matches_database';
@@ -1268,9 +1268,10 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
      * @param {*} newValue - New value from API
      * @param {string} source - Source of the new data
      * @param {object} newData - Full new data object
+     * @param {string} fieldName - Name of the field being compared
      * @returns {string} - 'matches_database', 'database_wrong', 'database_empty', or null
      */
-    function determineDatabaseState(currentValue, newValue, source, newData) {
+    function determineDatabaseState(currentValue, newValue, source, newData, fieldName = null) {
         // Extract actual value from recommendation text for publisher fields
         let actualNewValue = newValue;
         if (typeof newValue === 'string' && newValue.includes('(recommended:')) {

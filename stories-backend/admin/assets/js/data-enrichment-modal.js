@@ -450,30 +450,23 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
     }
 
     function fetchAmazonDataForFields(fields) {
-        // Check if we have Amazon-derived fields that need data
+        // CRITICAL FIX: Always fetch Amazon data for ISBN validation, regardless of Amazon-derived fields
+        if (!currentBookISBN) {
+            console.log('📦 No ISBN available for Amazon validation');
+            // Update Amazon status to show no ISBN
+            $('#amazon-status-badge').html('<span class="badge badge-secondary">No ISBN</span>');
+            return;
+        }
+
+        // Check if we have Amazon-derived fields that need data (for buying options)
         const amazonFields = ['purchase_links', 'format', 'price_range'];
         const hasAmazonFields = amazonFields.some(fieldName =>
             fields[fieldName] && fields[fieldName].new_data && fields[fieldName].new_data.source === 'amazon_derived'
         );
 
-        if (!hasAmazonFields || !currentBookISBN) {
-            console.log('📦 No Amazon fields to populate or no ISBN available');
-            console.log('📦 Debug - fields:', fields);
-            console.log('📦 Debug - currentBookISBN:', currentBookISBN);
-            console.log('📦 Debug - hasAmazonFields:', hasAmazonFields);
-
-            // Check each Amazon field individually
-            amazonFields.forEach(fieldName => {
-                console.log(`📦 Debug - ${fieldName}:`, fields[fieldName]);
-                if (fields[fieldName]) {
-                    console.log(`📦 Debug - ${fieldName}.new_data:`, fields[fieldName].new_data);
-                    if (fields[fieldName].new_data) {
-                        console.log(`📦 Debug - ${fieldName}.new_data.source:`, fields[fieldName].new_data.source);
-                    }
-                }
-            });
-            return;
-        }
+        console.log('📦 Amazon data fetch - ISBN available:', currentBookISBN);
+        console.log('📦 Amazon data fetch - has Amazon fields:', hasAmazonFields);
+        console.log('📦 Amazon data fetch - will fetch for ISBN validation regardless of Amazon fields');
 
         console.log('📦 Starting AJAX fetch for Amazon data. ISBN:', window.currentBookISBN);
 
@@ -498,10 +491,13 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 // Integrate Amazon data into the enrichment fields
                 updateEnrichmentDataWithAmazon(res.data);
             } else {
-                console.log('📦 No Amazon buying options found or empty response');
+                console.log('📦 No Amazon data found or empty response');
                 console.log('📦 Debug info:', res.debug);
 
-                // Update badges to show no data found
+                // CRITICAL FIX: Update Amazon status badge to show no data
+                $('#amazon-status-badge').html('<span class="badge badge-secondary">No Data</span>');
+
+                // Update badges to show no data found for Amazon-derived fields
                 amazonFields.forEach(fieldName => {
                     if (fields[fieldName] && fields[fieldName].new_data && fields[fieldName].new_data.source === 'amazon_derived') {
                         const $fieldDiv = $(`.enrichment-field[data-field="${fieldName}"]`);
@@ -514,7 +510,10 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             console.error('📦 Amazon AJAX error:', { xhr, status, error });
             console.error('📦 Response text:', xhr.responseText);
 
-            // Update badges to show error
+            // CRITICAL FIX: Update Amazon status badge to show error
+            $('#amazon-status-badge').html('<span class="badge badge-danger">Amazon Error</span>');
+
+            // Update badges to show error for Amazon-derived fields
             amazonFields.forEach(fieldName => {
                 if (fields[fieldName] && fields[fieldName].new_data && fields[fieldName].new_data.source === 'amazon_derived') {
                     const $fieldDiv = $(`.enrichment-field[data-field="${fieldName}"]`);

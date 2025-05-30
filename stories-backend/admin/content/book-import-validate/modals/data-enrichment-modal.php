@@ -122,7 +122,7 @@
                     </div>
                     <!-- Amazon Buying Options -->
                     <div class="mt-4">
-                        <h5>Amazon Buying Options <span id="amazon-status-badge"></span></h5>
+                        <h5>Amazon Buying Options</h5>
                         <div class="amazon-data-container text-muted">Click “Enrich” to load Amazon info.</div>
                     </div>
 

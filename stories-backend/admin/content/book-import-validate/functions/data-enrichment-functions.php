@@ -2686,9 +2686,7 @@ function mapAmazonAgeRangeToStandard($amazonAgeRange) {
         '3-5 years' => '3-4 years',
         '5-7 years' => '5-6 years',
 
-        // Teen/adult
-        '12+ years' => '11-14 years',
-        '12+' => '11-14 years',
+        // Teen/adult - REMOVED 12+ mappings to prevent hardcoded values
         '13+ years' => '11-14 years',
         '14+ years' => '14-16 years',
         '15+ years' => '14-16 years',

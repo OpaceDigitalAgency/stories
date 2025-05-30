@@ -430,6 +430,22 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         // Fetch Amazon data asynchronously to populate Amazon-derived fields
         fetchAmazonDataForFields(data.fields);
 
+        // Update Google Books status badge based on available data
+        if (data.fields && Object.keys(data.fields).length > 0) {
+            // Check if we have Google Books data by looking for fields with google_books source
+            const hasGoogleBooksData = Object.values(data.fields).some(field =>
+                field.new_data && field.new_data.source === 'google_books'
+            );
+
+            if (hasGoogleBooksData) {
+                $('#google-books-status-badge').html('<span class="badge badge-success">✓ Google Books</span>');
+            } else {
+                $('#google-books-status-badge').html('<span class="badge badge-warning">No Data</span>');
+            }
+        } else {
+            $('#google-books-status-badge').html('<span class="badge badge-secondary">No Data</span>');
+        }
+
         $('#enrichment-results').show();
     }
 
@@ -841,7 +857,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             '2-3 years': 'Pre-literacy (Mimicry)',
             '3-4 years': 'Early Pre-reader',
             '4-5 years': 'Beginning Reader',
-            '5-6 years': 'Early Reader',
+            '5-6 years': 'Developing Reader',
             '6-7 years': 'Developing Reader',
             '7-8 years': 'Transitional Reader',
             '8-9 years': 'Fluent Reader',
@@ -882,13 +898,23 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             'All Ages': '5-6 years'
         };
 
-        // Listen for changes in age range selections - FIXED event handling
+        // Listen for changes in age range selections - ENHANCED event handling for source switching
         $(document).on('change', 'input[type="checkbox"][value="age_range"], input[type="radio"][name*="age_range"]', function() {
             console.log('🔄 Age range field changed:', $(this).attr('name'), $(this).val(), $(this).is(':checked'));
 
-            // Only proceed if the field is being checked (selected)
-            if (!$(this).is(':checked')) {
+            // Handle both checkbox (field selection) and radio (source selection) changes
+            const isFieldCheckbox = $(this).attr('type') === 'checkbox' && $(this).val() === 'age_range';
+            const isSourceRadio = $(this).attr('type') === 'radio' && $(this).attr('name').includes('age_range');
+
+            // For field checkboxes, only proceed if being checked
+            if (isFieldCheckbox && !$(this).is(':checked')) {
                 console.log('🔄 Age range field unchecked, skipping sync');
+                return;
+            }
+
+            // For source radios, always proceed when selected
+            if (isSourceRadio && !$(this).is(':checked')) {
+                console.log('🔄 Age range source not selected, skipping sync');
                 return;
             }
 
@@ -937,13 +963,23 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             }
         });
 
-        // Listen for changes in reading level selections - FIXED event handling
+        // Listen for changes in reading level selections - ENHANCED event handling for source switching
         $(document).on('change', 'input[type="checkbox"][value="reading_level"], input[type="radio"][name*="reading_level"]', function() {
             console.log('🔄 Reading level field changed:', $(this).attr('name'), $(this).val(), $(this).is(':checked'));
 
-            // Only proceed if the field is being checked (selected)
-            if (!$(this).is(':checked')) {
+            // Handle both checkbox (field selection) and radio (source selection) changes
+            const isFieldCheckbox = $(this).attr('type') === 'checkbox' && $(this).val() === 'reading_level';
+            const isSourceRadio = $(this).attr('type') === 'radio' && $(this).attr('name').includes('reading_level');
+
+            // For field checkboxes, only proceed if being checked
+            if (isFieldCheckbox && !$(this).is(':checked')) {
                 console.log('🔄 Reading level field unchecked, skipping sync');
+                return;
+            }
+
+            // For source radios, always proceed when selected
+            if (isSourceRadio && !$(this).is(':checked')) {
+                console.log('🔄 Reading level source not selected, skipping sync');
                 return;
             }
 

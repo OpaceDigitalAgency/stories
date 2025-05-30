@@ -2559,12 +2559,9 @@ function handleFixAgeRangeSync() {
         }
 
         // 2. Define comprehensive mappings that handle whitespace and exact matches
+        // REMOVED 12+ mappings to prevent hardcoded values appearing in data enrichment
         $ageRangeMapping = [
             // Handle exact matches (including potential whitespace)
-            '12+' => '11-14 years',
-            ' 12+' => '11-14 years',
-            '12+ ' => '11-14 years',
-            ' 12+ ' => '11-14 years',
             '13+' => '11-14 years',
             '14+' => '14-16 years',
             '15+' => '14-16 years',

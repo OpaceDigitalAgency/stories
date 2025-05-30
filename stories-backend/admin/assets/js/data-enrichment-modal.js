@@ -1232,15 +1232,23 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         const valuesDiffer = normalizeValue(currentValue) !== normalizeValue(displayValue);
         console.log('🎨 Values differ:', valuesDiffer, 'normalized current:', normalizeValue(currentValue), 'normalized display:', normalizeValue(displayValue));
 
-        // CRITICAL FIX: For reading_level, also check if age_range is checked (synchronized fields)
+        // CRITICAL FIX: For reading_level, also check if age_range has any source selected (synchronized fields)
         let shouldAutoCheck = autoCheck && valuesDiffer && fieldCheckbox.length;
 
-        // Special case: if this is reading_level and age_range is checked, auto-check reading_level too
+        // Special case: if this is reading_level, auto-check it when:
+        // 1. Age range checkbox is checked, OR
+        // 2. Any age range source is selected (radio button)
         if (fieldName === 'reading_level') {
             const ageRangeCheckbox = $(`.enrichment-field[data-field="age_range"] input[type="checkbox"][value="age_range"]`);
-            if (ageRangeCheckbox.length && ageRangeCheckbox.is(':checked') && valuesDiffer) {
+            const ageRangeRadioSelected = $(`input[name*="age_range"][type="radio"]:checked`).length > 0;
+
+            if (valuesDiffer && (
+                (ageRangeCheckbox.length && ageRangeCheckbox.is(':checked')) ||
+                ageRangeRadioSelected
+            )) {
                 shouldAutoCheck = true;
-                console.log('🎨 Auto-checking reading_level because age_range is checked and values differ');
+                console.log('🎨 Auto-checking reading_level because age_range is active (checkbox checked or radio selected) and values differ');
+                console.log('🎨 Age range checkbox checked:', ageRangeCheckbox.is(':checked'), 'Radio selected:', ageRangeRadioSelected);
             }
         }
 

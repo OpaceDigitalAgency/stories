@@ -473,7 +473,8 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         // Fetch Amazon data
         $.post('book-import-validate/ajax/data-enrichment-ajax.php', {
             action: 'get_amazon_data',
-            isbn: window.currentBookISBN
+            isbn: window.currentBookISBN,
+            book_id: window.currentBookId  // Pass book ID for duplicate prevention
         }, function(res) {
             console.log('📦 Amazon AJAX response received:', res);
 

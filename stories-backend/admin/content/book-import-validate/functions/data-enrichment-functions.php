@@ -2389,11 +2389,12 @@ function scrapePriceFromAmazon($isbn) {
  *   @type string "selected_price"
  * }
  */
-function getAmazonEnrichmentData($isbn) {
+function getAmazonEnrichmentData($isbn, $currentBookData = null) {
     $cleanISBN = preg_replace('/[^0-9X]/i', '', $isbn);
 
     // Log the request for debugging
     error_log("getAmazonEnrichmentData called with ISBN: $isbn, cleaned: $cleanISBN");
+    error_log("DUPLICATE_FIX: Current book data provided: " . ($currentBookData ? 'YES' : 'NO'));
 
     // Fetch raw buying options and metadata (no caching since prices change frequently)
     $amazonData = scrapeAmazonBuyingOptions($cleanISBN);
@@ -2487,6 +2488,28 @@ function getAmazonEnrichmentData($isbn) {
                 }
 
                 $fieldKey = $amazonField === 'print_length' ? 'page_count' : $amazonField;
+
+                // CRITICAL FIX: Skip ISBN fields if they match current book data
+                if (($fieldKey === 'isbn' || $fieldKey === 'isbn13') && $currentBookData) {
+                    $currentValue = null;
+                    if ($fieldKey === 'isbn' && isset($currentBookData['isbn'])) {
+                        $currentValue = $currentBookData['isbn'];
+                    } elseif ($fieldKey === 'isbn13' && isset($currentBookData['isbn13'])) {
+                        $currentValue = $currentBookData['isbn13'];
+                    }
+
+                    // Normalize both values for comparison (remove hyphens)
+                    $normalizedCurrent = preg_replace('/[^0-9X]/i', '', $currentValue ?? '');
+                    $normalizedAmazon = preg_replace('/[^0-9X]/i', '', $value);
+
+                    if ($normalizedCurrent === $normalizedAmazon) {
+                        error_log("DUPLICATE_FIX: Skipping Amazon $fieldKey field - matches current value exactly ($normalizedCurrent)");
+                        continue; // Skip this field to prevent duplicates
+                    }
+
+                    error_log("DUPLICATE_FIX: Amazon $fieldKey field differs from current - current: '$normalizedCurrent', amazon: '$normalizedAmazon'");
+                }
+
                 $enrichmentFields[$fieldKey] = [
                     'label' => $label,
                     'new_data' => [

@@ -59,11 +59,19 @@ try {
 
         case 'get_amazon_data':
             $isbn = $_POST['isbn'] ?? '';
+            $bookId = $_POST['book_id'] ?? '';
             if (empty($isbn)) {
                 echo json_encode(['success' => false, 'message' => 'ISBN is required']);
             } else {
                 // Log the request for debugging
-                error_log("Amazon data request for ISBN: $isbn");
+                error_log("Amazon data request for ISBN: $isbn, book_id: $bookId");
+
+                // Get current book data to prevent duplicate fields
+                $currentBookData = null;
+                if (!empty($bookId)) {
+                    $currentBookData = getCurrentBookData($bookId);
+                    error_log("DUPLICATE_FIX: Retrieved current book data for filtering: " . json_encode($currentBookData));
+                }
 
                 // Convert ISBN-13 to ISBN-10 for Amazon (Amazon requires ISBN-10)
                 $isbn10 = convertISBN13ToISBN10($isbn);
@@ -79,7 +87,8 @@ try {
                 }
 
                 // Fetch cached Amazon enrichment payload (includes all options, default format, and price)
-                $amazonPayload = getAmazonEnrichmentData($isbn10);
+                // Pass current book data to prevent duplicate ISBN fields
+                $amazonPayload = getAmazonEnrichmentData($isbn10, $currentBookData);
 
                 // Log the result for debugging
                 error_log("Amazon payload result: " . json_encode($amazonPayload));

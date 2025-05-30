@@ -540,9 +540,19 @@ function handleApplyEnrichment() {
 
             case 'maturity_rating':
                 // Store the raw maturity rating if field exists
-                if (!empty($value) && columnExists('books', 'maturity_rating')) {
+                $columnExists = columnExists('books', 'maturity_rating');
+                error_log("Maturity rating field: value='$value', empty=" . (empty($value) ? 'YES' : 'NO') . ", column_exists=" . ($columnExists ? 'YES' : 'NO'));
+
+                if (!empty($value) && $columnExists) {
                     $updateFields[] = "maturity_rating = ?";
                     $params[] = $value;
+                    error_log("Added maturity_rating to update: $value");
+                } else {
+                    if (empty($value)) {
+                        error_log("Skipping maturity_rating - empty value");
+                    } else {
+                        error_log("Skipping maturity_rating - column does not exist in books table");
+                    }
                 }
                 break;
 

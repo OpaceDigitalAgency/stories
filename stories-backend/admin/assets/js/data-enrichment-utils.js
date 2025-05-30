@@ -145,6 +145,27 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
             return false;
         }
 
+        // Special handling for purchase_links (JSON vs display format)
+        if (typeof newValue === 'object' && typeof currentValue === 'string') {
+            // Parse current value as purchase links display format
+            try {
+                const currentParsed = parsePurchaseLinksDisplay(currentValue);
+                const newParsed = normalizePurchaseLinks(newValue);
+                return JSON.stringify(currentParsed) === JSON.stringify(newParsed);
+            } catch (e) {
+                console.log('🔍 Purchase links comparison failed:', e);
+            }
+        }
+
+        // Special handling for tags/genres (order-independent comparison)
+        if (typeof currentValue === 'string' && typeof newValue === 'string') {
+            // Check if these look like tag lists
+            if (currentValue.includes('Fiction') || newValue.includes('Fiction') ||
+                currentValue.includes('Children') || newValue.includes('Children')) {
+                return compareTagLists(currentValue, newValue);
+            }
+        }
+
         // For JSON objects (like purchase_links), compare the actual data
         if (typeof currentValue === 'object' && typeof newValue === 'object') {
             return JSON.stringify(currentValue) === JSON.stringify(newValue);
@@ -181,6 +202,81 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
 
         // Default comparison
         return currentValue === newValue;
+    }
+
+    /**
+     * Parse purchase links display format into normalized object
+     */
+    function parsePurchaseLinksDisplay(displayText) {
+        const links = {};
+        const lines = displayText.split('\n');
+
+        for (const line of lines) {
+            const match = line.match(/^([^:]+):\s*(.+)$/);
+            if (match) {
+                const format = match[1].trim();
+                const price = match[2].trim();
+                links[format] = { price: price };
+            }
+        }
+
+        return links;
+    }
+
+    /**
+     * Normalize purchase links object for comparison
+     */
+    function normalizePurchaseLinks(linksObj) {
+        const normalized = {};
+
+        for (const [format, data] of Object.entries(linksObj)) {
+            normalized[format] = { price: data.price };
+        }
+
+        return normalized;
+    }
+
+    /**
+     * Compare tag lists (order-independent)
+     */
+    function compareTagLists(current, newValue) {
+        // Handle the specific case where tags are concatenated without separators
+        // e.g., "AfricaAlgeriaBerbersChildren's Fiction..." vs "Social Life And CustomsBerbersImmigrants..."
+
+        // First try to split by common patterns
+        const splitTags = (str) => {
+            // Split by capital letters that follow lowercase letters (CamelCase boundaries)
+            // But preserve apostrophes and common patterns
+            let tags = str.replace(/([a-z])([A-Z])/g, '$1|$2')
+                         .split('|')
+                         .map(tag => tag.trim())
+                         .filter(tag => tag.length > 0);
+
+            // Further split by common separators if they exist
+            const furtherSplit = [];
+            for (const tag of tags) {
+                if (tag.includes(',') || tag.includes(';')) {
+                    furtherSplit.push(...tag.split(/[,;]/).map(t => t.trim()).filter(t => t.length > 0));
+                } else {
+                    furtherSplit.push(tag);
+                }
+            }
+
+            return furtherSplit.map(tag => tag.toLowerCase().trim()).sort();
+        };
+
+        const currentTags = splitTags(current);
+        const newTags = splitTags(newValue);
+
+        console.log('🔍 Comparing tag lists:', {
+            currentRaw: current,
+            newRaw: newValue,
+            currentParsed: currentTags,
+            newParsed: newTags,
+            match: JSON.stringify(currentTags) === JSON.stringify(newTags)
+        });
+
+        return JSON.stringify(currentTags) === JSON.stringify(newTags);
     }
 
     /**

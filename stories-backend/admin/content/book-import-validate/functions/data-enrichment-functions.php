@@ -2436,7 +2436,7 @@ function getAmazonEnrichmentData($isbn) {
                     'new_data' => [
                         'value' => $standardizedAgeRange,
                         'source' => 'amazon',
-                        'confidence' => 0.9, // Amazon data is usually very accurate
+                        'confidence' => 90, // Amazon data is usually very accurate
                         'status' => 'available',
                         'original_value' => $amazonMetadata['reading_age'] // Keep original for reference
                     ]
@@ -2453,7 +2453,7 @@ function getAmazonEnrichmentData($isbn) {
                     'new_data' => [
                         'value' => $readingLevel,
                         'source' => 'amazon',
-                        'confidence' => 0.85, // Derived from grade level, slightly lower confidence
+                        'confidence' => 85, // Derived from grade level, slightly lower confidence
                         'status' => 'available'
                     ]
                 ];
@@ -2492,7 +2492,7 @@ function getAmazonEnrichmentData($isbn) {
                     'new_data' => [
                         'value' => $value,
                         'source' => 'amazon',
-                        'confidence' => 0.9,
+                        'confidence' => 90,
                         'status' => 'available',
                         'original_value' => $amazonMetadata[$amazonField] // Keep original for reference
                     ]

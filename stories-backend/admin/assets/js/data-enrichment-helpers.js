@@ -326,16 +326,31 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
             const moreCount = isbns.length > 10 ? ` <span class="text-muted">+${isbns.length - 10} more</span>` : '';
             return `<div style="max-height: 100px; overflow-y: auto;">${isbnBadges}${moreCount}</div>`;
         } else if (fieldName === 'purchase_links') {
-            // Display purchase links as formatted JSON code
+            // Display purchase links in a user-friendly format
             try {
                 const linksData = typeof value === 'string' ? JSON.parse(value) : value;
                 if (!linksData || typeof linksData !== 'object') {
                     return '<span class="text-muted">No links available</span>';
                 }
 
-                // Format as JSON with proper indentation
-                const formattedJson = JSON.stringify(linksData, null, 2);
-                return `<pre class="bg-light p-2 rounded" style="font-size: 12px; max-height: 150px; overflow-y: auto;"><code>${formattedJson}</code></pre>`;
+                // Format as user-friendly purchase options
+                let formattedLinks = '';
+                Object.keys(linksData).forEach(format => {
+                    const option = linksData[format];
+                    if (option && option.price && option.url) {
+                        const isSelected = option.is_selected ? ' <span class="badge badge-success">Default</span>' : '';
+                        formattedLinks += `
+                            <div class="mb-1">
+                                <strong>${format}:</strong> ${option.price}${isSelected}
+                                <a href="${option.url}" target="_blank" class="btn btn-sm btn-outline-primary ml-2">
+                                    <i class="fas fa-external-link-alt"></i> Buy
+                                </a>
+                            </div>
+                        `;
+                    }
+                });
+
+                return formattedLinks || '<span class="text-muted">No valid purchase options</span>';
             } catch (e) {
                 console.error('Error parsing purchase links:', e);
                 return '<span class="text-danger">Error parsing links</span>';

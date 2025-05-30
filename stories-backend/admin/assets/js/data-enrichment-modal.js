@@ -544,6 +544,45 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     return;
                 }
 
+                // CRITICAL FIX: Check for duplicate ISBN fields before processing
+                if ((fieldName === 'isbn' || fieldName === 'isbn13')) {
+                    // Check if this ISBN field already exists in the DOM
+                    const existingFieldElement = $(`.enrichment-field[data-field="${fieldName}"]`);
+                    if (existingFieldElement.length > 0) {
+                        console.log(`📦 DUPLICATE_FIX: ISBN field ${fieldName} already exists in DOM - merging instead of creating new`);
+
+                        // Find the existing field and merge Amazon data as additional source
+                        if (existingField && existingField.new_data) {
+                            if (!existingField.new_data.options) {
+                                // Convert single source to multi-source
+                                const originalData = {
+                                    value: existingField.new_data.value,
+                                    source: existingField.new_data.source,
+                                    confidence: existingField.new_data.confidence,
+                                    label: existingField.label
+                                };
+
+                                existingField.new_data = {
+                                    options: [originalData],
+                                    source: existingField.new_data.source
+                                };
+                            }
+
+                            // Add Amazon as additional source
+                            existingField.new_data.options.push({
+                                value: amazonFieldData.new_data.value,
+                                source: amazonFieldData.new_data.source,
+                                confidence: amazonFieldData.new_data.confidence,
+                                label: amazonFieldData.label || existingField.label
+                            });
+
+                            existingField.new_data.source += ' + amazon';
+                            console.log(`📦 DUPLICATE_FIX: Merged Amazon data into existing ${fieldName} field`);
+                            return; // Skip creating new field
+                        }
+                    }
+                }
+
                 if (existingField) {
                     // Field already exists - check if it has new_data or is just showing current value
                     console.log(`📦 Field ${fieldName} already exists:`, {
@@ -1355,35 +1394,61 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 newLength: newTags.length
             });
 
-            // For concatenated strings, try a different approach - check if they contain the same content
+            // CRITICAL FIX: Better handling for concatenated strings
             if (currentTags.length === 1 && newTags.length === 1) {
                 const currentStr = currentTags[0];
                 const newStr = newTags[0];
 
                 // If both are long strings, they might be concatenated tags
-                if (currentStr.length > 50 && newStr.length > 50) {
+                if (currentStr.length > 30 && newStr.length > 30) {
                     console.log('🏷️ TAG_DEBUG: Detected concatenated tag strings, checking content similarity');
 
-                    // Simple check - if they contain similar content (allowing for different order)
-                    const currentWords = currentStr.split(/(?=[A-Z])/).filter(w => w.length > 2).map(w => w.toLowerCase());
-                    const newWords = newStr.split(/(?=[A-Z])/).filter(w => w.length > 2).map(w => w.toLowerCase());
+                    // Enhanced word extraction - handle camelCase and common separators
+                    const extractWords = (str) => {
+                        return str
+                            // Split on capital letters (camelCase)
+                            .split(/(?=[A-Z])/)
+                            // Split on common separators
+                            .flatMap(part => part.split(/[\s,;-]+/))
+                            // Clean and filter
+                            .map(w => w.toLowerCase().trim())
+                            .filter(w => w.length > 2)
+                            // Remove common words that don't add meaning
+                            .filter(w => !['and', 'the', 'for', 'with', 'from', 'fiction', 'books'].includes(w));
+                    };
 
-                    console.log('🏷️ TAG_DEBUG: Extracted words:', {
+                    const currentWords = extractWords(currentStr);
+                    const newWords = extractWords(newStr);
+
+                    console.log('🏷️ TAG_DEBUG: Enhanced word extraction:', {
+                        currentStr: currentStr,
+                        newStr: newStr,
                         currentWords: currentWords,
                         newWords: newWords
                     });
 
-                    // Check if most words are present in both
+                    // Check if most significant words are present in both
                     const commonWords = currentWords.filter(word => newWords.includes(word));
-                    const similarity = commonWords.length / Math.max(currentWords.length, newWords.length);
+                    const totalUniqueWords = new Set([...currentWords, ...newWords]).size;
+                    const similarity = totalUniqueWords > 0 ? commonWords.length / totalUniqueWords : 0;
 
-                    console.log('🏷️ TAG_DEBUG: Word similarity:', {
+                    console.log('🏷️ TAG_DEBUG: Enhanced similarity analysis:', {
                         commonWords: commonWords,
-                        similarity: similarity
+                        totalUniqueWords: totalUniqueWords,
+                        similarity: similarity,
+                        threshold: 0.7
                     });
 
-                    if (similarity > 0.8) {
+                    // Lower threshold for better matching of similar content
+                    if (similarity > 0.7) {
                         console.log('🏷️ TAG_DEBUG: High similarity detected - treating as match');
+                        return 'matches_database';
+                    }
+
+                    // Additional check: if strings are very similar in length and share many characters
+                    const lengthRatio = Math.min(currentStr.length, newStr.length) / Math.max(currentStr.length, newStr.length);
+                    if (lengthRatio > 0.8 && similarity > 0.5) {
+                        console.log('🏷️ TAG_DEBUG: Similar length and moderate similarity - treating as match');
                         return 'matches_database';
                     }
                 }

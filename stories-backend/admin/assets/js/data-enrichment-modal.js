@@ -913,18 +913,16 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             const isChecked = $(this).is(':checked');
             console.log('🔄 Age range field checkbox changed:', isChecked);
 
-            // Always sync reading level checkbox to match age range
-            $('input[type="checkbox"][value="reading_level"]').prop('checked', isChecked);
+            // TEMPORARILY DISABLED: Don't auto-sync checkboxes to debug the disabled field issue
+            // $('input[type="checkbox"][value="reading_level"]').prop('checked', isChecked);
 
             if (isChecked) {
                 // Both fields selected - sync reading level to match current age range selection
                 const selectedAgeRange = getSelectedFieldValue('age_range');
-                console.log('🔄 Both fields selected, syncing reading level to:', selectedAgeRange);
+                console.log('🔄 Age range selected, would sync reading level to:', selectedAgeRange);
 
                 if (selectedAgeRange && ageToReadingMap[selectedAgeRange]) {
                     const expectedReading = ageToReadingMap[selectedAgeRange];
-                    console.log('🔄 Syncing to reading level:', expectedReading);
-                    // Just log for now - don't try to update display
                     console.log('🔄 Expected reading level:', expectedReading);
                 }
             }
@@ -935,18 +933,17 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             const isChecked = $(this).is(':checked');
             console.log('🔄 Reading level field checkbox changed:', isChecked);
 
-            // Always sync age range checkbox to match reading level
-            $('input[type="checkbox"][value="age_range"]').prop('checked', isChecked);
+            // TEMPORARILY DISABLED: Don't auto-sync checkboxes to debug the disabled field issue
+            // $('input[type="checkbox"][value="age_range"]').prop('checked', isChecked);
 
             if (isChecked) {
                 // Both fields selected - sync age range to match current reading level selection
                 const selectedReadingLevel = getSelectedFieldValue('reading_level');
-                console.log('🔄 Both fields selected, syncing age range to:', selectedReadingLevel);
+                console.log('🔄 Reading level selected, would sync age range to:', selectedReadingLevel);
 
                 if (selectedReadingLevel && readingToAgeMap[selectedReadingLevel]) {
                     const expectedAge = readingToAgeMap[selectedReadingLevel];
-                    console.log('🔄 Syncing to age range:', expectedAge);
-                    syncAgeRangeToReadingLevel(expectedAge);
+                    console.log('🔄 Expected age range:', expectedAge);
                 }
             }
         });
@@ -964,8 +961,8 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     const expectedReading = ageToReadingMap[selectedAgeRange];
                     console.log('🔄 Syncing reading level to:', expectedReading);
 
-                    // Update the reading level field to show the corresponding value
-                    updateReadingLevelDisplay(expectedReading);
+                    // Just log for now - don't try to update display
+                    console.log('🔄 Would update reading level to:', expectedReading);
                 } else {
                     console.log('🔄 No mapping found for age range:', selectedAgeRange);
                 }

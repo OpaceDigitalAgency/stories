@@ -10,9 +10,62 @@ require_once '../includes/auth-check.php';
 // Include database connection
 require_once '../includes/db-connect.php';
 
-// Include existing import functions (only the functions we need, not the full page)
-require_once 'book-import-validate/functions/data-enrichment-functions.php';
-require_once '../includes/admin-functions.php';
+// Only include what we absolutely need to avoid function conflicts
+// We'll define the functions we need inline to avoid conflicts
+
+/**
+ * Check if a book already exists in the database
+ */
+function bookExists($db, $title, $author) {
+    $stmt = $db->prepare("
+        SELECT COUNT(*)
+        FROM directory_items di
+        JOIN books b ON di.id = b.directory_item_id
+        WHERE di.title = ? AND b.author = ?
+    ");
+    $stmt->execute([$title, $author]);
+    return $stmt->fetchColumn() > 0;
+}
+
+/**
+ * Import a book into the database
+ */
+function importBook($db, $bookData) {
+    try {
+        $db->beginTransaction();
+        
+        // Insert into directory_items
+        $stmt = $db->prepare("
+            INSERT INTO directory_items (title, slug, type, status, created_at, updated_at)
+            VALUES (?, ?, 'book', 'published', NOW(), NOW())
+        ");
+        
+        $slug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $bookData['title']));
+        $stmt->execute([$bookData['title'], $slug]);
+        $directoryItemId = $db->lastInsertId();
+        
+        // Insert into books
+        $stmt = $db->prepare("
+            INSERT INTO books (directory_item_id, author, description, age_range, created_at, updated_at)
+            VALUES (?, ?, ?, ?, NOW(), NOW())
+        ");
+        
+        $stmt->execute([
+            $directoryItemId,
+            $bookData['author'] ?? 'Unknown',
+            $bookData['description'] ?? '',
+            $bookData['age_range'] ?? ''
+        ]);
+        
+        $db->commit();
+        return $directoryItemId;
+        
+    } catch (Exception $e) {
+        $db->rollback();
+        error_log("Failed to import book: " . $e->getMessage());
+        return false;
+    }
+}
 
 // Include enrichment functions
 require_once 'book-import-validate/functions/data-enrichment-functions.php';

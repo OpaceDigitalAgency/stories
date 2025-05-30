@@ -381,18 +381,40 @@ function updateProgress(step, current, total, percentage, message) {
                                 'enriched' => ['label' => 'API Enriched', 'sortable' => true]
                             ];
                             
-                            // Render enhanced table
-                            renderEnhancedTable($tableData, $columns, 'discovered-books', 'discovered-books-table', [
-                                'show_bulk_actions' => true,
-                                'bulk_actions' => [
-                                    'import' => 'Import Selected',
-                                    'export_csv' => 'Export as CSV',
-                                    'export_json' => 'Export as JSON'
-                                ],
-                                'items_per_page' => 25,
-                                'show_search' => true,
-                                'show_filters' => true
-                            ]);
+                            // Render simple table (enhanced table has errors)
+                            echo "<div class='table-responsive'>";
+                            echo "<table class='table table-striped table-hover'>";
+                            echo "<thead class='table-dark'>";
+                            echo "<tr>";
+                            foreach ($columns as $field => $config) {
+                                echo "<th>" . htmlspecialchars($config['label']) . "</th>";
+                            }
+                            echo "</tr>";
+                            echo "</thead>";
+                            echo "<tbody>";
+                            
+                            foreach ($tableData as $row) {
+                                echo "<tr>";
+                                foreach ($columns as $field => $config) {
+                                    $value = $row[$field] ?? '';
+                                    if ($field === 'title' && !empty($row['detail_url'])) {
+                                        echo "<td><a href='" . htmlspecialchars($row['detail_url']) . "' target='_blank'>" . htmlspecialchars($value) . "</a></td>";
+                                    } else {
+                                        echo "<td>" . htmlspecialchars($value) . "</td>";
+                                    }
+                                }
+                                echo "</tr>";
+                            }
+                            
+                            echo "</tbody>";
+                            echo "</table>";
+                            echo "</div>";
+                            
+                            // Add export buttons
+                            echo "<div class='mt-3'>";
+                            echo "<button class='btn btn-success me-2' onclick='exportToCSV()'>Export as CSV</button>";
+                            echo "<button class='btn btn-info' onclick='exportToJSON()'>Export as JSON</button>";
+                            echo "</div>";
                             
                             echo "</div>";
                             
@@ -588,6 +610,56 @@ function updateProgress(step, current, total, percentage, message) {
 </style>
 
 <script>
+// Export functions
+function exportToCSV() {
+    const table = document.querySelector('.table');
+    if (!table) return;
+    
+    let csv = '';
+    const rows = table.querySelectorAll('tr');
+    
+    rows.forEach(row => {
+        const cols = row.querySelectorAll('th, td');
+        const rowData = Array.from(cols).map(col => {
+            return '"' + col.textContent.replace(/"/g, '""') + '"';
+        });
+        csv += rowData.join(',') + '\n';
+    });
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'discovered-books.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+
+function exportToJSON() {
+    const table = document.querySelector('.table');
+    if (!table) return;
+    
+    const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
+    const rows = Array.from(table.querySelectorAll('tbody tr'));
+    
+    const data = rows.map(row => {
+        const cells = Array.from(row.querySelectorAll('td'));
+        const rowData = {};
+        headers.forEach((header, index) => {
+            rowData[header] = cells[index] ? cells[index].textContent.trim() : '';
+        });
+        return rowData;
+    });
+    
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'discovered-books.json';
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+
 // Auto-hide progress overlay after completion
 setTimeout(() => {
     const progressOverlay = document.getElementById('discoveryProgress');

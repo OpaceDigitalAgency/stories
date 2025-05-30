@@ -1375,12 +1375,12 @@ require_once '../includes/header.php';
                                         
                                         <div class="form-group">
                                             <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" id="auto_enrich" name="auto_enrich" checked>
+                                                <input class="form-check-input" type="checkbox" id="auto_enrich" name="auto_enrich">
                                                 <label class="form-check-label" for="auto_enrich">
-                                                    <strong>Auto-enrich with APIs</strong>
+                                                    <strong>Auto-enrich with APIs (SLOW - adds 3-5 minutes)</strong>
                                                 </label>
                                                 <small class="form-text text-muted">
-                                                    Automatically fetch ISBNs, publishers, and other data from Google Books and Open Library
+                                                    Automatically fetch ISBNs, publishers, and other data from Google Books and Open Library. WARNING: This significantly slows down the process.
                                                 </small>
                                             </div>
                                         </div>

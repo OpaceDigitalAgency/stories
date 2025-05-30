@@ -860,7 +860,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             '3-4 years': 'Early Pre-reader',
             '4-5 years': 'Beginning Reader',
             '5-6 years': 'Early Reader',        // User's current database value
-            '6-7 years': 'Early Reader',        // Updated: was "Developing Reader"
+            '6-7 years': 'Developing Reader',   // FIXED: Correct mapping from database
             '7-8 years': 'Transitional Reader',
             '8-9 years': 'Fluent Reader',       // Amazon value
             '9-10 years': 'Fluent Reader',
@@ -887,7 +887,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             'Early Pre-reader': '3-4 years',
             'Beginning Reader': '4-5 years',
             'Early Reader': '5-6 years',        // Maps to user's current database value
-            'Developing Reader': '5-6 years',   // REMOVED: was '6-7 years', now maps to Early Reader range
+            'Developing Reader': '6-7 years',   // FIXED: Correct mapping from database
             'Transitional Reader': '7-8 years',
             'Fluent Reader': '8-9 years',       // Maps to Amazon's 8-9 years
             'Advanced Reader': '11-14 years',
@@ -899,53 +899,63 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             'All Ages': '5-6 years'
         };
 
-        // Listen for age range field checkbox changes (field selection)
+        // FIXED: Synchronized field selection - both fields must be selected/unselected together
         $(document).on('change', 'input[type="checkbox"][value="age_range"]', function() {
-            console.log('🔄 Age range field checkbox changed:', $(this).is(':checked'));
+            const isChecked = $(this).is(':checked');
+            console.log('🔄 Age range field checkbox changed:', isChecked);
 
-            if ($(this).is(':checked')) {
-                // Field selected - sync with current source
+            // Always sync reading level checkbox to match age range
+            $('input[type="checkbox"][value="reading_level"]').prop('checked', isChecked);
+
+            if (isChecked) {
+                // Both fields selected - sync reading level to match current age range selection
                 const selectedAgeRange = getSelectedFieldValue('age_range');
-                console.log('🔄 Age range field selected, syncing with:', selectedAgeRange);
+                console.log('🔄 Both fields selected, syncing reading level to:', selectedAgeRange);
 
                 if (selectedAgeRange && ageToReadingMap[selectedAgeRange]) {
                     const expectedReading = ageToReadingMap[selectedAgeRange];
                     console.log('🔄 Syncing to reading level:', expectedReading);
-                    syncReadingLevelField(expectedReading);
-                }
-            } else {
-                // Field unselected - revert to current database value
-                console.log('🔄 Age range field unselected, reverting to current value');
-                const currentAgeRange = window.currentEnrichmentData?.fields?.age_range?.current_value;
-
-                if (currentAgeRange && ageToReadingMap[currentAgeRange]) {
-                    const expectedReading = ageToReadingMap[currentAgeRange];
-                    console.log('🔄 Reverting to reading level:', expectedReading);
-                    syncReadingLevelField(expectedReading, true);
+                    syncReadingLevelToAgeRange(expectedReading);
                 }
             }
         });
 
-        // Listen for age range source changes (radio buttons)
+        // FIXED: Synchronized field selection - both fields must be selected/unselected together
+        $(document).on('change', 'input[type="checkbox"][value="reading_level"]', function() {
+            const isChecked = $(this).is(':checked');
+            console.log('🔄 Reading level field checkbox changed:', isChecked);
+
+            // Always sync age range checkbox to match reading level
+            $('input[type="checkbox"][value="age_range"]').prop('checked', isChecked);
+
+            if (isChecked) {
+                // Both fields selected - sync age range to match current reading level selection
+                const selectedReadingLevel = getSelectedFieldValue('reading_level');
+                console.log('🔄 Both fields selected, syncing age range to:', selectedReadingLevel);
+
+                if (selectedReadingLevel && readingToAgeMap[selectedReadingLevel]) {
+                    const expectedAge = readingToAgeMap[selectedReadingLevel];
+                    console.log('🔄 Syncing to age range:', expectedAge);
+                    syncAgeRangeToReadingLevel(expectedAge);
+                }
+            }
+        });
+
+        // FIXED: Age range source changes should sync reading level in real-time
         $(document).on('change', 'input[type="radio"][name*="age_range"]', function() {
             console.log('🔄 Age range source changed:', $(this).val(), $(this).attr('name'));
 
-            // Only sync if the age range field is currently selected
-            const ageRangeFieldSelected = $('input[type="checkbox"][value="age_range"]').is(':checked');
-            if (!ageRangeFieldSelected) {
-                console.log('🔄 Age range field not selected, skipping sync');
-                return;
-            }
-
-            // Wait a moment for the UI to update, then get the selected value
+            // Always sync reading level when age range source changes (regardless of checkbox state)
             setTimeout(() => {
                 const selectedAgeRange = getSelectedFieldValue('age_range');
                 console.log('🔄 New age range source value:', selectedAgeRange);
 
                 if (selectedAgeRange && ageToReadingMap[selectedAgeRange]) {
                     const expectedReading = ageToReadingMap[selectedAgeRange];
-                    console.log('🔄 Syncing to reading level:', expectedReading);
-                    syncReadingLevelField(expectedReading);
+                    console.log('🔄 Syncing reading level to:', expectedReading);
+
+                    // Update the reading level field to show the corresponding value
+                    updateReadingLevelDisplay(expectedReading);
                 } else {
                     console.log('🔄 No mapping found for age range:', selectedAgeRange);
                 }
@@ -990,7 +1000,9 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 if (selectedReadingLevel && readingToAgeMap[selectedReadingLevel]) {
                     const expectedAge = readingToAgeMap[selectedReadingLevel];
                     console.log('🔄 Expected age range:', expectedAge);
-                    syncAgeRangeField(expectedAge);
+
+                    // Update the age range field to show the corresponding value
+                    updateAgeRangeDisplay(expectedAge);
                 } else {
                     console.log('🔄 No mapping found for reading level:', selectedReadingLevel);
                     console.log('🔄 Exact match check:', readingToAgeMap[selectedReadingLevel]);
@@ -1001,7 +1013,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     );
                     if (partialMatch) {
                         console.log('🔄 Found partial match:', partialMatch, '→', readingToAgeMap[partialMatch]);
-                        syncAgeRangeField(readingToAgeMap[partialMatch]);
+                        updateAgeRangeDisplay(readingToAgeMap[partialMatch]);
                     }
                 }
             }, 100);
@@ -1054,186 +1066,86 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         return null;
     }
 
-    // Sync reading level field based on age range
-    function syncReadingLevelField(expectedReading, isRevertMode = false) {
-        console.log('🔄 syncReadingLevelField called with:', expectedReading, 'revert mode:', isRevertMode);
+    // FIXED: Simple function to update reading level display based on age range
+    function updateReadingLevelDisplay(expectedReading) {
+        console.log('🔄 updateReadingLevelDisplay called with:', expectedReading);
+
+        // Update the reading level field's "New Value" to show the mapped reading level
         const readingField = window.currentEnrichmentData?.fields?.['reading_level'];
         if (!readingField) {
             console.log('🔄 No reading_level field found');
             return;
         }
 
-        // Check if we have options to select from (multi-source field)
-        if (readingField.new_data && readingField.new_data.options) {
-            console.log('🔄 Reading level has multiple options:', readingField.new_data.options);
-
-            // Find matching option by exact match or partial match - ENHANCED null checks
-            let matchingIndex = -1;
-            readingField.new_data.options.forEach((option, index) => {
-                // CRITICAL FIX: Enhanced null checks to prevent TypeError
-                const optionValue = option?.value;
-                const hasValidOption = optionValue && typeof optionValue === 'string';
-                const hasValidExpected = expectedReading && typeof expectedReading === 'string';
-
-                if (hasValidOption && hasValidExpected) {
-                    if (optionValue === expectedReading ||
-                        optionValue.toLowerCase().includes(expectedReading.toLowerCase()) ||
-                        expectedReading.toLowerCase().includes(optionValue.toLowerCase())) {
-                        matchingIndex = index;
-                        console.log(`🔄 Found matching reading level option at index ${index}:`, optionValue);
-                    }
-                } else {
-                    console.log(`🔄 Skipping reading level option ${index} due to null/invalid values:`, {optionValue, expectedReading});
-                }
-            });
-
-            if (matchingIndex >= 0) {
-                // Select the matching radio button
-                $(`input[name="field_reading_level_option"][value="${matchingIndex}"]`).prop('checked', true).trigger('change');
-
-                // CRITICAL: Force UI update by triggering the change event
-                setTimeout(() => {
-                    $(`input[name="field_reading_level_option"][value="${matchingIndex}"]`).trigger('click');
-                }, 50);
-
-                // Auto-check the reading level field unless in revert mode
-                if (!isRevertMode) {
-                    $(`input[name="field_reading_level"]`).prop('checked', true);
-                    $(`input[name="fields[]"][value="reading_level"]`).prop('checked', true);
-                    console.log('🔄 Auto-selected reading level field for saving');
-                }
-
-                console.log('🔄 Successfully synced reading level to:', readingField.new_data.options[matchingIndex].value);
-            } else {
-                console.log('🔄 No matching reading level option found for:', expectedReading);
-            }
-        } else if (readingField.new_data) {
-            // Single source field - create a new option or update existing
-            console.log('🔄 Single reading level field found. Creating/updating with:', expectedReading);
-
-            // If it's a single source, we need to create options structure
-            if (!readingField.new_data.options) {
-                // Convert single source to multi-source with the new value
-                const originalValue = readingField.new_data.value;
-                const originalSource = readingField.new_data.source || 'unknown';
-
-                readingField.new_data.options = [
-                    {
-                        value: originalValue,
-                        source: originalSource,
-                        confidence: readingField.new_data.confidence || 80
-                    },
-                    {
-                        value: expectedReading,
-                        source: 'synchronized',
-                        confidence: 95
-                    }
-                ];
-
-                console.log('🔄 Converted single source to multi-source with sync option');
-
-                // Re-render the field to show the new options
-                displayEnrichmentFields(window.currentEnrichmentData.fields);
-
-                // Select the synchronized option
-                setTimeout(() => {
-                    $(`input[name="field_reading_level_option"][value="1"]`).prop('checked', true).trigger('change');
-                }, 100);
-            }
+        // Update the new_data value to reflect the mapped reading level
+        if (readingField.new_data) {
+            readingField.new_data.value = expectedReading;
+            readingField.new_data.source = 'synchronized_from_age_range';
+            readingField.new_data.confidence = 95;
         } else {
-            console.log('🔄 No reading level field data found');
+            readingField.new_data = {
+                value: expectedReading,
+                source: 'synchronized_from_age_range',
+                confidence: 95,
+                status: 'ready'
+            };
         }
+
+        // Re-render just the reading level field
+        const readingLevelContainer = $('[data-field="reading_level"]').parent();
+        if (readingLevelContainer.length > 0) {
+            const newHtml = createSingleSourceField('reading_level', readingField, 'Reading Level', false, false);
+            readingLevelContainer.html(newHtml);
+        }
+
+        console.log('🔄 Updated reading level display to:', expectedReading);
     }
 
-    // Sync age range field based on reading level
-    function syncAgeRangeField(expectedAge, isRevertMode = false) {
-        console.log('🔄 syncAgeRangeField called with:', expectedAge, 'revert mode:', isRevertMode);
+    // FIXED: Simple function to update age range display based on reading level
+    function updateAgeRangeDisplay(expectedAge) {
+        console.log('🔄 updateAgeRangeDisplay called with:', expectedAge);
+
+        // Update the age range field's "New Value" to show the mapped age range
         const ageField = window.currentEnrichmentData?.fields?.['age_range'];
         if (!ageField) {
             console.log('🔄 No age_range field found');
             return;
         }
 
-        // Check if we have options to select from (multi-source field)
-        if (ageField.new_data && ageField.new_data.options) {
-            console.log('🔄 Age range has multiple options:', ageField.new_data.options);
-
-            // Find matching option by exact match or partial match - ENHANCED null checks
-            let matchingIndex = -1;
-            ageField.new_data.options.forEach((option, index) => {
-                // CRITICAL FIX: Enhanced null checks to prevent TypeError
-                const optionValue = option?.value;
-                const hasValidOption = optionValue && typeof optionValue === 'string';
-                const hasValidExpected = expectedAge && typeof expectedAge === 'string';
-
-                if (hasValidOption && hasValidExpected) {
-                    if (optionValue === expectedAge ||
-                        optionValue.toLowerCase().includes(expectedAge.toLowerCase()) ||
-                        expectedAge.toLowerCase().includes(optionValue.toLowerCase())) {
-                        matchingIndex = index;
-                        console.log(`🔄 Found matching age range option at index ${index}:`, optionValue);
-                    }
-                } else {
-                    console.log(`🔄 Skipping option ${index} due to null/invalid values:`, {optionValue, expectedAge});
-                }
-            });
-
-            if (matchingIndex >= 0) {
-                // Select the matching radio button
-                $(`input[name="field_age_range_option"][value="${matchingIndex}"]`).prop('checked', true).trigger('change');
-
-                // CRITICAL: Force UI update by triggering the change event
-                setTimeout(() => {
-                    $(`input[name="field_age_range_option"][value="${matchingIndex}"]`).trigger('click');
-                }, 50);
-
-                // Auto-check the age range field unless in revert mode
-                if (!isRevertMode) {
-                    $(`input[name="field_age_range"]`).prop('checked', true);
-                    $(`input[name="fields[]"][value="age_range"]`).prop('checked', true);
-                    console.log('🔄 Auto-selected age range field for saving');
-                }
-
-                console.log('🔄 Successfully synced age range to:', ageField.new_data.options[matchingIndex].value);
-            } else {
-                console.log('🔄 No matching age range option found for:', expectedAge);
-            }
-        } else if (ageField.new_data) {
-            // Single source field - create a new option or update existing
-            console.log('🔄 Single age range field found. Creating/updating with:', expectedAge);
-
-            // If it's a single source, we need to create options structure
-            if (!ageField.new_data.options) {
-                // Convert single source to multi-source with the new value
-                const originalValue = ageField.new_data.value;
-                const originalSource = ageField.new_data.source || 'unknown';
-
-                ageField.new_data.options = [
-                    {
-                        value: originalValue,
-                        source: originalSource,
-                        confidence: ageField.new_data.confidence || 80
-                    },
-                    {
-                        value: expectedAge,
-                        source: 'synchronized',
-                        confidence: 95
-                    }
-                ];
-
-                console.log('🔄 Converted single source to multi-source with sync option');
-
-                // Re-render the field to show the new options
-                displayEnrichmentFields(window.currentEnrichmentData.fields);
-
-                // Select the synchronized option
-                setTimeout(() => {
-                    $(`input[name="field_age_range_option"][value="1"]`).prop('checked', true).trigger('change');
-                }, 100);
-            }
+        // Update the new_data value to reflect the mapped age range
+        if (ageField.new_data) {
+            ageField.new_data.value = expectedAge;
+            ageField.new_data.source = 'synchronized_from_reading_level';
+            ageField.new_data.confidence = 95;
         } else {
-            console.log('🔄 No age range field data found');
+            ageField.new_data = {
+                value: expectedAge,
+                source: 'synchronized_from_reading_level',
+                confidence: 95,
+                status: 'ready'
+            };
         }
+
+        // Re-render just the age range field
+        const ageRangeContainer = $('[data-field="age_range"]').parent();
+        if (ageRangeContainer.length > 0) {
+            const newHtml = createSingleSourceField('age_range', ageField, 'Age Range', false, false);
+            ageRangeContainer.html(newHtml);
+        }
+
+        console.log('🔄 Updated age range display to:', expectedAge);
+    }
+
+    // Legacy function - keeping for compatibility but simplified
+    function syncReadingLevelField(expectedReading, isRevertMode = false) {
+        console.log('🔄 syncReadingLevelField called with:', expectedReading, 'revert mode:', isRevertMode);
+        updateReadingLevelDisplay(expectedReading);
+    }
+
+    // Legacy function - keeping for compatibility but simplified
+    function syncAgeRangeField(expectedAge, isRevertMode = false) {
+        console.log('🔄 syncAgeRangeField called with:', expectedAge, 'revert mode:', isRevertMode);
+        updateAgeRangeDisplay(expectedAge);
     }
 
     function createSingleSourceField(fieldName, field, label, isUnknown, isPendingAmazon) {

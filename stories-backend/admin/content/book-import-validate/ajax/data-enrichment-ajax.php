@@ -1055,11 +1055,28 @@ function mapMaturityToAgeRangeFromTable($maturityRating) {
 
 /**
  * Map Google Books maturity rating to age range (fallback)
+ * FIXED: Better age range mapping that considers current book context
  */
-function mapMaturityToAgeRange($maturityRating) {
+function mapMaturityToAgeRange($maturityRating, $currentBookData = null) {
+    $currentAgeRange = $currentBookData['age_range'] ?? null;
+
     switch (strtoupper($maturityRating)) {
         case 'NOT_MATURE':
-            return '8-9 years'; // Default to a common children's age range
+            // For children's books, try to stay close to current age range if reasonable
+            if (!empty($currentAgeRange)) {
+                // If current age range is already a children's range, keep it reasonable
+                if (preg_match('/^(\d+)-(\d+)\s*years?$/i', $currentAgeRange, $matches)) {
+                    $startAge = intval($matches[1]);
+                    $endAge = intval($matches[2]);
+
+                    // If current range is reasonable for children (under 12), don't change it drastically
+                    if ($startAge <= 10 && $endAge <= 12) {
+                        return null; // Don't override reasonable children's age ranges
+                    }
+                }
+            }
+            // Default to a middle children's range only if no current range or current range is unreasonable
+            return '7-8 years';
         case 'MATURE':
             return '18+ years';
         default:

@@ -781,6 +781,17 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                         }
                     });
                 }
+            } else {
+                // When unchecked, revert to current value mapping
+                console.log('🔄 Age range unchecked, reverting to current value mapping');
+                const currentAgeRange = window.currentEnrichmentData.fields['age_range']?.current_value;
+                if (currentAgeRange && ageToReadingMap[currentAgeRange]) {
+                    const expectedReading = ageToReadingMap[currentAgeRange];
+                    console.log('🔄 Reverting to reading level:', expectedReading);
+                    syncReadingLevelField(expectedReading, true); // true = revert mode
+                } else {
+                    console.log('🔄 No current age range to revert to or no mapping found');
+                }
             }
         });
 
@@ -808,6 +819,17 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 } else {
                     console.log('🔄 No mapping found for reading level:', selectedReadingLevel);
                     console.log('🔄 Exact match check:', readingToAgeMap[selectedReadingLevel]);
+                }
+            } else {
+                // When unchecked, revert to current value mapping
+                console.log('🔄 Reading level unchecked, reverting to current value mapping');
+                const currentReadingLevel = window.currentEnrichmentData.fields['reading_level']?.current_value;
+                if (currentReadingLevel && readingToAgeMap[currentReadingLevel]) {
+                    const expectedAge = readingToAgeMap[currentReadingLevel];
+                    console.log('🔄 Reverting to age range:', expectedAge);
+                    syncAgeRangeField(expectedAge, true); // true = revert mode
+                } else {
+                    console.log('🔄 No current reading level to revert to or no mapping found');
                 }
             }
         });
@@ -856,8 +878,8 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
     }
 
     // Sync reading level field based on age range
-    function syncReadingLevelField(expectedReading) {
-        console.log('🔄 syncReadingLevelField called with:', expectedReading);
+    function syncReadingLevelField(expectedReading, isRevertMode = false) {
+        console.log('🔄 syncReadingLevelField called with:', expectedReading, 'revert mode:', isRevertMode);
         const readingField = window.currentEnrichmentData.fields['reading_level'];
         if (!readingField) {
             console.log('🔄 No reading_level field found');
@@ -872,7 +894,18 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 if (option.value === expectedReading) {
                     console.log(`🔄 Found matching reading level option at index ${index}:`, option.value);
                     $(`input[name="field_reading_level_option"][value="${index}"]`).prop('checked', true);
-                    $(`input[name="field_reading_level"]`).prop('checked', true);
+
+                    // Auto-check the reading level field unless in revert mode
+                    if (!isRevertMode) {
+                        $(`input[name="field_reading_level"]`).prop('checked', true);
+                        $(`input[name="fields[]"][value="reading_level"]`).prop('checked', true);
+                        console.log('🔄 Auto-selected reading level field for saving');
+                    } else {
+                        // In revert mode, uncheck the reading level field
+                        $(`input[name="field_reading_level"]`).prop('checked', false);
+                        $(`input[name="fields[]"][value="reading_level"]`).prop('checked', false);
+                        console.log('🔄 Unchecked reading level field in revert mode');
+                    }
 
                     // Update the visual display of the new value
                     const $readingFieldDiv = $(`.enrichment-field[data-field="reading_level"]`);
@@ -940,8 +973,8 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
     }
 
     // Sync age range field based on reading level
-    function syncAgeRangeField(expectedAge) {
-        console.log('🔄 syncAgeRangeField called with:', expectedAge);
+    function syncAgeRangeField(expectedAge, isRevertMode = false) {
+        console.log('🔄 syncAgeRangeField called with:', expectedAge, 'revert mode:', isRevertMode);
         const ageField = window.currentEnrichmentData.fields['age_range'];
         if (!ageField) {
             console.log('🔄 No age_range field found');
@@ -956,7 +989,18 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 if (option.value === expectedAge) {
                     console.log(`🔄 Found matching age range option at index ${index}:`, option.value);
                     $(`input[name="field_age_range_option"][value="${index}"]`).prop('checked', true);
-                    $(`input[name="field_age_range"]`).prop('checked', true);
+
+                    // Auto-check the age range field unless in revert mode
+                    if (!isRevertMode) {
+                        $(`input[name="field_age_range"]`).prop('checked', true);
+                        $(`input[name="fields[]"][value="age_range"]`).prop('checked', true);
+                        console.log('🔄 Auto-selected age range field for saving');
+                    } else {
+                        // In revert mode, uncheck the age range field
+                        $(`input[name="field_age_range"]`).prop('checked', false);
+                        $(`input[name="fields[]"][value="age_range"]`).prop('checked', false);
+                        console.log('🔄 Unchecked age range field in revert mode');
+                    }
 
                     // Update the visual display of the new value
                     const $ageFieldDiv = $(`.enrichment-field[data-field="age_range"]`);
@@ -1068,14 +1112,17 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         const disabledClass = (isUnknown || isPendingAmazon || benefitLevel === 'not_beneficial' || benefitLevel === 'exact_match') ? ' disabled-field' : '';
         const labelClass = (isUnknown || isPendingAmazon || benefitLevel === 'not_beneficial' || benefitLevel === 'exact_match') ? ' text-muted' : '';
 
-        // Auto-select database empty fields
-        const shouldAutoSelect = (databaseState === 'database_empty' || databaseState === 'database_wrong');
+        // Auto-select database empty fields and purchase links (unless exact match)
+        const shouldAutoSelect = (databaseState === 'database_empty' || databaseState === 'database_wrong') ||
+                                 (fieldName === 'purchase_links' && databaseState !== 'matches_database');
 
         // Add appropriate database state labels
         let databaseStateHtml = '';
+        let displayConfidence = confidence;
 
         switch (databaseState) {
             case 'matches_database':
+                displayConfidence = 100; // Override confidence for exact matches
                 databaseStateHtml = `
                     <div class="mt-2 p-2 bg-light border border-info rounded">
                         <div class="text-info">
@@ -1136,7 +1183,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                         <label class="form-check-label font-weight-bold${labelClass}" for="field_${fieldName}">
                             ${label}
                             <span class="badge badge-${sourceClass} ml-2">${displaySource}${isPendingAmazon ? ' (Loading...)' : ''}</span>
-                            ${!isUnknown && !isPendingAmazon ? `<span class="badge badge-${confidenceClass} ml-1">(${confidence}%)</span>` : ''}
+                            ${!isUnknown && !isPendingAmazon ? `<span class="badge badge-${confidenceClass} ml-1">(${displayConfidence}%)</span>` : ''}
                             ${getBenefitIndicator(benefitLevel)}
                         </label>
                     </div>

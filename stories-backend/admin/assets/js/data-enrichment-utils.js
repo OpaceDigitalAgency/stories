@@ -99,7 +99,19 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
                         window.location.href = window.location.href.split('?')[0] + '?_refresh=' + Date.now();
                     }, 2000);
                 } else {
-                    showNotification(`❌ ERROR! ${response.message || 'Unknown error'}`, 'danger', 5000);
+                    // Show user-friendly error message on screen
+                    const errorMsg = response.message || 'Unknown error';
+                    showNotification(`❌ ERROR! ${errorMsg}`, 'danger', 8000);
+
+                    // Also show detailed error in modal
+                    const $errorDiv = $('#enrichment-error');
+                    const $errorMessage = $('#error-message');
+                    $errorMessage.html(`
+                        <strong>Error:</strong> ${errorMsg}<br>
+                        <small class="text-muted">Check console for detailed debugging information.</small>
+                    `);
+                    $errorDiv.show();
+
                     console.log('❌ ERROR DEBUG:', debugMessage);
                     $('#apply-enrichment-btn').prop('disabled', false).html('<i class="fas fa-save"></i> Apply Selected Changes');
                 }

@@ -2656,14 +2656,14 @@ function handleFixAgeRangeSync() {
             '18+ years' => 'Proficient Reader'
         ];
 
-        // Map common API values to our standardized reading levels
+        // Map common API values to our standardized reading levels - UPDATED to use UK standards
         $readingLevelMapping = [
             'Middle Grade' => 'Fluent Reader',
             'Young Adult' => 'Advanced Reader',
             'Adult' => 'Proficient Reader',
             'All Ages' => 'Early Reader',
             'Children' => 'Early Reader',
-            'Juvenile' => 'Developing Reader',
+            'Juvenile' => 'Early Reader',    // FIXED: was "Developing Reader", now "Early Reader"
             'Teen' => 'Advanced Reader'
         ];
 

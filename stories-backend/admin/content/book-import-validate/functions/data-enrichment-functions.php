@@ -2281,10 +2281,10 @@ function extractAmazonMetadata($responses) {
         if (preg_match('/<div[^>]*id="detailBullets_feature_div"[^>]*>(.*?)<\/div>/is', $response, $bulletMatch)) {
             $bulletContent = $bulletMatch[1];
 
-            // Extract individual bullet points
+            // Extract individual bullet points - REMOVED grade_level (not UK standard)
             $bulletPatterns = [
                 'reading_age' => '/<span[^>]*class="a-text-bold"[^>]*>Reading age[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
-                'grade_level' => '/<span[^>]*class="a-text-bold"[^>]*>Grade level[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
+                // REMOVED: 'grade_level' - Amazon grade levels are US-based, not UK standard
                 'publisher' => '/<span[^>]*class="a-text-bold"[^>]*>Publisher[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
                 'publication_date' => '/<span[^>]*class="a-text-bold"[^>]*>Publication date[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
                 'language' => '/<span[^>]*class="a-text-bold"[^>]*>Language[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
@@ -2321,13 +2321,8 @@ function extractAmazonMetadata($responses) {
                 }
             }
 
-            // Extract grade level from carousel
-            if (preg_match('/<span>Grade level<\/span>.*?<span[^>]*>([^<]+)<\/span>/is', $carouselContent, $gradeMatch)) {
-                $gradeLevel = trim(strip_tags($gradeMatch[1]));
-                if (!empty($gradeLevel) && !isset($metadata['grade_level'])) {
-                    $metadata['grade_level'] = $gradeLevel;
-                }
-            }
+            // REMOVED: Grade level extraction - Amazon grade levels are US-based, not UK standard
+            // We only use Amazon reading age (which is UK-compatible) and map it to our standard age ranges
         }
 
         // If we found some metadata, we can break early
@@ -2533,21 +2528,9 @@ function getAmazonEnrichmentData($isbn, $currentBookData = null) {
             }
         }
 
-        // Map Amazon grade level to our reading_level field (we can derive reading level from grade)
-        if (isset($amazonMetadata['grade_level'])) {
-            $readingLevel = mapGradeLevelToReadingLevel($amazonMetadata['grade_level']);
-            if ($readingLevel) {
-                $enrichmentFields['reading_level'] = [
-                    'label' => 'Reading Level',
-                    'new_data' => [
-                        'value' => $readingLevel,
-                        'source' => 'amazon',
-                        'confidence' => 85, // Derived from grade level, slightly lower confidence
-                        'status' => 'available'
-                    ]
-                ];
-            }
-        }
+        // REMOVED: Amazon grade level to reading level mapping
+        // Amazon grade levels are US-based and not compatible with UK reading standards
+        // We only use Amazon reading age (which maps to our age ranges) and derive reading levels from that
 
         // Map other Amazon fields
         $fieldMappings = [
@@ -2633,85 +2616,10 @@ function getAmazonEnrichmentData($isbn, $currentBookData = null) {
     return $payload;
 }
 
-/**
- * Map Amazon grade level to reading level
- */
-function mapGradeLevelToReadingLevel($gradeLevel) {
-    // Clean up the grade level string
-    $gradeLevel = trim(strtolower($gradeLevel));
-
-    // Map grade levels to reading levels - UPDATED to match user requirements
-    $mappings = [
-        // Early years
-        'pre-k' => 'Pre-literacy (Sensory)',
-        'nursery' => 'Pre-literacy (Naming)',
-        'reception' => 'Beginning Reader',
-
-        // Primary grades (US system) - FIXED: Updated to match user requirements
-        'k' => 'Beginning Reader',
-        'kindergarten' => 'Beginning Reader',
-        '1' => 'Early Reader',
-        '2' => 'Early Reader',           // FIXED: was "Developing Reader", now "Early Reader"
-        '3' => 'Transitional Reader',
-        '4' => 'Fluent Reader',
-        '5' => 'Fluent Reader',
-        '6' => 'Fluent Reader',
-
-        // Range mappings - FIXED: Updated to match user requirements
-        '1 - 2' => 'Early Reader',       // FIXED: Both grades 1-2 should be Early Reader
-        '2 - 3' => 'Early Reader',       // FIXED: was "Developing Reader", now "Early Reader"
-        '3 - 4' => 'Transitional Reader',
-        '4 - 5' => 'Fluent Reader',
-        '5 - 6' => 'Fluent Reader',
-        '6 - 7' => 'Advanced Reader',
-        '7 - 8' => 'Advanced Reader',
-        '8 - 9' => 'Fluent Reader',      // FIXED: This should map to "Fluent Reader" for 8-9 years age range
-        '9+' => 'Advanced Reader',
-
-        // Secondary
-        '7' => 'Advanced Reader',
-        '8' => 'Advanced Reader',
-        '9' => 'Advanced Reader',
-        '10' => 'Advanced Reader',
-        '11' => 'Advanced Reader',
-        '12' => 'Proficient Reader',
-    ];
-
-    // Try exact match first
-    if (isset($mappings[$gradeLevel])) {
-        return $mappings[$gradeLevel];
-    }
-
-    // Try to extract numbers and map ranges
-    if (preg_match('/(\d+)\s*-\s*(\d+)/', $gradeLevel, $matches)) {
-        $start = intval($matches[1]);
-        $end = intval($matches[2]);
-
-        // Use the middle of the range
-        $middle = ($start + $end) / 2;
-
-        if ($middle <= 1) return 'Early Reader';
-        if ($middle <= 2) return 'Developing Reader';
-        if ($middle <= 3) return 'Transitional Reader';
-        if ($middle <= 6) return 'Fluent Reader';
-        if ($middle <= 11) return 'Advanced Reader';
-        return 'Proficient Reader';
-    }
-
-    // Try single number
-    if (preg_match('/(\d+)/', $gradeLevel, $matches)) {
-        $grade = intval($matches[1]);
-
-        if ($grade <= 1) return 'Early Reader';
-        if ($grade <= 2) return 'Developing Reader';
-        if ($grade <= 3) return 'Transitional Reader';
-        if ($grade <= 6) return 'Fluent Reader';
-        if ($grade <= 11) return 'Advanced Reader';
-        return 'Proficient Reader';
-    }
-
-    return null; // Unable to map
-}
+// REMOVED: mapGradeLevelToReadingLevel function
+// Amazon grade levels are US-based and not compatible with UK reading standards
+// We only use Amazon reading age and map it to our standardized UK age ranges
+// Reading levels are derived from age ranges using the standard_reading_levels table
 
 /**
  * Map Amazon age range to our standardized age ranges

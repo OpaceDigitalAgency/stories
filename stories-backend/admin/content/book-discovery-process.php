@@ -270,6 +270,43 @@ include_once '../includes/header.php';
     </div>
 </div>
 
+<script>
+function confirmImport() {
+    const checkboxes = document.querySelectorAll('input[name="selected_books[]"]:checked');
+    if (checkboxes.length === 0) {
+        alert('Please select at least one book to import.');
+        return false;
+    }
+    
+    const newBooks = Array.from(checkboxes).filter(cb => {
+        const row = cb.closest('tr');
+        return row.querySelector('.badge-success') !== null;
+    }).length;
+    
+    if (newBooks === 0) {
+        alert('All selected books already exist in the database. Please select new books to import.');
+        return false;
+    }
+    
+    return confirm(`Are you sure you want to import ${newBooks} new book(s) to your database?`);
+}
+
+// Auto-uncheck books that already exist
+document.addEventListener('DOMContentLoaded', function() {
+    const rows = document.querySelectorAll('table tbody tr');
+    rows.forEach(row => {
+        if (row.querySelector('.badge-warning')) {
+            const checkbox = row.querySelector('input[type="checkbox"]');
+            if (checkbox) {
+                checkbox.checked = false;
+                checkbox.disabled = true;
+                row.style.opacity = '0.6';
+            }
+        }
+    });
+});
+</script>
+
 <?php
 // Include footer
 include_once '../includes/footer.php';

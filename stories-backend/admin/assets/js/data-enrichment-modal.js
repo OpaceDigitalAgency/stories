@@ -1046,6 +1046,12 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 readingRadio.prop('checked', true);
                 console.log('🔄 Synced reading level radio selection to option:', optionIndex);
             }
+
+            // Update both field displays with auto-check
+            setTimeout(() => {
+                updateFieldDisplay('age_range', null, true);
+                updateFieldDisplay('reading_level', null, true);
+            }, 50);
         });
 
         $(document).on('change', 'input[type="radio"][name*="reading_level"]', function() {
@@ -1065,6 +1071,12 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 ageRadio.prop('checked', true);
                 console.log('🔄 Synced age range radio selection to option:', optionIndex);
             }
+
+            // Update both field displays with auto-check
+            setTimeout(() => {
+                updateFieldDisplay('age_range', null, true);
+                updateFieldDisplay('reading_level', null, true);
+            }, 50);
         });
 
         // Listen for checkbox changes on any field to update display
@@ -1143,9 +1155,10 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
      * Update the visual display of a field when source selection changes
      * @param {string} fieldName - The field name to update
      * @param {string} overrideValue - Optional value to use instead of getting from selection
+     * @param {boolean} autoCheck - Whether to automatically check the checkbox if value differs from database
      */
-    function updateFieldDisplay(fieldName, overrideValue = null) {
-        console.log('🎨 Updating field display for:', fieldName, 'override:', overrideValue);
+    function updateFieldDisplay(fieldName, overrideValue = null, autoCheck = false) {
+        console.log('🎨 Updating field display for:', fieldName, 'override:', overrideValue, 'autoCheck:', autoCheck);
 
         const fieldContainer = $(`.enrichment-field[data-field="${fieldName}"]`);
         if (!fieldContainer.length) {
@@ -1159,25 +1172,35 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             return;
         }
 
-        // Check if field checkbox is checked (enabled for update)
         const fieldCheckbox = fieldContainer.find(`input[type="checkbox"][value="${fieldName}"]`);
-        const isChecked = fieldCheckbox.length ? fieldCheckbox.is(':checked') : false;
+        const currentValue = fieldData.current_value;
 
-        console.log('🎨 Field checkbox state:', isChecked);
-
-        // Get the value to display - either override or selected value
+        // Determine the value to display
         let displayValue = overrideValue;
         if (!displayValue) {
-            if (isChecked) {
-                // Field is enabled - get selected source value
-                displayValue = getSelectedFieldValue(fieldName);
+            // Get the new data value (what the API sources suggest)
+            if (fieldData.new_data && fieldData.new_data.value !== undefined) {
+                displayValue = fieldData.new_data.value;
             } else {
-                // Field is disabled - show current database value
-                displayValue = fieldData.current_value;
+                displayValue = currentValue;
             }
         }
 
-        console.log('🎨 Display value determined:', displayValue);
+        console.log('🎨 Display value determined:', displayValue, 'current:', currentValue);
+
+        // Determine if this value differs from database
+        const valuesDiffer = normalizeValue(currentValue) !== normalizeValue(displayValue);
+        console.log('🎨 Values differ:', valuesDiffer, 'normalized current:', normalizeValue(currentValue), 'normalized display:', normalizeValue(displayValue));
+
+        // Auto-check checkbox if values differ and autoCheck is true
+        if (autoCheck && valuesDiffer && fieldCheckbox.length) {
+            fieldCheckbox.prop('checked', true);
+            console.log('🎨 Auto-checked checkbox for field:', fieldName);
+        }
+
+        // Check current checkbox state
+        const isChecked = fieldCheckbox.length ? fieldCheckbox.is(':checked') : false;
+        console.log('🎨 Field checkbox state after auto-check:', isChecked);
 
         // Update the "New Value" display - find the badge after "New Value:"
         const newValueBadge = fieldContainer.find('strong:contains("New Value:")').next('.badge');
@@ -1186,19 +1209,22 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             console.log('🎨 Updated new value badge to:', displayValue);
         }
 
-        // Update database state and styling based on checkbox state and value comparison
-        const currentValue = fieldData.current_value;
+        // Determine database state based on whether checkbox is checked and values
         let databaseState = null;
 
-        if (isChecked && displayValue) {
-            // Field is enabled - check if selected value matches database
-            databaseState = determineDatabaseState(currentValue, displayValue, 'selected', null, fieldName);
+        if (isChecked) {
+            // Field is checked - compare display value with current value
+            if (valuesDiffer) {
+                databaseState = isEmpty(currentValue) ? 'database_empty' : 'database_wrong';
+            } else {
+                databaseState = 'matches_database';
+            }
         } else {
-            // Field is disabled - always matches database (showing current value)
+            // Field is unchecked - always matches database (showing current value)
             databaseState = 'matches_database';
         }
 
-        console.log('🎨 Database state:', databaseState, 'for value:', displayValue);
+        console.log('🎨 Database state:', databaseState, 'isChecked:', isChecked, 'valuesDiffer:', valuesDiffer);
 
         // Remove existing state classes
         fieldContainer.removeClass('disabled-field matches-database database-wrong database-empty');
@@ -1207,10 +1233,9 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         if (!isChecked) {
             // Checkbox unchecked - field is disabled, show as matching database
             fieldContainer.addClass('disabled-field matches-database');
-            fieldCheckbox.prop('disabled', false); // Don't disable the checkbox itself
             console.log('🎨 Field unchecked - added disabled-field and matches-database classes');
         } else {
-            // Checkbox checked - field is enabled
+            // Checkbox checked - field is enabled, remove disabled styling
             if (databaseState === 'matches_database') {
                 fieldContainer.addClass('matches-database');
                 console.log('🎨 Field checked and matches database');
@@ -1228,10 +1253,71 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         if (confidenceBadge.length) {
             if (databaseState === 'matches_database') {
                 confidenceBadge.removeClass('badge-info badge-warning badge-danger').addClass('badge-success').text('(100%)');
-            } else {
-                confidenceBadge.removeClass('badge-success badge-warning badge-danger').addClass('badge-info').text('(New)');
+            } else if (databaseState === 'database_wrong') {
+                confidenceBadge.removeClass('badge-info badge-success badge-danger').addClass('badge-warning').text('(Wrong)');
+            } else if (databaseState === 'database_empty') {
+                confidenceBadge.removeClass('badge-info badge-warning badge-danger').addClass('badge-success').text('(New)');
             }
             console.log('🎨 Updated confidence badge for database state:', databaseState);
+        }
+
+        // Update the database state message box
+        updateDatabaseStateMessage(fieldContainer, databaseState, currentValue, displayValue);
+    }
+
+    /**
+     * Update the database state message box at the bottom of a field
+     */
+    function updateDatabaseStateMessage(fieldContainer, databaseState, currentValue, displayValue) {
+        // Find existing state message box
+        let stateMessageBox = fieldContainer.find('.mt-2.p-2.bg-light.border.rounded').last();
+
+        // Remove existing state message if it exists
+        if (stateMessageBox.length) {
+            stateMessageBox.remove();
+        }
+
+        // Create new state message based on database state
+        let stateHtml = '';
+
+        switch (databaseState) {
+            case 'matches_database':
+                stateHtml = `
+                    <div class="mt-2 p-2 bg-light border border-info rounded">
+                        <div class="text-info">
+                            <i class="fas fa-check-double"></i> <strong>Matches Database</strong>
+                            <span class="badge badge-info ml-1">100%</span>
+                        </div>
+                        <small class="text-muted">Current value exactly matches the new data</small>
+                    </div>
+                `;
+                break;
+            case 'database_wrong':
+                stateHtml = `
+                    <div class="mt-2 p-2 bg-light border border-warning rounded">
+                        <div class="text-warning">
+                            <i class="fas fa-exclamation-triangle"></i> <strong>Database Wrong</strong>
+                            <span class="badge badge-warning ml-1">Update</span>
+                        </div>
+                        <small class="text-muted">New value differs from database - update recommended</small>
+                    </div>
+                `;
+                break;
+            case 'database_empty':
+                stateHtml = `
+                    <div class="mt-2 p-2 bg-light border border-success rounded">
+                        <div class="text-success">
+                            <i class="fas fa-plus-circle"></i> <strong>Database Empty</strong>
+                            <span class="badge badge-success ml-1">Add</span>
+                        </div>
+                        <small class="text-muted">Adding missing data to database</small>
+                    </div>
+                `;
+                break;
+        }
+
+        if (stateHtml) {
+            fieldContainer.append(stateHtml);
         }
     }
 

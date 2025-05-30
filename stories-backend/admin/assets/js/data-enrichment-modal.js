@@ -40,11 +40,20 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     $('#enrichment-isbn10').text(isbn10);
 
                     // Calculate and display verified ISBN-10 value using conversion
-                    if (isbn13 !== '-' && isbn13.length === 13) {
-                        const verifiedISBN10 = convertISBN13ToISBN10(isbn13.replace(/[^0-9X]/gi, ''));
-                        $('#enrichment-isbn10-verified').text(verifiedISBN10 || '-');
+                    if (isbn13 !== '-') {
+                        const cleanISBN13 = isbn13.replace(/[^0-9X]/gi, '');
+                        console.log('📚 Attempting ISBN-13 to ISBN-10 conversion:', isbn13, '→ cleaned:', cleanISBN13);
+                        if (cleanISBN13.length === 13) {
+                            const verifiedISBN10 = convertISBN13ToISBN10(cleanISBN13);
+                            $('#enrichment-isbn10-verified').text(verifiedISBN10 || '-');
+                            console.log('📚 ✅ ISBN-10 verified value set to:', verifiedISBN10);
+                        } else {
+                            $('#enrichment-isbn10-verified').text('-');
+                            console.log('📚 ⚠️ ISBN-13 length not 13 after cleaning:', cleanISBN13.length);
+                        }
                     } else {
                         $('#enrichment-isbn10-verified').text('-');
+                        console.log('📚 ⚠️ No ISBN-13 available for conversion');
                     }
 
                     // Show the identifiers section
@@ -728,7 +737,8 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         };
 
         // Listen for changes in age range selections - enhanced debugging
-        $(document).on('change', 'input[name="field_age_range_option"], input[name="field_age_range"]', function() {
+        // Include all possible age range field patterns
+        $(document).on('change', 'input[name="field_age_range_option"], input[name="field_age_range"], input[value="age_range"], input[id="field_age_range"], input[name="fields[]"][value="age_range"]', function() {
             console.log('🔄 Age range field changed:', $(this).attr('name'), $(this).val(), $(this).is(':checked'));
             console.log('🔄 Element details:', {
                 element: this,
@@ -775,7 +785,8 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         });
 
         // Listen for changes in reading level selections
-        $(document).on('change', 'input[name="field_reading_level_option"], input[name="field_reading_level"]', function() {
+        // Include all possible reading level field patterns
+        $(document).on('change', 'input[name="field_reading_level_option"], input[name="field_reading_level"], input[value="reading_level"], input[id="field_reading_level"], input[name="fields[]"][value="reading_level"]', function() {
             console.log('🔄 Reading level field changed:', $(this).attr('name'), $(this).val(), $(this).is(':checked'));
             console.log('🔄 Element details:', {
                 element: this,
@@ -806,6 +817,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
     function getSelectedFieldValue(fieldName) {
         console.log('🔍 Getting selected value for field:', fieldName);
 
+        // Check for multi-option fields first
         const checkedOption = $(`input[name="field_${fieldName}_option"]:checked`);
         console.log('🔍 Checked option elements found:', checkedOption.length);
 
@@ -826,7 +838,8 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             }
         }
 
-        const checkedField = $(`input[name="field_${fieldName}"]:checked`);
+        // Check for single-source fields with various naming patterns
+        const checkedField = $(`input[name="field_${fieldName}"]:checked, input[name="fields[]"][value="${fieldName}"]:checked`);
         console.log('🔍 Checked field elements found:', checkedField.length);
 
         if (checkedField.length > 0) {
@@ -1148,19 +1161,29 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
      * @returns {string} - 'matches_database', 'database_wrong', 'database_empty', or null
      */
     function determineDatabaseState(currentValue, newValue, source, newData) {
+        // Extract actual value from recommendation text for publisher fields
+        let actualNewValue = newValue;
+        if (typeof newValue === 'string' && newValue.includes('(recommended:')) {
+            // Extract the actual value before the recommendation text
+            actualNewValue = newValue.split(' (recommended:')[0].trim();
+            console.log('🔍 PUBLISHER_DEBUG: Extracted actual value from recommendation:', newValue, '→', actualNewValue);
+        }
+
         // Check for exact matches first
-        if (isExactMatch(currentValue, newValue)) {
+        if (isExactMatch(currentValue, actualNewValue)) {
+            console.log('🔍 PUBLISHER_DEBUG: Exact match found:', currentValue, '===', actualNewValue);
             return 'matches_database';
         }
 
         // Check if database is empty and we have data from ANY source
-        if (isEmpty(currentValue) && !isEmpty(newValue)) {
+        if (isEmpty(currentValue) && !isEmpty(actualNewValue)) {
             return 'database_empty';
         }
 
         // Check if both sources agree but differ from database
-        if (source === 'google_books + open_library' && !isEmpty(currentValue) && !isEmpty(newValue)) {
-            if (!isExactMatch(currentValue, newValue)) {
+        if (source === 'google_books + open_library' && !isEmpty(currentValue) && !isEmpty(actualNewValue)) {
+            if (!isExactMatch(currentValue, actualNewValue)) {
+                console.log('🔍 PUBLISHER_DEBUG: Database wrong detected:', currentValue, '!==', actualNewValue);
                 return 'database_wrong';
             }
         }

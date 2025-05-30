@@ -158,10 +158,17 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
         }
 
         // Special handling for tags/genres (order-independent comparison)
+        if (typeof currentValue === 'object' && Array.isArray(currentValue) &&
+            typeof newValue === 'string') {
+            // Current value is array of tags, new value is string
+            return compareTagArrayToString(currentValue, newValue);
+        }
+
         if (typeof currentValue === 'string' && typeof newValue === 'string') {
             // Check if these look like tag lists
             if (currentValue.includes('Fiction') || newValue.includes('Fiction') ||
-                currentValue.includes('Children') || newValue.includes('Children')) {
+                currentValue.includes('Children') || newValue.includes('Children') ||
+                currentValue.includes('Africa') || newValue.includes('Africa')) {
                 return compareTagLists(currentValue, newValue);
             }
         }
@@ -237,46 +244,75 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
     }
 
     /**
+     * Compare tag array to concatenated string
+     */
+    function compareTagArrayToString(currentArray, newString) {
+        console.log('🏷️ Comparing tag array to string:', { currentArray, newString });
+
+        // Normalize current array tags
+        const currentTags = currentArray.map(tag => tag.toLowerCase().trim()).sort();
+
+        // Split the new string by CamelCase and normalize
+        const newTags = splitTagString(newString).map(tag => tag.toLowerCase().trim()).sort();
+
+        console.log('🏷️ Normalized comparison:', { currentTags, newTags });
+
+        // Check if arrays contain the same elements
+        const isEqual = currentTags.length === newTags.length &&
+                       currentTags.every(tag => newTags.includes(tag)) &&
+                       newTags.every(tag => currentTags.includes(tag));
+
+        console.log('🏷️ Arrays equal:', isEqual);
+        return isEqual;
+    }
+
+    /**
+     * Split concatenated tag string by CamelCase
+     */
+    function splitTagString(str) {
+        // Split by capital letters that follow lowercase letters (CamelCase boundaries)
+        // But preserve apostrophes and common patterns
+        let tags = str.replace(/([a-z])([A-Z])/g, '$1|$2')
+                     .split('|')
+                     .map(tag => tag.trim())
+                     .filter(tag => tag.length > 0);
+
+        // Further split by common separators if they exist
+        const furtherSplit = [];
+        for (const tag of tags) {
+            if (tag.includes(',') || tag.includes(';')) {
+                furtherSplit.push(...tag.split(/[,;]/).map(t => t.trim()).filter(t => t.length > 0));
+            } else {
+                furtherSplit.push(tag);
+            }
+        }
+
+        return furtherSplit;
+    }
+
+    /**
      * Compare tag lists (order-independent)
      */
     function compareTagLists(current, newValue) {
-        // Handle the specific case where tags are concatenated without separators
-        // e.g., "AfricaAlgeriaBerbersChildren's Fiction..." vs "Social Life And CustomsBerbersImmigrants..."
+        console.log('🔍 Comparing tag lists:', { current, newValue });
 
-        // First try to split by common patterns
-        const splitTags = (str) => {
-            // Split by capital letters that follow lowercase letters (CamelCase boundaries)
-            // But preserve apostrophes and common patterns
-            let tags = str.replace(/([a-z])([A-Z])/g, '$1|$2')
-                         .split('|')
-                         .map(tag => tag.trim())
-                         .filter(tag => tag.length > 0);
+        const currentTags = splitTagString(current).map(tag => tag.toLowerCase().trim()).sort();
+        const newTags = splitTagString(newValue).map(tag => tag.toLowerCase().trim()).sort();
 
-            // Further split by common separators if they exist
-            const furtherSplit = [];
-            for (const tag of tags) {
-                if (tag.includes(',') || tag.includes(';')) {
-                    furtherSplit.push(...tag.split(/[,;]/).map(t => t.trim()).filter(t => t.length > 0));
-                } else {
-                    furtherSplit.push(tag);
-                }
-            }
-
-            return furtherSplit.map(tag => tag.toLowerCase().trim()).sort();
-        };
-
-        const currentTags = splitTags(current);
-        const newTags = splitTags(newValue);
-
-        console.log('🔍 Comparing tag lists:', {
+        console.log('🔍 Parsed tags:', {
             currentRaw: current,
             newRaw: newValue,
             currentParsed: currentTags,
-            newParsed: newTags,
-            match: JSON.stringify(currentTags) === JSON.stringify(newTags)
+            newParsed: newTags
         });
 
-        return JSON.stringify(currentTags) === JSON.stringify(newTags);
+        // Check if arrays contain the same elements
+        const isEqual = currentTags.length === newTags.length &&
+                       currentTags.every(tag => newTags.includes(tag)) &&
+                       newTags.every(tag => currentTags.includes(tag));
+
+        console.log('🔍 Tags equal:', isEqual);
+        return isEqual;
     }
 
     /**

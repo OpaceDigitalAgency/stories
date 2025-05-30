@@ -793,6 +793,28 @@ function getCurrentBookData($bookId) {
  * Process enrichment fields for display - show only database fields with current vs new values
  */
 function filterRelevantFields($fields, $currentBookData) {
+    // Process maturity_rating separately and map to age_range if needed
+    if (isset($fields['maturity_rating']) && !empty($fields['maturity_rating']['value'])) {
+        $maturityRating = $fields['maturity_rating']['value'];
+        $mappedAgeRange = mapMaturityToAgeRangeFromTable($maturityRating);
+
+        if ($mappedAgeRange) {
+            // Add age_range to the fields if it's not already there or if current age_range is empty
+            $currentAgeRange = $currentBookData['age_range'] ?? null;
+
+            if (empty($currentAgeRange) || $currentAgeRange !== $mappedAgeRange) {
+                $fields['age_range'] = [
+                    'value' => $mappedAgeRange,
+                    'source' => $fields['maturity_rating']['source'] ?? 'google_books',
+                    'confidence' => $fields['maturity_rating']['confidence'] ?? 0.8
+                ];
+                error_log("Mapped maturity_rating '$maturityRating' to age_range '$mappedAgeRange'");
+            }
+        }
+
+        // Remove maturity_rating from fields since it's not a database column
+        unset($fields['maturity_rating']);
+    }
     // Define actual database fields that exist in books table
     $validDbFields = [
         'isbn' => 'ISBN-10',
@@ -813,7 +835,7 @@ function filterRelevantFields($fields, $currentBookData) {
         'characters' => 'Characters',
         'settings' => 'Settings',
         'tags' => 'Genres', // Special case - uses directory_item_tags junction table
-        'maturity_rating' => 'Maturity Rating', // Special case - mapped to age_range during save
+        // Note: maturity_rating is processed separately and mapped to age_range, not displayed as separate field
         'average_rating' => 'Average Rating',
         'rating_count' => 'Rating Count',
         'internet_archive_id' => 'Internet Archive ID',
@@ -830,9 +852,6 @@ function filterRelevantFields($fields, $currentBookData) {
             // Special handling for tags (displayed as genres)
             $currentValue = isset($currentBookData['current_tags']) ?
                 array_column($currentBookData['current_tags'], 'name') : [];
-        } elseif ($fieldName === 'maturity_rating') {
-            // Special handling for maturity_rating - show current age_range as current value
-            $currentValue = $currentBookData['age_range'] ?? null;
         } else {
             $currentValue = $currentBookData[$fieldName] ?? null;
         }

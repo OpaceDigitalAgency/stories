@@ -156,9 +156,14 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
             return parseFloat(currentValue) === parseFloat(newValue);
         }
 
-        // For strings, normalize and compare
+        // For strings, normalize and compare (ENHANCED for ISBNs and text)
         if (typeof currentValue === 'string' && typeof newValue === 'string') {
-            const normalize = (str) => str.trim().toLowerCase().replace(/\s+/g, ' ');
+            const normalize = (str) => {
+                return str.trim()
+                    .toLowerCase()
+                    .replace(/[-\s]/g, '') // Remove hyphens and spaces (for ISBNs)
+                    .replace(/\s+/g, ' '); // Normalize remaining whitespace
+            };
             return normalize(currentValue) === normalize(newValue);
         }
 

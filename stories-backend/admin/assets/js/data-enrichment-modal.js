@@ -1048,13 +1048,18 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         const benefitClass = getBenefitColorClass(benefitLevel);
         const benefitBorder = getBenefitBorderClass(benefitLevel);
 
+        // Determine database state first
+        const databaseState = determineDatabaseState(field.current_value, newData.value, source, newData);
+
         // Add disabled styling classes - exact matches should be disabled
         const disabledClass = (isUnknown || isPendingAmazon || benefitLevel === 'not_beneficial' || benefitLevel === 'exact_match') ? ' disabled-field' : '';
         const labelClass = (isUnknown || isPendingAmazon || benefitLevel === 'not_beneficial' || benefitLevel === 'exact_match') ? ' text-muted' : '';
 
-        // Determine database state and add appropriate labels
+        // Auto-select database empty fields
+        const shouldAutoSelect = (databaseState === 'database_empty' || databaseState === 'database_wrong');
+
+        // Add appropriate database state labels
         let databaseStateHtml = '';
-        const databaseState = determineDatabaseState(field.current_value, newData.value, source, newData);
 
         switch (databaseState) {
             case 'matches_database':
@@ -1112,7 +1117,9 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 <div class="enrichment-field ${benefitBorder}${exactMatchClass}${disabledClass}" data-field="${fieldName}">
                     <div class="form-check">
                         <input class="form-check-input field-checkbox" type="checkbox"
-                               id="field_${fieldName}" name="fields[]" value="${fieldName}" ${isUnknown || isPendingAmazon || benefitLevel === 'not_beneficial' || benefitLevel === 'exact_match' ? 'disabled' : ''}>
+                               id="field_${fieldName}" name="fields[]" value="${fieldName}"
+                               ${isUnknown || isPendingAmazon || benefitLevel === 'not_beneficial' || benefitLevel === 'exact_match' ? 'disabled' : ''}
+                               ${shouldAutoSelect ? 'checked' : ''}>
                         <label class="form-check-label font-weight-bold${labelClass}" for="field_${fieldName}">
                             ${label}
                             <span class="badge badge-${sourceClass} ml-2">${displaySource}${isPendingAmazon ? ' (Loading...)' : ''}</span>
@@ -1146,12 +1153,9 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             return 'matches_database';
         }
 
-        // Check if database is empty and we have data from sources
+        // Check if database is empty and we have data from ANY source
         if (isEmpty(currentValue) && !isEmpty(newValue)) {
-            // If both sources agree (combined source), it's database empty
-            if (source === 'google_books + open_library') {
-                return 'database_empty';
-            }
+            return 'database_empty';
         }
 
         // Check if both sources agree but differ from database

@@ -1091,7 +1091,24 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             const fieldName = $(this).attr('name').match(/field_(.+)_option/)?.[1];
             if (fieldName) {
                 console.log('🔄 Field radio changed:', fieldName, 'option:', $(this).val());
-                updateFieldDisplay(fieldName);
+                updateFieldDisplay(fieldName, null, true); // Enable auto-check
+            }
+        });
+
+        // CRITICAL FIX: Also listen for ANY radio button change in multi-source fields
+        $(document).on('change', 'input[type="radio"]', function() {
+            const radioName = $(this).attr('name') || '';
+            console.log('🔄 Any radio changed:', radioName, 'checked:', $(this).is(':checked'));
+
+            // Check if this is a field option radio button
+            if (radioName.includes('field_') && radioName.includes('_option')) {
+                const fieldName = radioName.match(/field_(.+)_option/)?.[1];
+                if (fieldName) {
+                    console.log('🔄 Detected field radio change for:', fieldName);
+                    setTimeout(() => {
+                        updateFieldDisplay(fieldName, null, true);
+                    }, 100);
+                }
             }
         });
     }
@@ -1178,11 +1195,26 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         // Determine the value to display
         let displayValue = overrideValue;
         if (!displayValue) {
-            // Get the new data value (what the API sources suggest)
-            if (fieldData.new_data && fieldData.new_data.value !== undefined) {
+            // For multi-option fields, get the selected option value
+            const checkedOption = $(`input[name="field_${fieldName}_option"]:checked`);
+            if (checkedOption.length > 0) {
+                const optionIndex = parseInt(checkedOption.val());
+                if (fieldData.new_data && fieldData.new_data.options && fieldData.new_data.options[optionIndex]) {
+                    displayValue = fieldData.new_data.options[optionIndex].value;
+                    console.log('🎨 Using multi-option value:', displayValue, 'from option', optionIndex);
+                }
+            }
+
+            // Fallback to single-source field value
+            if (!displayValue && fieldData.new_data && fieldData.new_data.value !== undefined) {
                 displayValue = fieldData.new_data.value;
-            } else {
+                console.log('🎨 Using single-source value:', displayValue);
+            }
+
+            // Final fallback to current value
+            if (!displayValue) {
                 displayValue = currentValue;
+                console.log('🎨 Using current value as fallback:', displayValue);
             }
         }
 

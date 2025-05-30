@@ -146,7 +146,12 @@ class BookTrustScraper {
             $href = $titleNode->getAttribute('href');
             error_log("BookTrustScraper: parseBookItem - Title: '{$book['title']}', href: '{$href}'");
             if ($href) {
-                $book['detail_url'] = $this->base_url . $href;
+                // Check if href is already a full URL
+                if (strpos($href, 'http') === 0) {
+                    $book['detail_url'] = $href;
+                } else {
+                    $book['detail_url'] = $this->base_url . $href;
+                }
             }
         } else {
             // Try alternative selectors for debugging

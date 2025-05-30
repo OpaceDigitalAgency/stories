@@ -852,49 +852,50 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
 
     // Set up synchronization between age range and reading level fields
     function setupAgeRangeReadingLevelSync() {
-        // Age range to reading level mapping (matching database values)
+        // Age range to reading level mapping (updated to match user requirements)
         const ageToReadingMap = {
             '0-12 months': 'Pre-literacy (Sensory)',
             '12-24 months': 'Pre-literacy (Naming)',
             '2-3 years': 'Pre-literacy (Mimicry)',
             '3-4 years': 'Early Pre-reader',
             '4-5 years': 'Beginning Reader',
-            '5-6 years': 'Early Reader',
-            '6-7 years': 'Developing Reader',
+            '5-6 years': 'Early Reader',        // User's current database value
+            '6-7 years': 'Early Reader',        // Updated: was "Developing Reader"
             '7-8 years': 'Transitional Reader',
-            '8-9 years': 'Fluent Reader',
+            '8-9 years': 'Fluent Reader',       // Amazon value
             '9-10 years': 'Fluent Reader',
             '10-11 years': 'Fluent Reader',
             '11-14 years': 'Advanced Reader',
             '14-16 years': 'Advanced Reader',
             '16-18 years': 'Advanced Reader',
-            '18+ years': 'Proficient Reader',
+            '18+ years': 'Proficient Reader',   // Google Books value → Adult
             // Amazon-style age ranges
             '8-11 years': 'Fluent Reader',
             '8 - 11 years': 'Fluent Reader',
-            // Legacy values that might still exist - REMOVED 12+ mappings to prevent them appearing
-            // Common variations that might come from APIs
-            '5-6 years': 'Early Reader',
-            'All Ages': 'Early Reader'
+            // API variations
+            'All Ages': 'Early Reader',
+            'Adult': 'Proficient Reader',       // Google Books category
+            'Young Adult': 'Advanced Reader',
+            'Children': 'Early Reader'
         };
 
-        // Reading level to age range mapping (including common API values)
+        // Reading level to age range mapping (updated to match user requirements)
         const readingToAgeMap = {
             'Pre-literacy (Sensory)': '0-12 months',
             'Pre-literacy (Naming)': '12-24 months',
             'Pre-literacy (Mimicry)': '2-3 years',
             'Early Pre-reader': '3-4 years',
             'Beginning Reader': '4-5 years',
-            'Early Reader': '5-6 years',
-            'Developing Reader': '6-7 years',
+            'Early Reader': '5-6 years',        // Maps to user's current database value
+            'Developing Reader': '5-6 years',   // REMOVED: was '6-7 years', now maps to Early Reader range
             'Transitional Reader': '7-8 years',
-            'Fluent Reader': '9-10 years',
+            'Fluent Reader': '8-9 years',       // Maps to Amazon's 8-9 years
             'Advanced Reader': '11-14 years',
-            'Proficient Reader': '18+ years',
+            'Proficient Reader': '18+ years',   // Maps to Google Books 18+ years
             // Common API variations
-            'Middle Grade': '9-10 years',
+            'Middle Grade': '8-9 years',        // Updated to map to Fluent Reader range
             'Young Adult': '14-16 years',
-            'Adult': '18+ years',
+            'Adult': '18+ years',               // Google Books category
             'All Ages': '5-6 years'
         };
 
@@ -976,6 +977,15 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 const selectedReadingLevel = getSelectedFieldValue('reading_level');
                 console.log('🔄 Selected reading level:', selectedReadingLevel);
                 console.log('🔄 Available mappings:', Object.keys(readingToAgeMap));
+
+                // ENHANCED DEBUG: Show where "Developing Reader" might be coming from
+                if (selectedReadingLevel === 'Developing Reader') {
+                    console.log('🚨 DEBUG: "Developing Reader" detected! Investigating source...');
+                    console.log('🚨 Reading level field structure:', window.currentEnrichmentData?.fields?.reading_level);
+                    console.log('🚨 All reading level options in DOM:', $('input[name*="reading_level"]').map(function() {
+                        return { name: $(this).attr('name'), value: $(this).val(), checked: $(this).is(':checked'), text: $(this).closest('label').text() };
+                    }).get());
+                }
 
                 if (selectedReadingLevel && readingToAgeMap[selectedReadingLevel]) {
                     const expectedAge = readingToAgeMap[selectedReadingLevel];

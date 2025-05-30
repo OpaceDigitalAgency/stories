@@ -531,15 +531,68 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
 
             Object.keys(amazonData).forEach(fieldName => {
                 const amazonFieldData = amazonData[fieldName];
+                const existingField = window.currentEnrichmentData.fields[fieldName];
 
-                // Add or update the field in the enrichment data
-                window.currentEnrichmentData.fields[fieldName] = {
-                    label: amazonFieldData.label || fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-                    current_value: window.currentEnrichmentData.fields[fieldName]?.current_value || null,
-                    new_data: amazonFieldData.new_data
-                };
+                console.log(`📦 Processing Amazon field: ${fieldName}`, {
+                    amazonData: amazonFieldData,
+                    existingField: existingField
+                });
 
-                console.log(`📦 Added/updated ${fieldName} field with Amazon data`);
+                if (existingField && existingField.new_data) {
+                    // Field already exists with data from other sources - merge Amazon as third source
+                    console.log(`📦 Merging Amazon data with existing field: ${fieldName}`);
+
+                    if (existingField.new_data.options) {
+                        // Field already has multiple sources - add Amazon as another option
+                        console.log(`📦 Adding Amazon as additional option to multi-source field: ${fieldName}`);
+                        existingField.new_data.options.push({
+                            value: amazonFieldData.new_data.value,
+                            source: amazonFieldData.new_data.source,
+                            confidence: amazonFieldData.new_data.confidence,
+                            label: amazonFieldData.label || existingField.label,
+                            original_value: amazonFieldData.new_data.original_value
+                        });
+
+                        // Update source to include Amazon
+                        const currentSources = existingField.new_data.source || '';
+                        if (!currentSources.includes('amazon')) {
+                            existingField.new_data.source = currentSources + ' + amazon';
+                        }
+                    } else {
+                        // Field has single source - convert to multi-source with Amazon
+                        console.log(`📦 Converting single-source field to multi-source: ${fieldName}`);
+                        const originalData = {
+                            value: existingField.new_data.value,
+                            source: existingField.new_data.source,
+                            confidence: existingField.new_data.confidence,
+                            label: existingField.label
+                        };
+
+                        existingField.new_data = {
+                            options: [
+                                originalData,
+                                {
+                                    value: amazonFieldData.new_data.value,
+                                    source: amazonFieldData.new_data.source,
+                                    confidence: amazonFieldData.new_data.confidence,
+                                    label: amazonFieldData.label || existingField.label,
+                                    original_value: amazonFieldData.new_data.original_value
+                                }
+                            ],
+                            source: (originalData.source || 'unknown') + ' + amazon'
+                        };
+                    }
+                } else {
+                    // Field doesn't exist or has no data - add Amazon data as new field
+                    console.log(`📦 Adding new Amazon field: ${fieldName}`);
+                    window.currentEnrichmentData.fields[fieldName] = {
+                        label: amazonFieldData.label || fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                        current_value: existingField?.current_value || null,
+                        new_data: amazonFieldData.new_data
+                    };
+                }
+
+                console.log(`📦 Final field structure for ${fieldName}:`, window.currentEnrichmentData.fields[fieldName]);
             });
 
             // Re-render the enrichment fields to include the new Amazon data

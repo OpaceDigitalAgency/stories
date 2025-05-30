@@ -148,10 +148,10 @@ try {
                 }
 
                 // Add enrichment fields from Amazon metadata (age range, reading level, etc.)
-                // CRITICAL FIX: Filter out duplicate ISBN fields that match current book data
+                // CRITICAL FIX: Always include Amazon ISBN data for validation, even if it matches current data
                 if (!empty($amazonPayload['enrichment_fields'])) {
                     foreach ($amazonPayload['enrichment_fields'] as $fieldName => $fieldData) {
-                        // CRITICAL FIX: Skip ISBN fields if they match current book data to prevent duplicates
+                        // CRITICAL FIX: For ISBN fields, always include Amazon data as a validation source
                         if (($fieldName === 'isbn' || $fieldName === 'isbn13') && $currentBookData) {
                             $currentValue = null;
 
@@ -166,14 +166,19 @@ try {
                             $normalizedCurrent = preg_replace('/[^0-9X]/i', '', $currentValue ?? '');
                             $normalizedAmazon = preg_replace('/[^0-9X]/i', '', $fieldData['new_data']['value'] ?? '');
 
-                            error_log("DUPLICATE_FIX: Comparing $fieldName - current: '$normalizedCurrent' vs amazon: '$normalizedAmazon'");
+                            error_log("AMAZON_VALIDATION: Comparing $fieldName - current: '$normalizedCurrent' vs amazon: '$normalizedAmazon'");
 
+                            // CRITICAL FIX: Always include Amazon data for ISBN validation
+                            // Mark it as validation data if it matches current value
                             if ($normalizedCurrent === $normalizedAmazon && !empty($normalizedCurrent)) {
-                                error_log("DUPLICATE_FIX: Skipping Amazon $fieldName field in AJAX - matches current value exactly ($normalizedCurrent)");
-                                continue; // Skip this field to prevent duplicates
+                                error_log("AMAZON_VALIDATION: Amazon $fieldName matches current value - including as validation source");
+                                $fieldData['new_data']['validation_source'] = true;
+                                $fieldData['new_data']['matches_current'] = true;
+                            } else {
+                                error_log("AMAZON_VALIDATION: Amazon $fieldName differs from current - including as update source");
+                                $fieldData['new_data']['validation_source'] = true;
+                                $fieldData['new_data']['matches_current'] = false;
                             }
-
-                            error_log("DUPLICATE_FIX: Amazon $fieldName field differs from current in AJAX - current: '$normalizedCurrent', amazon: '$normalizedAmazon'");
                         }
 
                         $structuredData[$fieldName] = $fieldData;

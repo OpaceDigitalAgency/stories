@@ -1348,12 +1348,10 @@ require_once '../includes/header.php';
                                 <div class="card-body">
                                     <p>Enter a URL from a book recommendation website to discover and import books.</p>
                                     
-                                    <form method="post" action="book-discovery-process.php">
-                                        <input type="hidden" name="action" value="discover_from_url">
-                                        
+                                    <form method="post" action="book-discovery-process-enhanced.php">
                                         <div class="form-group">
                                             <label for="discovery_url">Website URL</label>
-                                            <input type="url" class="form-control" id="discovery_url" name="url"
+                                            <input type="url" class="form-control" id="discovery_url" name="discovery_url"
                                                    placeholder="https://www.booktrust.org.uk/booklists/..." required>
                                             <small class="form-text text-muted">
                                                 Supported sites: BookTrust, Waterstones, LoveReading4Kids, and many more
@@ -1361,18 +1359,46 @@ require_once '../includes/header.php';
                                         </div>
                                         
                                         <div class="form-group">
-                                            <label for="discovery_limit">Maximum books to discover</label>
-                                            <select class="form-control" id="discovery_limit" name="limit">
-                                                <option value="10">10 books</option>
-                                                <option value="25" selected>25 books</option>
-                                                <option value="50">50 books</option>
-                                                <option value="100">100 books</option>
-                                                <option value="0">All books</option>
+                                            <label for="age_filter">Age Range Filter (Optional)</label>
+                                            <select class="form-control" id="age_filter" name="age_filter">
+                                                <option value="">All ages</option>
+                                                <option value="0-2">0-2 years</option>
+                                                <option value="3-5">3-5 years</option>
+                                                <option value="5-8">5-8 years</option>
+                                                <option value="8-12">8-12 years</option>
+                                                <option value="12+">12+ years</option>
                                             </select>
+                                            <small class="form-text text-muted">
+                                                Filter books by age range if specified on the source website
+                                            </small>
                                         </div>
                                         
-                                        <button type="submit" class="btn btn-primary">
-                                            <i class="fas fa-search"></i> Discover Books
+                                        <div class="form-group">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="auto_enrich" name="auto_enrich" checked>
+                                                <label class="form-check-label" for="auto_enrich">
+                                                    <strong>Auto-enrich with APIs</strong>
+                                                </label>
+                                                <small class="form-text text-muted">
+                                                    Automatically fetch ISBNs, publishers, and other data from Google Books and Open Library
+                                                </small>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="import_to_db" name="import_to_db">
+                                                <label class="form-check-label" for="import_to_db">
+                                                    <strong>Import directly to database</strong>
+                                                </label>
+                                                <small class="form-text text-muted">
+                                                    Automatically import discovered books to your library (skip preview)
+                                                </small>
+                                            </div>
+                                        </div>
+                                        
+                                        <button type="submit" class="btn btn-primary btn-lg">
+                                            <i class="fas fa-search"></i> Start Discovery Process
                                         </button>
                                     </form>
                                 </div>
@@ -1385,8 +1411,8 @@ require_once '../includes/header.php';
                                 <div class="card-body">
                                     <p>Automatically discover new book recommendation sources.</p>
                                     
-                                    <form method="post" action="book-discovery-process.php">
-                                        <input type="hidden" name="action" value="discover_sources">
+                                    <form method="post" action="book-discovery-process-enhanced.php">
+                                        <input type="hidden" name="discover_sources" value="1">
                                         
                                         <div class="form-group">
                                             <label for="source_keywords">Search Keywords</label>
@@ -1397,7 +1423,7 @@ require_once '../includes/header.php';
                                             </small>
                                         </div>
                                         
-                                        <button type="submit" class="btn btn-secondary">
+                                        <button type="submit" class="btn btn-secondary btn-lg">
                                             <i class="fas fa-globe"></i> Find New Sources
                                         </button>
                                     </form>

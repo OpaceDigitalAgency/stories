@@ -563,21 +563,15 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     return;
                 }
 
-                // CRITICAL FIX: Prevent duplicate ISBN fields completely
+                // CRITICAL FIX: Handle Amazon ISBN data as validation source
                 if ((fieldName === 'isbn' || fieldName === 'isbn13')) {
-                    console.log(`📦 DUPLICATE_FIX: Processing Amazon ${fieldName} field`);
+                    console.log(`📦 AMAZON_VALIDATION: Processing Amazon ${fieldName} field`);
 
                     // Check if this ISBN field already exists in the enrichment data
                     if (existingField) {
-                        console.log(`📦 DUPLICATE_FIX: ${fieldName} field already exists in data - merging Amazon as additional source`);
+                        console.log(`📦 AMAZON_VALIDATION: ${fieldName} field already exists - adding Amazon as validation source`);
 
-                        // If the existing field has the same value as Amazon, skip it entirely
-                        if (existingField.current_value === amazonFieldData.new_data.value) {
-                            console.log(`📦 DUPLICATE_FIX: Skipping ${fieldName} - Amazon value matches current value exactly`);
-                            return; // Skip this field completely
-                        }
-
-                        // If existing field has new_data, merge Amazon as additional source
+                        // Always add Amazon as a validation source for ISBN fields
                         if (existingField.new_data) {
                             if (!existingField.new_data.options) {
                                 // Convert single source to multi-source
@@ -594,27 +588,38 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                                 };
                             }
 
-                            // Add Amazon as additional source
+                            // Add Amazon as additional validation source
                             existingField.new_data.options.push({
                                 value: amazonFieldData.new_data.value,
                                 source: amazonFieldData.new_data.source,
                                 confidence: amazonFieldData.new_data.confidence,
-                                label: amazonFieldData.label || existingField.label
+                                label: amazonFieldData.label || existingField.label,
+                                validation_source: amazonFieldData.new_data.validation_source,
+                                matches_current: amazonFieldData.new_data.matches_current
                             });
 
-                            existingField.new_data.source += ' + amazon';
-                            console.log(`📦 DUPLICATE_FIX: Merged Amazon data into existing ${fieldName} field`);
+                            // Update source to include Amazon
+                            if (!existingField.new_data.source.includes('amazon')) {
+                                existingField.new_data.source += ' + amazon';
+                            }
+                            console.log(`📦 AMAZON_VALIDATION: Added Amazon as validation source for ${fieldName}`);
                             return; // Skip creating new field
                         } else {
-                            // Field exists but has no new_data (matches database) - don't add Amazon data
-                            console.log(`📦 DUPLICATE_FIX: ${fieldName} matches database exactly - skipping Amazon data`);
-                            return; // Skip this field completely
+                            // Field exists but has no new_data - create new_data with Amazon
+                            existingField.new_data = {
+                                value: amazonFieldData.new_data.value,
+                                source: amazonFieldData.new_data.source,
+                                confidence: amazonFieldData.new_data.confidence,
+                                validation_source: amazonFieldData.new_data.validation_source,
+                                matches_current: amazonFieldData.new_data.matches_current
+                            };
+                            console.log(`📦 AMAZON_VALIDATION: Added Amazon data to existing ${fieldName} field with no new_data`);
+                            return; // Skip creating new field
                         }
                     } else {
-                        // Field doesn't exist in enrichment data - this shouldn't happen for ISBN fields
-                        // but if it does, we should not create a new field if it matches current value
-                        console.log(`📦 DUPLICATE_FIX: ${fieldName} field not found in enrichment data - this is unexpected`);
-                        return; // Skip creating new field to prevent duplicates
+                        // Field doesn't exist in enrichment data - create it with Amazon data
+                        console.log(`📦 AMAZON_VALIDATION: Creating new ${fieldName} field with Amazon data`);
+                        // Continue to create new field below
                     }
                 }
 

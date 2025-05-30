@@ -89,7 +89,7 @@ function getEnrichedBookData($title, $author, $currentISBN = '', $currentPublish
     }
 
     // Combine and analyze results from both sources
-    $combinedData = combineMultiSourceData($googleResults, $openLibraryResults, $title, $author, $currentISBN, $currentPublisher);
+    $combinedData = combineMultiSourceData($googleResults, $openLibraryResults, $title, $author, $currentISBN, $currentPublisher, []);
 
     if (!empty($combinedData)) {
         $enrichedData['fields'] = $combinedData['fields'];
@@ -103,7 +103,7 @@ function getEnrichedBookData($title, $author, $currentISBN = '', $currentPublish
 /**
  * Combine data from multiple sources intelligently
  */
-function combineMultiSourceData($googleResults, $openLibraryResults, $title, $author, $currentISBN, $currentPublisher = null) {
+function combineMultiSourceData($googleResults, $openLibraryResults, $title, $author, $currentISBN, $currentPublisher = null, $currentValues = []) {
     // Define fields that match actual database structure with enhanced mapping
     $allFields = [
         'isbn' => ['confidence' => 95, 'label' => 'ISBN-10'],
@@ -202,10 +202,21 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
                 if (normalizeForComparison($googleValue) === normalizeForComparison($openLibraryValue)) {
                     // Values match - use combined source
                     error_log("PUBLISHER_TEST: Field '$fieldName' values match after normalization");
+
+                    // Check if this matches the current value exactly for 100% confidence
+                    $finalValue = preferEnglishVersion($googleValue, $openLibraryValue);
+                    $confidence = min($fieldConfig['confidence'] + 10, 100); // Boost confidence for matching sources
+
+                    // If it matches current value exactly, set to 100%
+                    if (isset($currentValues[$fieldName]) && isExactValueMatch($currentValues[$fieldName], $finalValue)) {
+                        $confidence = 100;
+                        error_log("PUBLISHER_TEST: Field '$fieldName' exactly matches current value - setting confidence to 100%");
+                    }
+
                     $combinedFields[$fieldName] = [
-                        'value' => preferEnglishVersion($googleValue, $openLibraryValue),
+                        'value' => $finalValue,
                         'source' => 'google_books + open_library',
-                        'confidence' => min($fieldConfig['confidence'] + 10, 100), // Boost confidence for matching sources
+                        'confidence' => $confidence,
                         'label' => $fieldConfig['label']
                     ];
                 } else {
@@ -817,6 +828,50 @@ function normalizeForComparison($value) {
         return strtolower(trim(preg_replace('/[^a-zA-Z0-9\s]/', '', $value)));
     }
     return $value;
+}
+
+/**
+ * Check if two values are exactly the same (for confidence scoring)
+ */
+function isExactValueMatch($currentValue, $newValue) {
+    // Handle null/empty cases
+    if (empty($currentValue) && empty($newValue)) {
+        return true;
+    }
+    if (empty($currentValue) || empty($newValue)) {
+        return false;
+    }
+
+    // For JSON objects (like purchase_links), compare the actual data
+    if (is_array($currentValue) && is_array($newValue)) {
+        return json_encode($currentValue) === json_encode($newValue);
+    }
+
+    // For JSON strings, parse and compare
+    if (is_string($currentValue) && is_string($newValue)) {
+        // Try to parse as JSON first
+        $currentParsed = json_decode($currentValue, true);
+        $newParsed = json_decode($newValue, true);
+        if ($currentParsed !== null && $newParsed !== null) {
+            return json_encode($currentParsed) === json_encode($newParsed);
+        }
+    }
+
+    // For numbers, handle string vs number comparison
+    if ((is_numeric($currentValue)) && (is_numeric($newValue))) {
+        return floatval($currentValue) === floatval($newValue);
+    }
+
+    // For strings, normalize and compare
+    if (is_string($currentValue) && is_string($newValue)) {
+        $normalize = function($str) {
+            return trim(strtolower(preg_replace('/\s+/', ' ', $str)));
+        };
+        return $normalize($currentValue) === $normalize($newValue);
+    }
+
+    // Default comparison
+    return $currentValue === $newValue;
 }
 
 /**

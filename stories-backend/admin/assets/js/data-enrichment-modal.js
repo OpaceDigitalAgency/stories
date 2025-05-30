@@ -1048,14 +1048,53 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         const benefitClass = getBenefitColorClass(benefitLevel);
         const benefitBorder = getBenefitBorderClass(benefitLevel);
 
-        // Add disabled styling classes
-        const disabledClass = (isUnknown || isPendingAmazon || benefitLevel === 'not_beneficial') ? ' disabled-field' : '';
-        const labelClass = (isUnknown || isPendingAmazon || benefitLevel === 'not_beneficial') ? ' text-muted' : '';
+        // Add disabled styling classes - exact matches should be disabled
+        const disabledClass = (isUnknown || isPendingAmazon || benefitLevel === 'not_beneficial' || benefitLevel === 'exact_match') ? ' disabled-field' : '';
+        const labelClass = (isUnknown || isPendingAmazon || benefitLevel === 'not_beneficial' || benefitLevel === 'exact_match') ? ' text-muted' : '';
+
+        // Determine database state and add appropriate labels
+        let databaseStateHtml = '';
+        const databaseState = determineDatabaseState(field.current_value, newData.value, source, newData);
+
+        switch (databaseState) {
+            case 'matches_database':
+                databaseStateHtml = `
+                    <div class="mt-2 p-2 bg-light border border-info rounded">
+                        <div class="text-info">
+                            <i class="fas fa-check-double"></i> <strong>Matches Database</strong>
+                            <span class="badge badge-info ml-1">100%</span>
+                        </div>
+                        <small class="text-muted">Current value exactly matches the new data</small>
+                    </div>
+                `;
+                break;
+            case 'database_wrong':
+                databaseStateHtml = `
+                    <div class="mt-2 p-2 bg-light border border-warning rounded">
+                        <div class="text-warning">
+                            <i class="fas fa-exclamation-triangle"></i> <strong>Database Wrong</strong>
+                            <span class="badge badge-warning ml-1">${confidence}%</span>
+                        </div>
+                        <small class="text-muted">Both sources agree - database value appears incorrect</small>
+                    </div>
+                `;
+                break;
+            case 'database_empty':
+                databaseStateHtml = `
+                    <div class="mt-2 p-2 bg-light border border-success rounded">
+                        <div class="text-success">
+                            <i class="fas fa-plus-circle"></i> <strong>Database Empty</strong>
+                            <span class="badge badge-success ml-1">${confidence}%</span>
+                        </div>
+                        <small class="text-muted">Sources agree - adding missing data to database</small>
+                    </div>
+                `;
+                break;
+        }
 
         // Special handling for publisher database recommendations
-        let databaseMatchHtml = '';
         if (fieldName === 'publisher' && source === 'database_recommendation' && newData.match_type) {
-            databaseMatchHtml = `
+            databaseStateHtml = `
                 <div class="mt-2 p-2 bg-light border border-success rounded">
                     <div class="text-success">
                         <i class="fas fa-database"></i> <strong>Database Match (Recommended)</strong>
@@ -1073,7 +1112,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 <div class="enrichment-field ${benefitBorder}${exactMatchClass}${disabledClass}" data-field="${fieldName}">
                     <div class="form-check">
                         <input class="form-check-input field-checkbox" type="checkbox"
-                               id="field_${fieldName}" name="fields[]" value="${fieldName}" ${isUnknown || isPendingAmazon || benefitLevel === 'not_beneficial' ? 'disabled' : ''}>
+                               id="field_${fieldName}" name="fields[]" value="${fieldName}" ${isUnknown || isPendingAmazon || benefitLevel === 'not_beneficial' || benefitLevel === 'exact_match' ? 'disabled' : ''}>
                         <label class="form-check-label font-weight-bold${labelClass}" for="field_${fieldName}">
                             ${label}
                             <span class="badge badge-${sourceClass} ml-2">${displaySource}${isPendingAmazon ? ' (Loading...)' : ''}</span>
@@ -1087,10 +1126,42 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                         </div>
                         <strong>New Value:</strong> ${displayValue}
                     </div>
-                    ${databaseMatchHtml}
+                    ${databaseStateHtml}
                 </div>
             </div>
         `;
+    }
+
+    /**
+     * Determine the database state for a field
+     * @param {*} currentValue - Current value in database
+     * @param {*} newValue - New value from API
+     * @param {string} source - Source of the new data
+     * @param {object} newData - Full new data object
+     * @returns {string} - 'matches_database', 'database_wrong', 'database_empty', or null
+     */
+    function determineDatabaseState(currentValue, newValue, source, newData) {
+        // Check for exact matches first
+        if (isExactMatch(currentValue, newValue)) {
+            return 'matches_database';
+        }
+
+        // Check if database is empty and we have data from sources
+        if (isEmpty(currentValue) && !isEmpty(newValue)) {
+            // If both sources agree (combined source), it's database empty
+            if (source === 'google_books + open_library') {
+                return 'database_empty';
+            }
+        }
+
+        // Check if both sources agree but differ from database
+        if (source === 'google_books + open_library' && !isEmpty(currentValue) && !isEmpty(newValue)) {
+            if (!isExactMatch(currentValue, newValue)) {
+                return 'database_wrong';
+            }
+        }
+
+        return null; // No special database state
     }
 
     // Update status badges to show completion instead of "Checking..."
@@ -1236,6 +1307,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
     window.updateEnrichmentDataWithAmazon = updateEnrichmentDataWithAmazon;
     window.displayEnrichmentFields = displayEnrichmentFields;
     window.createSingleSourceField = createSingleSourceField;
+    window.determineDatabaseState = determineDatabaseState;
     window.updateStatusBadges = updateStatusBadges;
     window.autoSelectBeneficialFields = autoSelectBeneficialFields;
     window.fetchBookISBNsFromDatabase = fetchBookISBNsFromDatabase;

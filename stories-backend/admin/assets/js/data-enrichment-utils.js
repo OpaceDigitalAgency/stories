@@ -121,16 +121,67 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
     }
 
     /**
+     * Check if two values are exactly the same
+     * Handles special cases like JSON objects, formatted text, etc.
+     */
+    function isExactMatch(currentValue, newValue) {
+        // Handle null/undefined cases
+        if (isEmpty(currentValue) && isEmpty(newValue)) {
+            return true;
+        }
+        if (isEmpty(currentValue) || isEmpty(newValue)) {
+            return false;
+        }
+
+        // For JSON objects (like purchase_links), compare the actual data
+        if (typeof currentValue === 'object' && typeof newValue === 'object') {
+            return JSON.stringify(currentValue) === JSON.stringify(newValue);
+        }
+
+        // For JSON strings, parse and compare
+        if (typeof currentValue === 'string' && typeof newValue === 'string') {
+            // Try to parse as JSON first
+            try {
+                const currentParsed = JSON.parse(currentValue);
+                const newParsed = JSON.parse(newValue);
+                return JSON.stringify(currentParsed) === JSON.stringify(newParsed);
+            } catch (e) {
+                // Not JSON, continue with string comparison
+            }
+        }
+
+        // For numbers, handle string vs number comparison
+        if ((typeof currentValue === 'number' || !isNaN(currentValue)) &&
+            (typeof newValue === 'number' || !isNaN(newValue))) {
+            return parseFloat(currentValue) === parseFloat(newValue);
+        }
+
+        // For strings, normalize and compare
+        if (typeof currentValue === 'string' && typeof newValue === 'string') {
+            const normalize = (str) => str.trim().toLowerCase().replace(/\s+/g, ' ');
+            return normalize(currentValue) === normalize(newValue);
+        }
+
+        // Default comparison
+        return currentValue === newValue;
+    }
+
+    /**
      * Determine the benefit level of updating a field
      * @param {*} currentValue - Current value in database
      * @param {*} newValue - New value from API
      * @param {boolean} isUnknown - Whether new value is unknown
-     * @returns {string} - 'beneficial', 'questionable', 'not_beneficial'
+     * @returns {string} - 'beneficial', 'questionable', 'not_beneficial', 'exact_match'
      */
     function determineBenefitLevel(currentValue, newValue, isUnknown) {
         // If new value is unknown or null, it's not beneficial
         if (isUnknown || !newValue || newValue === 'Unknown' || newValue === 'null' || newValue === '') {
             return 'not_beneficial';
+        }
+
+        // Check for exact matches first
+        if (isExactMatch(currentValue, newValue)) {
+            return 'exact_match';
         }
 
         // If current value is empty/null and new value has content, it's beneficial
@@ -191,6 +242,8 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
                 return 'bg-light-warning'; // Pale amber
             case 'not_beneficial':
                 return 'bg-light-danger'; // Pale red
+            case 'exact_match':
+                return 'bg-light-info'; // Pale blue for exact matches
             default:
                 return 'bg-light';
         }
@@ -207,6 +260,8 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
                 return 'border-warning';
             case 'not_beneficial':
                 return 'border-danger';
+            case 'exact_match':
+                return 'border-info';
             default:
                 return '';
         }
@@ -223,6 +278,8 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
                 return '<span class="badge badge-warning ml-1" title="Review recommended"><i class="fas fa-question"></i></span>';
             case 'not_beneficial':
                 return '<span class="badge badge-danger ml-1" title="Not beneficial"><i class="fas fa-times"></i></span>';
+            case 'exact_match':
+                return '<span class="badge badge-info ml-1" title="Matches database exactly"><i class="fas fa-check-double"></i></span>';
             default:
                 return '';
         }
@@ -325,6 +382,7 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
     window.showEnrichmentError = showEnrichmentError;
     window.applyEnrichmentChanges = applyEnrichmentChanges;
     window.determineBenefitLevel = determineBenefitLevel;
+    window.isExactMatch = isExactMatch;
     window.isEmpty = isEmpty;
     window.normalizeValue = normalizeValue;
     window.getBenefitColorClass = getBenefitColorClass;

@@ -129,30 +129,18 @@ class BookTrustComprehensiveScraper:
         metadata_elem = li_element.find('p', class_='body-xxs')
         if metadata_elem:
             metadata_text = metadata_elem.get_text(strip=True)
-            # The metadata format is "YYYY • X to Y years" or similar
-            # Split by bullet point
-            parts = metadata_text.split('•')
             
-            if len(parts) >= 2:
-                # First part is the year
-                year_part = parts[0].strip()
-                year_match = re.search(r'\b(20\d{2})\b', year_part)
-                if year_match:
-                    book['year'] = year_match.group(1)
-                
-                # Second part is the age range
-                age_part = parts[1].strip()
-                # Clean up the age range text
-                book['age_range'] = age_part
+            # The metadata format appears to be "YYYYX to Y years" with no separator
+            # Extract year first (4 digits starting with 20)
+            year_match = re.search(r'^(20\d{2})', metadata_text)
+            if year_match:
+                book['year'] = year_match.group(1)
+                # Get the age range by removing the year from the start
+                age_range = metadata_text[4:].strip()  # Skip the 4-digit year
+                book['age_range'] = age_range
             else:
-                # Fallback to original parsing if no bullet point found
-                year_match = re.search(r'\b(20\d{2})\b', metadata_text)
-                if year_match:
-                    book['year'] = year_match.group(1)
-                
-                age_match = re.search(r'(\d+\s*to\s*\d+\s*years?|\d+\+?\s*years?)', metadata_text, re.IGNORECASE)
-                if age_match:
-                    book['age_range'] = age_match.group(1)
+                # No year found, assume the whole text is the age range
+                book['age_range'] = metadata_text
         
         # Extract tags
         tags_container = li_element.find('ul', class_='bt-tags')

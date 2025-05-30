@@ -1074,6 +1074,11 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     } else {
                         console.log('🔄 Could not find or create visual display container for reading level');
                     }
+
+                    // CRITICAL FIX: Update the actual badge in the field display
+                    const $readingFieldContainer = $(`.enrichment-field[data-field="reading_level"]`);
+                    $readingFieldContainer.find('.badge-light, .badge-info').text(expectedReading);
+                    console.log('🔄 Updated reading level badge display to:', expectedReading);
                 }
             });
         } else if (readingField.new_data) {
@@ -1169,6 +1174,11 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     } else {
                         console.log('🔄 Could not find or create visual display container for age range');
                     }
+
+                    // CRITICAL FIX: Update the actual badge in the field display
+                    const $ageFieldContainer = $(`.enrichment-field[data-field="age_range"]`);
+                    $ageFieldContainer.find('.badge-light, .badge-info').text(expectedAge);
+                    console.log('🔄 Updated age range badge display to:', expectedAge);
                 }
             });
         } else if (ageField.new_data) {

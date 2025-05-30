@@ -1157,15 +1157,42 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
             break;
 
         case 'age_range':
-            // CRITICAL FIX: Handle direct age range values from Google Books
+            // CRITICAL FIX: Extract age range from Google Books categories and map properly
             $ageRange = null;
 
-            // First check if there's a direct age_range field (Google Books)
-            if (isset($match['age_range']) && !empty($match['age_range'])) {
+            // First check Google Books categories for age-related information
+            if (isset($match['categories']) && is_array($match['categories'])) {
+                foreach ($match['categories'] as $category) {
+                    if (is_string($category)) {
+                        // Look for age patterns in categories
+                        if (preg_match('/(\d+)\s*\+/i', $category, $matches)) {
+                            $rawAgeRange = $matches[0]; // e.g., "12+"
+                            $ageRange = mapAmazonAgeRangeToStandard($rawAgeRange);
+                            error_log("GOOGLE_BOOKS_CATEGORY_AGE: Found '$rawAgeRange' in category '$category', mapped to '$ageRange'");
+                            if ($ageRange) break;
+                        } elseif (preg_match('/(\d+)\s*-\s*(\d+)/i', $category, $matches)) {
+                            $rawAgeRange = $matches[0]; // e.g., "8-12"
+                            $ageRange = mapAmazonAgeRangeToStandard($rawAgeRange . ' years');
+                            error_log("GOOGLE_BOOKS_CATEGORY_AGE: Found '$rawAgeRange' in category '$category', mapped to '$ageRange'");
+                            if ($ageRange) break;
+                        } elseif (stripos($category, 'young adult') !== false) {
+                            $ageRange = '14-16 years';
+                            error_log("GOOGLE_BOOKS_CATEGORY_AGE: Found 'young adult' in category '$category', mapped to '$ageRange'");
+                            break;
+                        } elseif (stripos($category, 'teen') !== false) {
+                            $ageRange = '11-14 years';
+                            error_log("GOOGLE_BOOKS_CATEGORY_AGE: Found 'teen' in category '$category', mapped to '$ageRange'");
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Check if there's a direct age_range field (unlikely but possible)
+            if (!$ageRange && isset($match['age_range']) && !empty($match['age_range'])) {
                 $rawAgeRange = $match['age_range'];
-                // Use the same mapping function as Amazon data
                 $ageRange = mapAmazonAgeRangeToStandard($rawAgeRange);
-                error_log("GOOGLE_BOOKS_AGE_RANGE: Mapped '$rawAgeRange' to '$ageRange'");
+                error_log("GOOGLE_BOOKS_DIRECT_AGE: Mapped '$rawAgeRange' to '$ageRange'");
             }
 
             // Open Library subject_facet[] contains specific patterns
@@ -1184,13 +1211,20 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
                 }
             }
 
-            // Else fallback from maturity_rating
+            // Fallback from maturity_rating - but map it properly
             if (!$ageRange && isset($match['maturity_rating'])) {
                 $maturityRating = $match['maturity_rating'];
                 if ($maturityRating === 'NOT_MATURE') {
                     $ageRange = '5-6 years'; // Use standard value for general children's books
                 } elseif ($maturityRating === 'MATURE') {
                     $ageRange = '18+ years'; // Use standard synchronized value
+                } else {
+                    // Try to map any other maturity rating value
+                    $mappedAge = mapAmazonAgeRangeToStandard($maturityRating);
+                    if ($mappedAge) {
+                        $ageRange = $mappedAge;
+                        error_log("GOOGLE_BOOKS_MATURITY: Mapped maturity rating '$maturityRating' to '$ageRange'");
+                    }
                 }
             }
 

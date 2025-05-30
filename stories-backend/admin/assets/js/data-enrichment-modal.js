@@ -841,7 +841,10 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         setupAgeRangeReadingLevelSync();
 
         // FIXED: Ensure both fields have synchronized source options before setting up sync
-        ensureSynchronizedSourceOptions();
+        // Only run if both fields exist and have data
+        setTimeout(() => {
+            ensureSynchronizedSourceOptions();
+        }, 500);
 
         // Debug: Show what fields are actually available
         setTimeout(() => {
@@ -853,54 +856,56 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         }, 1000);
     }
 
+    // FIXED: Define mapping variables at top level so they're available to all functions
+    const ageToReadingMap = {
+        '0-12 months': 'Pre-literacy (Sensory)',
+        '12-24 months': 'Pre-literacy (Naming)',
+        '2-3 years': 'Pre-literacy (Mimicry)',
+        '3-4 years': 'Early Pre-reader',
+        '4-5 years': 'Beginning Reader',
+        '5-6 years': 'Early Reader',        // User's current database value
+        '6-7 years': 'Developing Reader',   // FIXED: Correct mapping from database
+        '7-8 years': 'Transitional Reader',
+        '8-9 years': 'Fluent Reader',       // Amazon value
+        '9-10 years': 'Fluent Reader',
+        '10-11 years': 'Fluent Reader',
+        '11-14 years': 'Advanced Reader',
+        '14-16 years': 'Advanced Reader',
+        '16-18 years': 'Advanced Reader',
+        '18+ years': 'Proficient Reader',   // Google Books value → Adult
+        // Amazon-style age ranges
+        '8-11 years': 'Fluent Reader',
+        '8 - 11 years': 'Fluent Reader',
+        // API variations
+        'All Ages': 'Early Reader',
+        'Adult': 'Proficient Reader',       // Google Books category
+        'Young Adult': 'Advanced Reader',
+        'Children': 'Early Reader'
+    };
+
+    // Reading level to age range mapping (updated to match user requirements)
+    const readingToAgeMap = {
+        'Pre-literacy (Sensory)': '0-12 months',
+        'Pre-literacy (Naming)': '12-24 months',
+        'Pre-literacy (Mimicry)': '2-3 years',
+        'Early Pre-reader': '3-4 years',
+        'Beginning Reader': '4-5 years',
+        'Early Reader': '5-6 years',        // Maps to user's current database value
+        'Developing Reader': '6-7 years',   // FIXED: Correct mapping from database
+        'Transitional Reader': '7-8 years',
+        'Fluent Reader': '8-9 years',       // Maps to Amazon's 8-9 years
+        'Advanced Reader': '11-14 years',
+        'Proficient Reader': '18+ years',   // Maps to Google Books 18+ years
+        // Common API variations
+        'Middle Grade': '8-9 years',        // Updated to map to Fluent Reader range
+        'Young Adult': '14-16 years',
+        'Adult': '18+ years',               // Google Books category
+        'All Ages': '5-6 years'
+    };
+
     // Set up synchronization between age range and reading level fields
     function setupAgeRangeReadingLevelSync() {
-        // Age range to reading level mapping (updated to match user requirements)
-        const ageToReadingMap = {
-            '0-12 months': 'Pre-literacy (Sensory)',
-            '12-24 months': 'Pre-literacy (Naming)',
-            '2-3 years': 'Pre-literacy (Mimicry)',
-            '3-4 years': 'Early Pre-reader',
-            '4-5 years': 'Beginning Reader',
-            '5-6 years': 'Early Reader',        // User's current database value
-            '6-7 years': 'Developing Reader',   // FIXED: Correct mapping from database
-            '7-8 years': 'Transitional Reader',
-            '8-9 years': 'Fluent Reader',       // Amazon value
-            '9-10 years': 'Fluent Reader',
-            '10-11 years': 'Fluent Reader',
-            '11-14 years': 'Advanced Reader',
-            '14-16 years': 'Advanced Reader',
-            '16-18 years': 'Advanced Reader',
-            '18+ years': 'Proficient Reader',   // Google Books value → Adult
-            // Amazon-style age ranges
-            '8-11 years': 'Fluent Reader',
-            '8 - 11 years': 'Fluent Reader',
-            // API variations
-            'All Ages': 'Early Reader',
-            'Adult': 'Proficient Reader',       // Google Books category
-            'Young Adult': 'Advanced Reader',
-            'Children': 'Early Reader'
-        };
-
-        // Reading level to age range mapping (updated to match user requirements)
-        const readingToAgeMap = {
-            'Pre-literacy (Sensory)': '0-12 months',
-            'Pre-literacy (Naming)': '12-24 months',
-            'Pre-literacy (Mimicry)': '2-3 years',
-            'Early Pre-reader': '3-4 years',
-            'Beginning Reader': '4-5 years',
-            'Early Reader': '5-6 years',        // Maps to user's current database value
-            'Developing Reader': '6-7 years',   // FIXED: Correct mapping from database
-            'Transitional Reader': '7-8 years',
-            'Fluent Reader': '8-9 years',       // Maps to Amazon's 8-9 years
-            'Advanced Reader': '11-14 years',
-            'Proficient Reader': '18+ years',   // Maps to Google Books 18+ years
-            // Common API variations
-            'Middle Grade': '8-9 years',        // Updated to map to Fluent Reader range
-            'Young Adult': '14-16 years',
-            'Adult': '18+ years',               // Google Books category
-            'All Ages': '5-6 years'
-        };
+        // Note: Mapping variables are now defined at top level for global access
 
         // FIXED: Synchronized field selection - both fields must be selected/unselected together
         $(document).on('change', 'input[type="checkbox"][value="age_range"]', function() {
@@ -1112,11 +1117,23 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
     function ensureSynchronizedSourceOptions() {
         console.log('🔄 ensureSynchronizedSourceOptions called');
 
-        const ageField = window.currentEnrichmentData?.fields?.['age_range'];
-        const readingField = window.currentEnrichmentData?.fields?.['reading_level'];
+        // Check if enrichment data exists
+        if (!window.currentEnrichmentData || !window.currentEnrichmentData.fields) {
+            console.log('🔄 No enrichment data available yet');
+            return;
+        }
+
+        const ageField = window.currentEnrichmentData.fields['age_range'];
+        const readingField = window.currentEnrichmentData.fields['reading_level'];
 
         if (!ageField || !readingField) {
-            console.log('🔄 Missing age_range or reading_level field');
+            console.log('🔄 Missing age_range or reading_level field - skipping synchronization');
+            return;
+        }
+
+        // Check if both fields have data to work with
+        if (!ageField.new_data && !readingField.new_data) {
+            console.log('🔄 No new data in either field - skipping synchronization');
             return;
         }
 

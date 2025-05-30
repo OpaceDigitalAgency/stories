@@ -250,7 +250,9 @@ include_once '../includes/header.php';
                             echo "</div>";
                             
                         } else {
-                            echo "<p class='text-danger'>Invalid request. Please use the discovery form.</p>";
+                            // No action or invalid action
+                            echo "<div class='alert alert-danger'>Invalid request. Please use the discovery form.</div>";
+                            echo "<a href='book-import-tool.php?tab=discovery' class='btn btn-primary'>Back to Discovery</a>";
                         }
                         
                     } catch (Exception $e) {
@@ -258,14 +260,12 @@ include_once '../includes/header.php';
                         echo "<strong>Error:</strong> " . htmlspecialchars($e->getMessage());
                         echo "</div>";
                         error_log("Book discovery error: " . $e->getMessage());
+                    } else {
+                        // Not a POST request, show error
+                        echo "<div class='alert alert-danger'>Invalid request. Please use the discovery form.</div>";
+                        echo "<a href='book-import-tool.php?tab=discovery' class='btn btn-primary'>Back to Discovery</a>";
                     }
                     ?>
-                    
-                    <div class="mt-4">
-                        <a href="book-import-tool.php?tab=discovery" class="btn btn-primary">
-                            <i class="fas fa-arrow-left"></i> Back to Discovery
-                        </a>
-                    </div>
                 </div>
             </div>
         </div>

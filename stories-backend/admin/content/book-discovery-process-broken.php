@@ -260,8 +260,10 @@ include_once '../includes/header.php';
                         echo "<strong>Error:</strong> " . htmlspecialchars($e->getMessage());
                         echo "</div>";
                         error_log("Book discovery error: " . $e->getMessage());
-                    } else {
-                        // Not a POST request, show error
+                    }
+                    
+                    // Check if not a POST request
+                    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
                         echo "<div class='alert alert-danger'>Invalid request. Please use the discovery form.</div>";
                         echo "<a href='book-import-tool.php?tab=discovery' class='btn btn-primary'>Back to Discovery</a>";
                     }

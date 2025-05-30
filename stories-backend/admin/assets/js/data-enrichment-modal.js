@@ -1094,6 +1094,15 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             return null;
         }
 
+        // Check if field checkbox is checked first
+        const fieldCheckbox = $(`.enrichment-field[data-field="${fieldName}"] input[type="checkbox"][value="${fieldName}"]`);
+        const isChecked = fieldCheckbox.length ? fieldCheckbox.is(':checked') : false;
+
+        if (!isChecked) {
+            console.log('🔍 Field checkbox not checked, returning current value:', fieldData.current_value);
+            return fieldData.current_value;
+        }
+
         // Check for multi-option fields first
         const checkedOption = $(`input[name="field_${fieldName}_option"]:checked`);
         console.log('🔍 Checked option elements found:', checkedOption.length);
@@ -1144,56 +1153,83 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             return;
         }
 
-        // Get the value to display
-        const displayValue = overrideValue || getSelectedFieldValue(fieldName);
         const fieldData = window.currentEnrichmentData?.fields?.[fieldName];
-
         if (!fieldData) {
             console.log('🎨 No field data for:', fieldName);
             return;
         }
 
-        // Check if field is enabled
-        const fieldCheckbox = $(`input[type="checkbox"][value="${fieldName}"]`);
-        const isEnabled = !fieldCheckbox.length || fieldCheckbox.is(':checked');
+        // Check if field checkbox is checked (enabled for update)
+        const fieldCheckbox = fieldContainer.find(`input[type="checkbox"][value="${fieldName}"]`);
+        const isChecked = fieldCheckbox.length ? fieldCheckbox.is(':checked') : false;
 
-        console.log('🎨 Field enabled state:', isEnabled, 'display value:', displayValue);
+        console.log('🎨 Field checkbox state:', isChecked);
 
-        // Update the "New Value" display
-        const newValueElement = fieldContainer.find('.new-value');
-        if (newValueElement.length && displayValue) {
-            newValueElement.text(displayValue);
-            console.log('🎨 Updated new value display to:', displayValue);
+        // Get the value to display - either override or selected value
+        let displayValue = overrideValue;
+        if (!displayValue) {
+            if (isChecked) {
+                // Field is enabled - get selected source value
+                displayValue = getSelectedFieldValue(fieldName);
+            } else {
+                // Field is disabled - show current database value
+                displayValue = fieldData.current_value;
+            }
         }
 
-        // Update database state and styling
+        console.log('🎨 Display value determined:', displayValue);
+
+        // Update the "New Value" display - find the badge after "New Value:"
+        const newValueBadge = fieldContainer.find('strong:contains("New Value:")').next('.badge');
+        if (newValueBadge.length && displayValue) {
+            newValueBadge.text(displayValue);
+            console.log('🎨 Updated new value badge to:', displayValue);
+        }
+
+        // Update database state and styling based on checkbox state and value comparison
         const currentValue = fieldData.current_value;
-        const databaseState = determineDatabaseState(currentValue, displayValue, 'selected', null, fieldName);
+        let databaseState = null;
+
+        if (isChecked && displayValue) {
+            // Field is enabled - check if selected value matches database
+            databaseState = determineDatabaseState(currentValue, displayValue, 'selected', null, fieldName);
+        } else {
+            // Field is disabled - always matches database (showing current value)
+            databaseState = 'matches_database';
+        }
+
+        console.log('🎨 Database state:', databaseState, 'for value:', displayValue);
 
         // Remove existing state classes
         fieldContainer.removeClass('disabled-field matches-database database-wrong database-empty');
 
-        if (!isEnabled) {
-            fieldContainer.addClass('disabled-field');
-            console.log('🎨 Added disabled-field class');
-        } else if (databaseState === 'matches_database') {
-            fieldContainer.addClass('matches-database disabled-field');
-            console.log('🎨 Added matches-database and disabled-field classes');
-        } else if (databaseState === 'database_wrong') {
-            fieldContainer.addClass('database-wrong');
-            console.log('🎨 Added database-wrong class');
-        } else if (databaseState === 'database_empty') {
-            fieldContainer.addClass('database-empty');
-            console.log('🎨 Added database-empty class');
+        // Apply appropriate styling based on state
+        if (!isChecked) {
+            // Checkbox unchecked - field is disabled, show as matching database
+            fieldContainer.addClass('disabled-field matches-database');
+            fieldCheckbox.prop('disabled', false); // Don't disable the checkbox itself
+            console.log('🎨 Field unchecked - added disabled-field and matches-database classes');
+        } else {
+            // Checkbox checked - field is enabled
+            if (databaseState === 'matches_database') {
+                fieldContainer.addClass('matches-database');
+                console.log('🎨 Field checked and matches database');
+            } else if (databaseState === 'database_wrong') {
+                fieldContainer.addClass('database-wrong');
+                console.log('🎨 Field checked - database wrong');
+            } else if (databaseState === 'database_empty') {
+                fieldContainer.addClass('database-empty');
+                console.log('🎨 Field checked - database empty');
+            }
         }
 
-        // Update confidence badge
-        const confidenceBadge = fieldContainer.find('.badge-info, .badge-success, .badge-warning, .badge-danger');
+        // Update confidence badge in the label
+        const confidenceBadge = fieldContainer.find('.form-check-label .badge-info, .form-check-label .badge-success').last();
         if (confidenceBadge.length) {
             if (databaseState === 'matches_database') {
-                confidenceBadge.removeClass('badge-info badge-warning badge-danger').addClass('badge-success').text('100%');
+                confidenceBadge.removeClass('badge-info badge-warning badge-danger').addClass('badge-success').text('(100%)');
             } else {
-                confidenceBadge.removeClass('badge-success badge-warning badge-danger').addClass('badge-info').text('New');
+                confidenceBadge.removeClass('badge-success badge-warning badge-danger').addClass('badge-info').text('(New)');
             }
             console.log('🎨 Updated confidence badge for database state:', databaseState);
         }

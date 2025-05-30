@@ -39,8 +39,8 @@ class BookTrustScraper {
         // Extract age range from URL or page title
         $defaultAgeRange = $this->extractAgeRange($url, $xpath);
         
-        // Find all book items
-        $bookItems = $xpath->query('//li[@class="book-item"]');
+        // Find all book items (using the correct selector from Python script)
+        $bookItems = $xpath->query('//li[@class="reading-width"]');
         error_log("Found " . $bookItems->length . " book items on {$url}");
         
         foreach ($bookItems as $item) {

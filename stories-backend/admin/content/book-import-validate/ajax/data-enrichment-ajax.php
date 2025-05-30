@@ -148,8 +148,30 @@ try {
                 }
 
                 // Add enrichment fields from Amazon metadata (age range, reading level, etc.)
+                // CRITICAL FIX: Filter out duplicate ISBN fields that match current book data
                 if (!empty($amazonPayload['enrichment_fields'])) {
                     foreach ($amazonPayload['enrichment_fields'] as $fieldName => $fieldData) {
+                        // Skip ISBN fields if they match current book data to prevent duplicates
+                        if (($fieldName === 'isbn' || $fieldName === 'isbn13') && $currentBookData) {
+                            $currentValue = null;
+                            if ($fieldName === 'isbn' && isset($currentBookData['isbn'])) {
+                                $currentValue = $currentBookData['isbn'];
+                            } elseif ($fieldName === 'isbn13' && isset($currentBookData['isbn13'])) {
+                                $currentValue = $currentBookData['isbn13'];
+                            }
+
+                            // Normalize both values for comparison (remove hyphens)
+                            $normalizedCurrent = preg_replace('/[^0-9X]/i', '', $currentValue ?? '');
+                            $normalizedAmazon = preg_replace('/[^0-9X]/i', '', $fieldData['new_data']['value'] ?? '');
+
+                            if ($normalizedCurrent === $normalizedAmazon && !empty($normalizedCurrent)) {
+                                error_log("DUPLICATE_FIX: Skipping Amazon $fieldName field in AJAX - matches current value exactly ($normalizedCurrent)");
+                                continue; // Skip this field to prevent duplicates
+                            }
+
+                            error_log("DUPLICATE_FIX: Amazon $fieldName field differs from current in AJAX - current: '$normalizedCurrent', amazon: '$normalizedAmazon'");
+                        }
+
                         $structuredData[$fieldName] = $fieldData;
                         error_log("Added Amazon enrichment field: $fieldName = " . json_encode($fieldData));
                     }

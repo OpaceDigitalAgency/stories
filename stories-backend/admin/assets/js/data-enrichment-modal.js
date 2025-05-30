@@ -1420,18 +1420,29 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 if (currentStr.length > 30 && newStr.length > 30) {
                     console.log('🏷️ TAG_DEBUG: Detected concatenated tag strings, checking content similarity');
 
-                    // Enhanced word extraction - handle camelCase and common separators
+                    // CRITICAL FIX: Enhanced word extraction for concatenated genre strings
                     const extractWords = (str) => {
-                        return str
-                            // Split on capital letters (camelCase)
-                            .split(/(?=[A-Z])/)
-                            // Split on common separators
-                            .flatMap(part => part.split(/[\s,;-]+/))
+                        // First, handle common patterns in concatenated genre strings
+                        let processed = str
+                            // Add spaces before capital letters (camelCase)
+                            .replace(/([a-z])([A-Z])/g, '$1 $2')
+                            // Handle specific patterns like "People & Places"
+                            .replace(/&/g, ' and ')
+                            // Handle apostrophes in "Children's Fiction"
+                            .replace(/'/g, ' ')
+                            // Normalize multiple spaces
+                            .replace(/\s+/g, ' ');
+
+                        return processed
+                            // Split on various separators
+                            .split(/[\s,;-]+/)
                             // Clean and filter
                             .map(w => w.toLowerCase().trim())
                             .filter(w => w.length > 2)
                             // Remove common words that don't add meaning
-                            .filter(w => !['and', 'the', 'for', 'with', 'from', 'fiction', 'books'].includes(w));
+                            .filter(w => !['and', 'the', 'for', 'with', 'from', 'of', 'in', 'on', 'at', 'to'].includes(w))
+                            // Remove duplicates
+                            .filter((word, index, arr) => arr.indexOf(word) === index);
                     };
 
                     const currentWords = extractWords(currentStr);
@@ -1444,27 +1455,36 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                         newWords: newWords
                     });
 
-                    // Check if most significant words are present in both
+                    // CRITICAL FIX: Better similarity calculation for genre matching
                     const commonWords = currentWords.filter(word => newWords.includes(word));
-                    const totalUniqueWords = new Set([...currentWords, ...newWords]).size;
-                    const similarity = totalUniqueWords > 0 ? commonWords.length / totalUniqueWords : 0;
+                    const allWords = new Set([...currentWords, ...newWords]);
+
+                    // Calculate multiple similarity metrics
+                    const jaccardSimilarity = commonWords.length / allWords.size;
+                    const overlapSimilarity = commonWords.length / Math.min(currentWords.length, newWords.length);
+                    const coverageSimilarity = commonWords.length / Math.max(currentWords.length, newWords.length);
 
                     console.log('🏷️ TAG_DEBUG: Enhanced similarity analysis:', {
+                        currentWords: currentWords,
+                        newWords: newWords,
                         commonWords: commonWords,
-                        totalUniqueWords: totalUniqueWords,
-                        similarity: similarity,
-                        threshold: 0.7
+                        totalUniqueWords: allWords.size,
+                        jaccardSimilarity: jaccardSimilarity,
+                        overlapSimilarity: overlapSimilarity,
+                        coverageSimilarity: coverageSimilarity
                     });
 
-                    // Lower threshold for better matching of similar content
-                    if (similarity > 0.7) {
+                    // Use multiple criteria for better matching
+                    // If most words overlap (high coverage) OR very high Jaccard similarity
+                    if (overlapSimilarity > 0.8 || jaccardSimilarity > 0.7 || coverageSimilarity > 0.85) {
                         console.log('🏷️ TAG_DEBUG: High similarity detected - treating as match');
+                        console.log('🏷️ TAG_DEBUG: Match criteria: overlap=' + overlapSimilarity + ', jaccard=' + jaccardSimilarity + ', coverage=' + coverageSimilarity);
                         return 'matches_database';
                     }
 
                     // Additional check: if strings are very similar in length and share many characters
                     const lengthRatio = Math.min(currentStr.length, newStr.length) / Math.max(currentStr.length, newStr.length);
-                    if (lengthRatio > 0.8 && similarity > 0.5) {
+                    if (lengthRatio > 0.8 && jaccardSimilarity > 0.5) {
                         console.log('🏷️ TAG_DEBUG: Similar length and moderate similarity - treating as match');
                         return 'matches_database';
                     }

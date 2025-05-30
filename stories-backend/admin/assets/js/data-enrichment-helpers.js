@@ -248,17 +248,34 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
         } else if (fieldName === 'characters' || fieldName === 'settings') {
             return value.split(',').map(item => `<span class="badge badge-light mr-1">${item.trim()}</span>`).join('');
         } else if (fieldName === 'purchase_links') {
-            // Handle JSON purchase links from Amazon
+            // CRITICAL FIX: Use same user-friendly formatting as formatFieldValue
             try {
-                const links = JSON.parse(value);
-                let html = '<ul class="list-unstyled mb-0">';
-                Object.entries(links).forEach(([format, info]) => {
-                    html += `<li><strong>${format}:</strong> <a href="${info.url}" target="_blank">${info.price}</a></li>`;
+                const linksData = typeof value === 'string' ? JSON.parse(value) : value;
+                if (!linksData || typeof linksData !== 'object') {
+                    return '<span class="text-muted">No links available</span>';
+                }
+
+                // Format as user-friendly purchase options
+                let formattedLinks = '';
+                Object.keys(linksData).forEach(format => {
+                    const option = linksData[format];
+                    if (option && option.price && option.url) {
+                        const isSelected = option.is_selected ? ' <span class="badge badge-success">Default</span>' : '';
+                        formattedLinks += `
+                            <div class="mb-1">
+                                <strong>${format}:</strong> ${option.price}${isSelected}
+                                <a href="${option.url}" target="_blank" class="btn btn-sm btn-outline-primary ml-2">
+                                    <i class="fas fa-external-link-alt"></i> Buy
+                                </a>
+                            </div>
+                        `;
+                    }
                 });
-                html += '</ul>';
-                return html;
+
+                return formattedLinks || '<span class="text-muted">No valid purchase options</span>';
             } catch (e) {
-                return value; // Fallback to raw value if not valid JSON
+                console.error('Error parsing purchase links in formatCurrentValue:', e);
+                return '<span class="text-danger">Error parsing links</span>';
             }
         }
 

@@ -99,7 +99,7 @@ include_once '../includes/header.php';
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h2>Book Discovery Process</h2>
+                    <h1>Book Discovery Process</h1>
                 </div>
                 <div class="card-body">
                     <?php
@@ -170,7 +170,7 @@ include_once '../includes/header.php';
                                     // Initialize discovery engine
                                     $engine = new BookDiscoveryEngine($db);
                                     
-                                    echo "<h2>Book Discovery Preview</h2>";
+                                    echo "<h3>Discovery Results</h3>";
                                     echo "<div class='alert alert-info'>";
                                     echo "<i class='fas fa-info-circle'></i> <strong>Preview Mode:</strong> The books below have been discovered but NOT yet imported. ";
                                     echo "Review the information and select which books you want to add to your library.";
@@ -265,9 +265,14 @@ include_once '../includes/header.php';
                             error_log("Book discovery error: " . $e->getMessage());
                         }
                     } else {
-                        // Not a POST request, show error
-                        echo "<div class='alert alert-danger'>Invalid request. Please use the discovery form.</div>";
-                        echo "<a href='book-import-tool.php?tab=discovery' class='btn btn-primary'>Back to Discovery</a>";
+                        // Not a POST request, redirect to discovery tab
+                        echo "<div class='alert alert-info'>";
+                        echo "<i class='fas fa-info-circle'></i> This page processes book discovery requests. ";
+                        echo "Please use the Discovery tab in the Book Import Tool to start discovering books.";
+                        echo "</div>";
+                        echo "<a href='book-import-tool.php?tab=discovery' class='btn btn-primary'>";
+                        echo "<i class='fas fa-arrow-left'></i> Go to Discovery Tab";
+                        echo "</a>";
                     }
                     ?>
                 </div>

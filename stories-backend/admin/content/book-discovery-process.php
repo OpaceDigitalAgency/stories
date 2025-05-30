@@ -29,11 +29,13 @@ ini_set('implicit_flush', true);
 ob_implicit_flush(true);
 
 // Function to flush output for discovery process
-function flushDiscoveryOutput() {
-    if (ob_get_level() > 0) {
-        ob_flush();
+if (!function_exists('flushDiscoveryOutput')) {
+    function flushDiscoveryOutput() {
+        if (ob_get_level() > 0) {
+            ob_flush();
+        }
+        flush();
     }
-    flush();
 }
 
 // Set page variables

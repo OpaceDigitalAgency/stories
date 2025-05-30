@@ -1341,6 +1341,7 @@ require_once '../includes/header.php';
                             <h4>Book Discovery</h4>
                             <p>Discover new children's books from various sources and import them into your library.</p>
                             
+                            <!-- Discovery Form -->
                             <div class="card mb-4">
                                 <div class="card-header">
                                     <h5>URL-based Discovery</h5>
@@ -1348,7 +1349,7 @@ require_once '../includes/header.php';
                                 <div class="card-body">
                                     <p>Enter a URL from a book recommendation website to discover and import books.</p>
                                     
-                                    <form method="post" action="book-discovery-modern.php">
+                                    <form id="discoveryForm">
                                         <div class="form-group">
                                             <label for="discovery_url">Website URL</label>
                                             <input type="url" class="form-control" id="discovery_url" name="discovery_url"
@@ -1377,10 +1378,10 @@ require_once '../includes/header.php';
                                             <div class="form-check">
                                                 <input class="form-check-input" type="checkbox" id="auto_enrich" name="auto_enrich">
                                                 <label class="form-check-label" for="auto_enrich">
-                                                    <strong>Auto-enrich with APIs (SLOW - adds 3-5 minutes)</strong>
+                                                    <strong>Auto-enrich with APIs (slower but more data)</strong>
                                                 </label>
                                                 <small class="form-text text-muted">
-                                                    Automatically fetch ISBNs, publishers, and other data from Google Books and Open Library. WARNING: This significantly slows down the process.
+                                                    Automatically fetch ISBNs, publishers, and other data from Google Books and Open Library
                                                 </small>
                                             </div>
                                         </div>
@@ -1392,15 +1393,57 @@ require_once '../includes/header.php';
                                                     <strong>Import directly to database</strong>
                                                 </label>
                                                 <small class="form-text text-muted">
-                                                    Automatically import discovered books to your library (skip preview)
+                                                    Automatically import discovered books to your library
                                                 </small>
                                             </div>
                                         </div>
                                         
-                                        <button type="submit" class="btn btn-primary btn-lg">
-                                            <i class="fas fa-search"></i> Start Discovery Process
+                                        <button type="submit" class="btn btn-primary btn-lg" id="startDiscoveryBtn">
+                                            <i class="fas fa-search"></i> Start Discovery
                                         </button>
                                     </form>
+                                </div>
+                            </div>
+                            
+                            <!-- Progress Section -->
+                            <div id="progressSection" class="card mb-4" style="display: none;">
+                                <div class="card-header">
+                                    <h5>Discovery Progress</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="progress mb-3">
+                                        <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated"
+                                             role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                            0%
+                                        </div>
+                                    </div>
+                                    <p id="progressMessage">Initializing...</p>
+                                    <div id="currentBookInfo" class="alert alert-info" style="display: none;">
+                                        <strong>Processing:</strong> <span id="currentBookTitle"></span>
+                                    </div>
+                                    <div class="mt-3">
+                                        <button id="cancelButton" class="btn btn-warning" style="display: none;" onclick="cancelDiscovery()">
+                                            <i class="fas fa-stop"></i> Cancel Process
+                                        </button>
+                                        <button id="showResultsButton" class="btn btn-info" style="display: none;" onclick="showPartialResults()">
+                                            <i class="fas fa-table"></i> Show Results So Far
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Results Section -->
+                            <div id="resultsSection" class="card" style="display: none;">
+                                <div class="card-header">
+                                    <h5>Discovery Results</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div id="summaryInfo" class="alert alert-success mb-4"></div>
+                                    
+                                    <!-- Results Table -->
+                                    <div id="tableContainer">
+                                        <!-- Table will be populated here -->
+                                    </div>
                                 </div>
                             </div>
                             
@@ -1736,6 +1779,360 @@ $(document).ready(function() {
             $('.enrich-specific').hide();
         }
     });
+
+    // Discovery Tab Handlers
+    let discoveryBooks = [];
+    let discoveryCurrentIndex = 0;
+    let discoveryAutoEnrich = false;
+    let discoveryImportToDb = false;
+    let discoveryTotalBooks = 0;
+    let discoveryProcessedBooks = 0;
+    let discoveryImportedBooks = 0;
+    let discoveryErrorBooks = 0;
+    let discoveryCancelled = false;
+
+    $('#discoveryForm').on('submit', function(e) {
+        e.preventDefault();
+        startDiscovery();
+    });
+
+    async function startDiscovery() {
+        const form = document.getElementById('discoveryForm');
+        const formData = new FormData(form);
+        
+        discoveryAutoEnrich = document.getElementById('auto_enrich').checked;
+        discoveryImportToDb = document.getElementById('import_to_db').checked;
+        
+        // Show progress section
+        document.getElementById('progressSection').style.display = 'block';
+        document.getElementById('resultsSection').style.display = 'none';
+        
+        // Reset counters
+        discoveryCurrentIndex = 0;
+        discoveryProcessedBooks = 0;
+        discoveryImportedBooks = 0;
+        discoveryErrorBooks = 0;
+        discoveryCancelled = false;
+        
+        // Show cancel button
+        document.getElementById('cancelButton').style.display = 'inline-block';
+        document.getElementById('showResultsButton').style.display = 'none';
+        
+        // Disable form
+        $('#startDiscoveryBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Discovering...');
+        
+        try {
+            // Step 1: Discover all books
+            updateDiscoveryProgress(0, 'Discovering books from website...');
+            
+            const discoverData = new FormData();
+            discoverData.append('action', 'discover_all');
+            discoverData.append('url', formData.get('discovery_url'));
+            discoverData.append('age_filter', formData.get('age_filter'));
+            
+            const response = await fetch('book-discovery-ajax.php', {
+                method: 'POST',
+                body: discoverData
+            });
+            
+            const result = await response.json();
+            
+            if (!result.success) {
+                throw new Error(result.error);
+            }
+            
+            discoveryBooks = result.books;
+            discoveryTotalBooks = result.total;
+            
+            if (discoveryTotalBooks === 0) {
+                updateDiscoveryProgress(100, 'No books found matching your criteria.');
+                $('#startDiscoveryBtn').prop('disabled', false).html('<i class="fas fa-search"></i> Start Discovery');
+                return;
+            }
+            
+            updateDiscoveryProgress(10, `Found ${discoveryTotalBooks} books. Starting processing...`);
+            
+            // Step 2: Process books one by one
+            await processDiscoveryBooks();
+            
+            // Step 3: Show results
+            showDiscoveryResults();
+            
+        } catch (error) {
+            console.error('Discovery error:', error);
+            updateDiscoveryProgress(0, `Error: ${error.message}`, 'danger');
+            $('#startDiscoveryBtn').prop('disabled', false).html('<i class="fas fa-search"></i> Start Discovery');
+        }
+    }
+
+    async function processDiscoveryBooks() {
+        for (let i = 0; i < discoveryBooks.length; i++) {
+            // Check if process was cancelled
+            if (discoveryCancelled) {
+                updateDiscoveryProgress(getCurrentDiscoveryProgress(i), 'Process cancelled by user', 'warning');
+                document.getElementById('currentBookInfo').style.display = 'none';
+                document.getElementById('cancelButton').style.display = 'none';
+                document.getElementById('showResultsButton').style.display = 'inline-block';
+                $('#startDiscoveryBtn').prop('disabled', false).html('<i class="fas fa-search"></i> Start Discovery');
+                return;
+            }
+            
+            const book = discoveryBooks[i];
+            const progress = 10 + ((i / discoveryBooks.length) * 80); // 10-90%
+            
+            // Show current book being processed
+            document.getElementById('currentBookInfo').style.display = 'block';
+            document.getElementById('currentBookTitle').textContent = book.title || 'Unknown Title';
+            
+            updateDiscoveryProgress(progress, `Processing book ${i + 1} of ${discoveryBooks.length}: ${book.title}`);
+            
+            try {
+                // Enrich if requested
+                if (discoveryAutoEnrich) {
+                    const enrichData = new FormData();
+                    enrichData.append('action', 'enrich_book');
+                    enrichData.append('book', JSON.stringify(book));
+                    
+                    const enrichResponse = await fetch('book-discovery-ajax.php', {
+                        method: 'POST',
+                        body: enrichData
+                    });
+                    
+                    const enrichResult = await enrichResponse.json();
+                    
+                    if (enrichResult.success) {
+                        discoveryBooks[i] = enrichResult.book;
+                    }
+                }
+                
+                // Import if requested
+                if (discoveryImportToDb) {
+                    const importData = new FormData();
+                    importData.append('action', 'import_book');
+                    importData.append('book', JSON.stringify(discoveryBooks[i]));
+                    
+                    const importResponse = await fetch('book-discovery-ajax.php', {
+                        method: 'POST',
+                        body: importData
+                    });
+                    
+                    const importResult = await importResponse.json();
+                    
+                    if (importResult.success) {
+                        discoveryImportedBooks++;
+                        discoveryBooks[i].imported = true;
+                    } else {
+                        discoveryBooks[i].import_error = importResult.message;
+                    }
+                }
+                
+                discoveryProcessedBooks++;
+                
+            } catch (error) {
+                console.error(`Error processing book ${i + 1}:`, error);
+                discoveryErrorBooks++;
+                discoveryBooks[i].processing_error = error.message;
+            }
+            
+            // Small delay to show progress
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        // Hide current book info and cancel button
+        document.getElementById('currentBookInfo').style.display = 'none';
+        document.getElementById('cancelButton').style.display = 'none';
+        updateDiscoveryProgress(100, 'Processing complete!', 'success');
+        $('#startDiscoveryBtn').prop('disabled', false).html('<i class="fas fa-search"></i> Start Discovery');
+    }
+
+    function updateDiscoveryProgress(percentage, message, type = 'info') {
+        const progressBar = document.getElementById('progressBar');
+        const progressMessage = document.getElementById('progressMessage');
+        
+        progressBar.style.width = percentage + '%';
+        progressBar.setAttribute('aria-valuenow', percentage);
+        progressBar.textContent = Math.round(percentage) + '%';
+        
+        progressMessage.textContent = message;
+        progressMessage.className = `alert alert-${type}`;
+    }
+
+    function getCurrentDiscoveryProgress(currentIndex) {
+        return 10 + ((currentIndex / discoveryBooks.length) * 80);
+    }
+
+    function cancelDiscovery() {
+        discoveryCancelled = true;
+        updateDiscoveryProgress(getCurrentDiscoveryProgress(discoveryProcessedBooks), 'Cancelling process...', 'warning');
+    }
+
+    function showPartialResults() {
+        // Show results section with processed books so far
+        document.getElementById('resultsSection').style.display = 'block';
+        
+        // Update summary for partial results
+        const summaryInfo = document.getElementById('summaryInfo');
+        summaryInfo.className = 'alert alert-warning mb-4';
+        let summaryHtml = `
+            <h6>Partial Results (Process Cancelled):</h6>
+            <ul class="mb-0">
+                <li>Total books discovered: ${discoveryTotalBooks}</li>
+                <li>Successfully processed: ${discoveryProcessedBooks}</li>
+                <li>Remaining unprocessed: ${discoveryTotalBooks - discoveryProcessedBooks}</li>
+                <li>Errors: ${discoveryErrorBooks}</li>
+        `;
+        
+        if (discoveryAutoEnrich) {
+            summaryHtml += `<li>Books enriched with API data: ${discoveryProcessedBooks}</li>`;
+        }
+        
+        if (discoveryImportToDb) {
+            summaryHtml += `<li>Successfully imported: ${discoveryImportedBooks}</li>`;
+        }
+        
+        summaryHtml += '</ul>';
+        summaryInfo.innerHTML = summaryHtml;
+        
+        // Show only processed books in table
+        const processedBooks = discoveryBooks.slice(0, discoveryProcessedBooks);
+        renderDiscoveryTable(processedBooks);
+        
+        // Hide the show results button
+        document.getElementById('showResultsButton').style.display = 'none';
+    }
+
+    function showDiscoveryResults() {
+        // Show results section
+        document.getElementById('resultsSection').style.display = 'block';
+        
+        // Update summary
+        const summaryInfo = document.getElementById('summaryInfo');
+        let summaryHtml = `
+            <h6>Summary:</h6>
+            <ul class="mb-0">
+                <li>Total books discovered: ${discoveryTotalBooks}</li>
+                <li>Successfully processed: ${discoveryProcessedBooks}</li>
+                <li>Errors: ${discoveryErrorBooks}</li>
+        `;
+        
+        if (discoveryAutoEnrich) {
+            summaryHtml += `<li>Books enriched with API data: ${discoveryProcessedBooks}</li>`;
+        }
+        
+        if (discoveryImportToDb) {
+            summaryHtml += `<li>Successfully imported: ${discoveryImportedBooks}</li>`;
+        }
+        
+        summaryHtml += '</ul>';
+        summaryInfo.innerHTML = summaryHtml;
+        
+        // Show all books in table
+        renderDiscoveryTable(discoveryBooks);
+    }
+
+    function renderDiscoveryTable(books) {
+        let tableHtml = `
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Title</th>
+                            <th>Author</th>
+                            <th>Age Range</th>
+                            <th>Year</th>
+                            <th>ISBN</th>
+                            <th>Publisher</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        books.forEach((book, index) => {
+            const status = book.processing_error ? 'Error' : (book.imported ? 'Imported' : 'Ready');
+            const statusClass = status === 'Error' ? 'text-danger' : (status === 'Imported' ? 'text-success' : 'text-info');
+            
+            tableHtml += `
+                <tr>
+                    <td>${book.title || ''}</td>
+                    <td>${book.author || ''}</td>
+                    <td>${book.age_range || ''}</td>
+                    <td>${book.year || ''}</td>
+                    <td>${book.isbn || book.isbn13 || ''}</td>
+                    <td>${book.publisher || ''}</td>
+                    <td><span class="${statusClass}">${status}</span></td>
+                </tr>
+            `;
+        });
+        
+        tableHtml += `
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="mt-3">
+                <button class="btn btn-success me-2" onclick="exportDiscoveryToCSV()">
+                    <i class="fas fa-download"></i> Export as CSV
+                </button>
+                <button class="btn btn-info me-2" onclick="exportDiscoveryToJSON()">
+                    <i class="fas fa-download"></i> Export as JSON
+                </button>
+            </div>
+        `;
+        
+        document.getElementById('tableContainer').innerHTML = tableHtml;
+    }
+
+    function exportDiscoveryToCSV() {
+        let csv = 'Title,Author,Age Range,Year,ISBN,Publisher,Status\n';
+        
+        discoveryBooks.forEach(book => {
+            const status = book.processing_error ? 'Error' : (book.imported ? 'Imported' : 'Ready');
+            const row = [
+                book.title || '',
+                book.author || '',
+                book.age_range || '',
+                book.year || '',
+                book.isbn || book.isbn13 || '',
+                book.publisher || '',
+                status
+            ].map(field => `"${field.replace(/"/g, '""')}"`).join(',');
+            csv += row + '\n';
+        });
+        
+        downloadFile(csv, 'discovered-books.csv', 'text/csv');
+    }
+
+    function exportDiscoveryToJSON() {
+        const data = discoveryBooks.map(book => ({
+            title: book.title || '',
+            author: book.author || '',
+            age_range: book.age_range || '',
+            year: book.year || '',
+            isbn: book.isbn || book.isbn13 || '',
+            publisher: book.publisher || '',
+            enriched: discoveryAutoEnrich,
+            imported: book.imported || false
+        }));
+        
+        downloadFile(JSON.stringify(data, null, 2), 'discovered-books.json', 'application/json');
+    }
+
+    function downloadFile(content, filename, mimeType) {
+        const blob = new Blob([content], { type: mimeType });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        window.URL.revokeObjectURL(url);
+    }
+
+    // Make functions global so they can be called from onclick handlers
+    window.cancelDiscovery = cancelDiscovery;
+    window.showPartialResults = showPartialResults;
+    window.exportDiscoveryToCSV = exportDiscoveryToCSV;
+    window.exportDiscoveryToJSON = exportDiscoveryToJSON;
 });
 </script>
 

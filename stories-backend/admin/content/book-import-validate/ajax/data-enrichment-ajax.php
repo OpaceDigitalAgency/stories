@@ -543,7 +543,7 @@ function handleApplyEnrichment() {
                 error_log("Maturity rating field: value='$value', mapping to age_range");
 
                 if (!empty($value)) {
-                    $mappedAgeRange = mapMaturityRatingToAgeRange($value);
+                    $mappedAgeRange = mapMaturityToAgeRangeFromTable($value);
                     if ($mappedAgeRange && columnExists('books', 'age_range')) {
                         $updateFields[] = "age_range = ?";
                         $params[] = $mappedAgeRange;
@@ -1002,72 +1002,7 @@ function mapMaturityToAgeRange($maturityRating) {
     }
 }
 
-/**
- * Map maturity rating to appropriate age range using database values
- */
-function mapMaturityRatingToAgeRange($maturityRating) {
-    global $db;
 
-    try {
-        // Get available age ranges from database
-        $stmt = $db->query("SELECT range_name FROM age_ranges ORDER BY id ASC");
-        $ageRanges = $stmt->fetchAll(PDO::FETCH_COLUMN);
-
-        if (empty($ageRanges)) {
-            // Fallback to hardcoded mapping if no database ranges
-            return mapMaturityToAgeRange($maturityRating);
-        }
-
-        $maturity = strtoupper(trim($maturityRating));
-
-        // Map based on maturity rating
-        switch ($maturity) {
-            case 'NOT_MATURE':
-            case 'EVERYONE':
-            case 'ALL_AGES':
-                // Find the most general/youngest age range
-                foreach (['All Ages', '0-2', '3-5', '6-8'] as $preferred) {
-                    if (in_array($preferred, $ageRanges)) {
-                        return $preferred;
-                    }
-                }
-                return $ageRanges[0]; // First available
-
-            case 'MATURE':
-            case 'ADULT':
-            case '18+':
-                // Find adult age ranges
-                foreach (['18+', '16+', '14+'] as $preferred) {
-                    if (in_array($preferred, $ageRanges)) {
-                        return $preferred;
-                    }
-                }
-                return end($ageRanges); // Last available (likely highest age)
-
-            default:
-                // Try to extract age from the rating string
-                if (preg_match('/(\d+)\+?/', $maturity, $matches)) {
-                    $age = intval($matches[1]);
-
-                    // Find closest age range
-                    foreach ($ageRanges as $range) {
-                        if (preg_match('/(\d+)/', $range, $rangeMatches)) {
-                            $rangeAge = intval($rangeMatches[1]);
-                            if ($rangeAge >= $age) {
-                                return $range;
-                            }
-                        }
-                    }
-                }
-
-                return null; // No suitable mapping found
-        }
-
-    } catch (Exception $e) {
-        error_log("Error mapping maturity rating '$maturityRating': " . $e->getMessage());
-        return mapMaturityToAgeRange($maturityRating); // Fallback
-    }
-}
 
 /**
  * Process publisher relationship using authors table

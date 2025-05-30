@@ -53,9 +53,9 @@ class BookTrustScraper {
         $defaultAgeRange = $this->extractAgeRange($url, $xpath);
         error_log("BookTrustScraper: Default age range: " . $defaultAgeRange);
         
-        // Find all book items (using the correct selector from Python script)
-        $bookItems = $xpath->query('//li[@class="reading-width"]');
-        error_log("BookTrustScraper: Found " . $bookItems->length . " book items with selector //li[@class=\"reading-width\"]");
+        // Find all book items (using contains() to match partial class)
+        $bookItems = $xpath->query('//li[contains(@class, "reading-width")]');
+        error_log("BookTrustScraper: Found " . $bookItems->length . " book items with selector //li[contains(@class, \"reading-width\")]");
         
         // If no items found, try alternative selectors for debugging
         if ($bookItems->length === 0) {
@@ -65,12 +65,12 @@ class BookTrustScraper {
             $allLi = $xpath->query('//li');
             error_log("BookTrustScraper: Found " . $allLi->length . " total li elements");
             
-            // Try finding elements with book-related classes
-            $bookClasses = ['book-item', 'book', 'item', 'card'];
+            // Try finding elements with book-related classes using contains()
+            $bookClasses = ['book-item', 'book', 'item', 'card', 'reading-width'];
             foreach ($bookClasses as $class) {
-                $items = $xpath->query("//li[@class='{$class}']");
+                $items = $xpath->query("//li[contains(@class, '{$class}')]");
                 if ($items->length > 0) {
-                    error_log("BookTrustScraper: Found " . $items->length . " items with class '{$class}'");
+                    error_log("BookTrustScraper: Found " . $items->length . " items containing class '{$class}'");
                 }
             }
             

@@ -16,11 +16,11 @@ error_reporting(E_ALL);
 ini_set('display_errors', 0); // Don't display errors in output, but log them
 
 try {
-    // Include auth check - FIXED: Correct path from ajax subdirectory
-    require_once '../../../../includes/auth-check.php';
+    // Include auth check - FIXED: Correct path from ajax subdirectory to admin/includes
+    require_once '../../../includes/auth-check.php';
 
-    // Include database connection - FIXED: Correct path from ajax subdirectory
-    require_once '../../../../includes/db-connect.php';
+    // Include database connection - FIXED: Correct path from ajax subdirectory to admin/includes
+    require_once '../../../includes/db-connect.php';
     require_once '../functions/data-enrichment-functions.php';
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'message' => 'Failed to load required files: ' . $e->getMessage()]);

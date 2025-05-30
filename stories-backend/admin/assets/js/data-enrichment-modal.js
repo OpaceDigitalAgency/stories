@@ -924,7 +924,8 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 if (selectedAgeRange && ageToReadingMap[selectedAgeRange]) {
                     const expectedReading = ageToReadingMap[selectedAgeRange];
                     console.log('🔄 Syncing to reading level:', expectedReading);
-                    syncReadingLevelToAgeRange(expectedReading);
+                    // Just log for now - don't try to update display
+                    console.log('🔄 Expected reading level:', expectedReading);
                 }
             }
         });

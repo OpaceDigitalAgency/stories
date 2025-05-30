@@ -10,8 +10,9 @@ require_once '../includes/auth-check.php';
 // Include database connection
 require_once '../includes/db-connect.php';
 
-// Include existing import functions
-require_once 'book-import-process.php';
+// Include existing import functions (only the functions we need, not the full page)
+require_once 'book-import-validate/functions/data-enrichment-functions.php';
+require_once '../includes/admin-functions.php';
 
 // Include enrichment functions
 require_once 'book-import-validate/functions/data-enrichment-functions.php';

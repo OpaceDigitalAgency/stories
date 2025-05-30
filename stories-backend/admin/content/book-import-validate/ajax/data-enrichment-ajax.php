@@ -2448,7 +2448,7 @@ function synchronizeAgeAndReadingLevel($bookId) {
         $currentAge = $book['age_range'];
         $currentReading = $book['reading_level'];
 
-        // Age range to reading level mapping
+        // Age range to reading level mapping - UPDATED to match user requirements
         $ageToReadingMap = [
             '0-12 months' => 'Pre-literacy (Sensory)',
             '12-24 months' => 'Pre-literacy (Naming)',
@@ -2456,7 +2456,7 @@ function synchronizeAgeAndReadingLevel($bookId) {
             '3-4 years' => 'Early Pre-reader',
             '4-5 years' => 'Beginning Reader',
             '5-6 years' => 'Early Reader',
-            '6-7 years' => 'Developing Reader',
+            '6-7 years' => 'Early Reader',        // FIXED: was "Developing Reader", now "Early Reader"
             '7-8 years' => 'Transitional Reader',
             '8-9 years' => 'Fluent Reader',
             '9-10 years' => 'Fluent Reader',
@@ -2467,19 +2467,19 @@ function synchronizeAgeAndReadingLevel($bookId) {
             '18+ years' => 'Proficient Reader'
         ];
 
-        // Reading level to age range mapping
+        // Reading level to age range mapping - UPDATED to match user requirements
         $readingToAgeMap = [
             'Pre-literacy (Sensory)' => '0-12 months',
             'Pre-literacy (Naming)' => '12-24 months',
             'Pre-literacy (Mimicry)' => '2-3 years',
             'Early Pre-reader' => '3-4 years',
             'Beginning Reader' => '4-5 years',
-            'Early Reader' => '5-6 years',
-            'Developing Reader' => '6-7 years',
+            'Early Reader' => '5-6 years',        // Maps to user's current database value
+            'Developing Reader' => '5-6 years',   // FIXED: was '6-7 years', now maps to Early Reader range
             'Transitional Reader' => '7-8 years',
-            'Fluent Reader' => '8-9 years', // Default to youngest fluent reader age
-            'Advanced Reader' => '11-14 years', // Default to middle advanced age
-            'Proficient Reader' => '18+ years'
+            'Fluent Reader' => '8-9 years',       // Maps to Amazon's 8-9 years
+            'Advanced Reader' => '11-14 years',
+            'Proficient Reader' => '18+ years'    // Maps to Google Books 18+ years
         ];
 
         $updateFields = [];
@@ -2637,7 +2637,7 @@ function handleFixAgeRangeSync() {
             }
         }
 
-        // 6. Synchronize age ranges with reading levels using standardized values
+        // 6. Synchronize age ranges with reading levels using standardized values - UPDATED
         $ageToReadingMap = [
             '0-12 months' => 'Pre-literacy (Sensory)',
             '12-24 months' => 'Pre-literacy (Naming)',
@@ -2645,7 +2645,7 @@ function handleFixAgeRangeSync() {
             '3-4 years' => 'Early Pre-reader',
             '4-5 years' => 'Beginning Reader',
             '5-6 years' => 'Early Reader',
-            '6-7 years' => 'Developing Reader',
+            '6-7 years' => 'Early Reader',        // FIXED: was "Developing Reader", now "Early Reader"
             '7-8 years' => 'Transitional Reader',
             '8-9 years' => 'Fluent Reader',
             '9-10 years' => 'Fluent Reader',

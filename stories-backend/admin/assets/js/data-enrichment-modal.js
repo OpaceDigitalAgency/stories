@@ -1067,14 +1067,23 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         if (readingField.new_data && readingField.new_data.options) {
             console.log('🔄 Reading level has multiple options:', readingField.new_data.options);
 
-            // Find matching option by exact match or partial match
+            // Find matching option by exact match or partial match - ENHANCED null checks
             let matchingIndex = -1;
             readingField.new_data.options.forEach((option, index) => {
-                if (option.value === expectedReading ||
-                    (option.value && option.value.toLowerCase().includes(expectedReading.toLowerCase())) ||
-                    (expectedReading && expectedReading.toLowerCase().includes(option.value.toLowerCase()))) {
-                    matchingIndex = index;
-                    console.log(`🔄 Found matching reading level option at index ${index}:`, option.value);
+                // CRITICAL FIX: Enhanced null checks to prevent TypeError
+                const optionValue = option?.value;
+                const hasValidOption = optionValue && typeof optionValue === 'string';
+                const hasValidExpected = expectedReading && typeof expectedReading === 'string';
+
+                if (hasValidOption && hasValidExpected) {
+                    if (optionValue === expectedReading ||
+                        optionValue.toLowerCase().includes(expectedReading.toLowerCase()) ||
+                        expectedReading.toLowerCase().includes(optionValue.toLowerCase())) {
+                        matchingIndex = index;
+                        console.log(`🔄 Found matching reading level option at index ${index}:`, optionValue);
+                    }
+                } else {
+                    console.log(`🔄 Skipping reading level option ${index} due to null/invalid values:`, {optionValue, expectedReading});
                 }
             });
 
@@ -1149,14 +1158,23 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         if (ageField.new_data && ageField.new_data.options) {
             console.log('🔄 Age range has multiple options:', ageField.new_data.options);
 
-            // Find matching option by exact match or partial match
+            // Find matching option by exact match or partial match - ENHANCED null checks
             let matchingIndex = -1;
             ageField.new_data.options.forEach((option, index) => {
-                if (option.value === expectedAge ||
-                    (option.value && option.value.toLowerCase().includes(expectedAge.toLowerCase())) ||
-                    (expectedAge && expectedAge.toLowerCase().includes(option.value.toLowerCase()))) {
-                    matchingIndex = index;
-                    console.log(`🔄 Found matching age range option at index ${index}:`, option.value);
+                // CRITICAL FIX: Enhanced null checks to prevent TypeError
+                const optionValue = option?.value;
+                const hasValidOption = optionValue && typeof optionValue === 'string';
+                const hasValidExpected = expectedAge && typeof expectedAge === 'string';
+
+                if (hasValidOption && hasValidExpected) {
+                    if (optionValue === expectedAge ||
+                        optionValue.toLowerCase().includes(expectedAge.toLowerCase()) ||
+                        expectedAge.toLowerCase().includes(optionValue.toLowerCase())) {
+                        matchingIndex = index;
+                        console.log(`🔄 Found matching age range option at index ${index}:`, optionValue);
+                    }
+                } else {
+                    console.log(`🔄 Skipping option ${index} due to null/invalid values:`, {optionValue, expectedAge});
                 }
             });
 

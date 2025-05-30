@@ -1236,6 +1236,18 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
                     return $readingLevel;
                 }
             }
+
+            // CRITICAL FIX: Add Google Books categories to reading level mapping
+            if (isset($match['categories']) && is_array($match['categories'])) {
+                foreach ($match['categories'] as $category) {
+                    if (is_string($category)) {
+                        $readingLevel = mapCategoryToReadingLevel($category);
+                        if ($readingLevel) {
+                            return $readingLevel;
+                        }
+                    }
+                }
+            }
             break;
 
         case 'average_rating':
@@ -1384,6 +1396,43 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
         default:
             // Standard field extraction
             return $match[$fieldName] ?? null;
+    }
+
+    return null;
+}
+
+/**
+ * Map Google Books categories to reading levels
+ */
+function mapCategoryToReadingLevel($category) {
+    $category = strtolower(trim($category));
+
+    // Map Google Books categories to reading levels
+    $categoryMappings = [
+        'adult' => 'Proficient Reader',
+        'young adult' => 'Advanced Reader',
+        'teen' => 'Advanced Reader',
+        'middle grade' => 'Fluent Reader',
+        'children' => 'Early Reader',
+        'juvenile' => 'Early Reader',
+        'picture books' => 'Beginning Reader',
+        'early readers' => 'Early Reader',
+        'chapter books' => 'Transitional Reader',
+        'fiction / general' => 'Proficient Reader',
+        'fiction / literary' => 'Proficient Reader',
+        'fiction / contemporary' => 'Advanced Reader'
+    ];
+
+    // Try exact match first
+    if (isset($categoryMappings[$category])) {
+        return $categoryMappings[$category];
+    }
+
+    // Try partial matches
+    foreach ($categoryMappings as $key => $readingLevel) {
+        if (strpos($category, $key) !== false) {
+            return $readingLevel;
+        }
     }
 
     return null;
@@ -2591,32 +2640,32 @@ function mapGradeLevelToReadingLevel($gradeLevel) {
     // Clean up the grade level string
     $gradeLevel = trim(strtolower($gradeLevel));
 
-    // Map grade levels to reading levels based on UK education system
+    // Map grade levels to reading levels - UPDATED to match user requirements
     $mappings = [
         // Early years
         'pre-k' => 'Pre-literacy (Sensory)',
         'nursery' => 'Pre-literacy (Naming)',
         'reception' => 'Beginning Reader',
 
-        // Primary grades (US system)
+        // Primary grades (US system) - FIXED: Updated to match user requirements
         'k' => 'Beginning Reader',
         'kindergarten' => 'Beginning Reader',
         '1' => 'Early Reader',
-        '2' => 'Developing Reader',
+        '2' => 'Early Reader',           // FIXED: was "Developing Reader", now "Early Reader"
         '3' => 'Transitional Reader',
         '4' => 'Fluent Reader',
         '5' => 'Fluent Reader',
         '6' => 'Fluent Reader',
 
-        // Range mappings
-        '1 - 2' => 'Early Reader',
-        '2 - 3' => 'Developing Reader',
+        // Range mappings - FIXED: Updated to match user requirements
+        '1 - 2' => 'Early Reader',       // FIXED: Both grades 1-2 should be Early Reader
+        '2 - 3' => 'Early Reader',       // FIXED: was "Developing Reader", now "Early Reader"
         '3 - 4' => 'Transitional Reader',
         '4 - 5' => 'Fluent Reader',
         '5 - 6' => 'Fluent Reader',
         '6 - 7' => 'Advanced Reader',
         '7 - 8' => 'Advanced Reader',
-        '8 - 9' => 'Advanced Reader',
+        '8 - 9' => 'Fluent Reader',      // FIXED: This should map to "Fluent Reader" for 8-9 years age range
         '9+' => 'Advanced Reader',
 
         // Secondary

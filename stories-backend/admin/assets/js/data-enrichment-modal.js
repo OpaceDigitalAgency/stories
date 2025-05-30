@@ -1109,12 +1109,16 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         const databaseState = determineDatabaseState(field.current_value, newData.value, source, newData);
 
         // Add disabled styling classes - exact matches should be disabled
-        const disabledClass = (isUnknown || isPendingAmazon || benefitLevel === 'not_beneficial' || benefitLevel === 'exact_match') ? ' disabled-field' : '';
-        const labelClass = (isUnknown || isPendingAmazon || benefitLevel === 'not_beneficial' || benefitLevel === 'exact_match') ? ' text-muted' : '';
+        const shouldDisable = isUnknown || isPendingAmazon || benefitLevel === 'not_beneficial' || benefitLevel === 'exact_match' || databaseState === 'matches_database';
+        const disabledClass = shouldDisable ? ' disabled-field' : '';
+        const labelClass = shouldDisable ? ' text-muted' : '';
 
         // Auto-select database empty fields and purchase links (unless exact match)
-        const shouldAutoSelect = (databaseState === 'database_empty' || databaseState === 'database_wrong') ||
-                                 (fieldName === 'purchase_links' && databaseState !== 'matches_database');
+        // Never auto-select if it matches database exactly
+        const shouldAutoSelect = databaseState !== 'matches_database' && (
+            (databaseState === 'database_empty' || databaseState === 'database_wrong') ||
+            (fieldName === 'purchase_links' && databaseState !== 'matches_database')
+        );
 
         // Add appropriate database state labels
         let databaseStateHtml = '';
@@ -1178,7 +1182,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     <div class="form-check">
                         <input class="form-check-input field-checkbox" type="checkbox"
                                id="field_${fieldName}" name="fields[]" value="${fieldName}"
-                               ${isUnknown || isPendingAmazon || benefitLevel === 'not_beneficial' || benefitLevel === 'exact_match' ? 'disabled' : ''}
+                               ${shouldDisable ? 'disabled' : ''}
                                ${shouldAutoSelect ? 'checked' : ''}>
                         <label class="form-check-label font-weight-bold${labelClass}" for="field_${fieldName}">
                             ${label}

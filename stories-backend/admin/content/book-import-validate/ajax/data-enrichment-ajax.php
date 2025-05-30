@@ -612,7 +612,28 @@ function handleApplyEnrichment() {
     if (empty($updateFields)) {
         $errorMsg = 'No valid fields to update';
         error_log("ERROR: $errorMsg");
-        echo json_encode(['success' => false, 'message' => $errorMsg]);
+        error_log("DEBUG: Fields processed but none were valid:");
+        foreach ($fields as $fieldName => $fieldData) {
+            $value = $fieldData['value'];
+            error_log("  - $fieldName: value='" . json_encode($value) . "', empty=" . (empty($value) ? 'YES' : 'NO') . ", column_exists=" . (columnExists('books', $fieldName) ? 'YES' : 'NO'));
+        }
+        echo json_encode([
+            'success' => false,
+            'message' => $errorMsg,
+            'debug' => [
+                'fields_received' => array_keys($fields),
+                'fields_processed' => count($fields),
+                'valid_fields' => count($updateFields),
+                'field_details' => array_map(function($fieldName, $fieldData) {
+                    $value = $fieldData['value'];
+                    return [
+                        'value' => $value,
+                        'empty' => empty($value),
+                        'column_exists' => columnExists('books', $fieldName)
+                    ];
+                }, array_keys($fields), $fields)
+            ]
+        ]);
         return;
     }
 

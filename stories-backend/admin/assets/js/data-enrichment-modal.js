@@ -486,6 +486,11 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             book_id: window.currentBookId  // Pass book ID for duplicate prevention
         }, function(res) {
             console.log('📦 Amazon AJAX response received:', res);
+            console.log('📦 URGENT_DEBUG: Response success:', res.success);
+            console.log('📦 URGENT_DEBUG: Response data:', res.data);
+            console.log('📦 URGENT_DEBUG: Data keys:', res.data ? Object.keys(res.data) : 'no data');
+            console.log('📦 URGENT_DEBUG: Format in data:', res.data?.format);
+            console.log('📦 URGENT_DEBUG: Price range in data:', res.data?.price_range);
 
             if (res.success && res.data && Object.keys(res.data).length > 0) {
                 // Integrate Amazon data into the enrichment fields
@@ -509,6 +514,13 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                         $newValueDiv.text('No Amazon data found');
                     }
                 });
+
+                // URGENT DEBUG: Check if fields exist but Amazon data failed
+                console.log('📦 URGENT_DEBUG: Checking existing fields for format and price_range...');
+                const formatField = window.currentEnrichmentData?.fields?.format;
+                const priceField = window.currentEnrichmentData?.fields?.price_range;
+                console.log('📦 URGENT_DEBUG: Format field exists:', !!formatField, formatField);
+                console.log('📦 URGENT_DEBUG: Price range field exists:', !!priceField, priceField);
             }
         }, 'json').fail(function(xhr, status, error) {
             console.error('📦 Amazon AJAX error:', { xhr, status, error });

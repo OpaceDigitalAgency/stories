@@ -1008,8 +1008,8 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     const expectedAge = readingToAgeMap[selectedReadingLevel];
                     console.log('🔄 Expected age range:', expectedAge);
 
-                    // Update the age range field to show the corresponding value
-                    updateAgeRangeDisplay(expectedAge);
+                    // Just log for now - don't try to update display
+                    console.log('🔄 Would update age range to:', expectedAge);
                 } else {
                     console.log('🔄 No mapping found for reading level:', selectedReadingLevel);
                     console.log('🔄 Exact match check:', readingToAgeMap[selectedReadingLevel]);
@@ -1020,7 +1020,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     );
                     if (partialMatch) {
                         console.log('🔄 Found partial match:', partialMatch, '→', readingToAgeMap[partialMatch]);
-                        updateAgeRangeDisplay(readingToAgeMap[partialMatch]);
+                        console.log('🔄 Would update age range to:', readingToAgeMap[partialMatch]);
                     }
                 }
             }, 100);
@@ -1226,13 +1226,13 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
     // Legacy function - keeping for compatibility but simplified
     function syncReadingLevelField(expectedReading, isRevertMode = false) {
         console.log('🔄 syncReadingLevelField called with:', expectedReading, 'revert mode:', isRevertMode);
-        updateReadingLevelDisplay(expectedReading);
+        console.log('🔄 Would update reading level display to:', expectedReading);
     }
 
     // Legacy function - keeping for compatibility but simplified
     function syncAgeRangeField(expectedAge, isRevertMode = false) {
         console.log('🔄 syncAgeRangeField called with:', expectedAge, 'revert mode:', isRevertMode);
-        updateAgeRangeDisplay(expectedAge);
+        console.log('🔄 Would update age range display to:', expectedAge);
     }
 
     function createSingleSourceField(fieldName, field, label, isUnknown, isPendingAmazon) {

@@ -145,13 +145,43 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
             return false;
         }
 
-        // Special handling for purchase_links (JSON vs display format)
-        if (typeof newValue === 'object' && typeof currentValue === 'string') {
+        // CRITICAL FIX: Enhanced purchase links comparison
+        if ((typeof newValue === 'object' && typeof currentValue === 'string') ||
+            (typeof newValue === 'string' && typeof currentValue === 'string' &&
+             (newValue.includes('£') || currentValue.includes('£') ||
+              newValue.includes('$') || currentValue.includes('$')))) {
             // Parse current value as purchase links display format
             try {
-                const currentParsed = parsePurchaseLinksDisplay(currentValue);
-                const newParsed = normalizePurchaseLinks(newValue);
-                return JSON.stringify(currentParsed) === JSON.stringify(newParsed);
+                console.log('🛒 PURCHASE_LINKS_DEBUG: Comparing purchase links:', {
+                    currentValue: currentValue,
+                    newValue: newValue,
+                    currentType: typeof currentValue,
+                    newType: typeof newValue
+                });
+
+                let currentParsed, newParsed;
+
+                if (typeof currentValue === 'string') {
+                    currentParsed = parsePurchaseLinksDisplay(currentValue);
+                } else {
+                    currentParsed = normalizePurchaseLinks(currentValue);
+                }
+
+                if (typeof newValue === 'string') {
+                    newParsed = parsePurchaseLinksDisplay(newValue);
+                } else {
+                    newParsed = normalizePurchaseLinks(newValue);
+                }
+
+                console.log('🛒 PURCHASE_LINKS_DEBUG: Parsed values:', {
+                    currentParsed: currentParsed,
+                    newParsed: newParsed
+                });
+
+                // Compare the normalized objects (order-independent)
+                const isEqual = comparePurchaseLinksObjects(currentParsed, newParsed);
+                console.log('🛒 PURCHASE_LINKS_DEBUG: Are equal:', isEqual);
+                return isEqual;
             } catch (e) {
                 console.log('🔍 Purchase links comparison failed:', e);
             }
@@ -213,21 +243,81 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
 
     /**
      * Parse purchase links display format into normalized object
+     * CRITICAL FIX: Enhanced parsing for various display formats
      */
     function parsePurchaseLinksDisplay(displayText) {
         const links = {};
-        const lines = displayText.split('\n');
 
-        for (const line of lines) {
-            const match = line.match(/^([^:]+):\s*(.+)$/);
-            if (match) {
-                const format = match[1].trim();
-                const price = match[2].trim();
-                links[format] = { price: price };
+        // Handle different display formats
+        if (typeof displayText === 'string') {
+            // Split by newlines or common separators
+            const lines = displayText.split(/[\n\r]+/).filter(line => line.trim());
+
+            for (const line of lines) {
+                // Match patterns like "Kindle: £3.19" or "Paperback: £2.99 Default"
+                const match = line.match(/^([^:]+):\s*([£$€¥]\d+\.?\d*)\s*(.*)?$/);
+                if (match) {
+                    const format = match[1].trim();
+                    const price = match[2].trim();
+                    const extra = match[3] ? match[3].trim() : '';
+
+                    links[format] = {
+                        price: price,
+                        is_selected: extra.toLowerCase().includes('default')
+                    };
+                }
             }
         }
 
+        console.log('🛒 Parsed purchase links from display:', { displayText, links });
         return links;
+    }
+
+    /**
+     * Compare two purchase links objects (order-independent)
+     */
+    function comparePurchaseLinksObjects(obj1, obj2) {
+        const keys1 = Object.keys(obj1).sort();
+        const keys2 = Object.keys(obj2).sort();
+
+        // Check if they have the same number of keys
+        if (keys1.length !== keys2.length) {
+            console.log('🛒 Different number of purchase options:', keys1.length, 'vs', keys2.length);
+            return false;
+        }
+
+        // Check if all keys match
+        if (!keys1.every(key => keys2.includes(key))) {
+            console.log('🛒 Different purchase option keys:', keys1, 'vs', keys2);
+            return false;
+        }
+
+        // Check if all values match
+        for (const key of keys1) {
+            const val1 = obj1[key];
+            const val2 = obj2[key];
+
+            // Compare prices (normalize currency symbols)
+            const price1 = val1.price ? val1.price.replace(/[£$€¥]/g, '').trim() : '';
+            const price2 = val2.price ? val2.price.replace(/[£$€¥]/g, '').trim() : '';
+
+            if (price1 !== price2) {
+                console.log('🛒 Different prices for', key, ':', price1, 'vs', price2);
+                return false;
+            }
+
+            // Compare default status (optional)
+            const isDefault1 = val1.is_selected || false;
+            const isDefault2 = val2.is_selected || false;
+
+            if (isDefault1 !== isDefault2) {
+                console.log('🛒 Different default status for', key, ':', isDefault1, 'vs', isDefault2);
+                return false;
+            }
+        }
+
+        console.log('🛒 Purchase links objects are identical');
+        return true;
     }
 
     /**

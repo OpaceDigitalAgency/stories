@@ -52,7 +52,7 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
                 <div class="form-check mt-2">
                     <input class="form-check-input" type="radio" name="field_${fieldName}_option" id="field_${fieldName}_${index}" value="${index}">
                     <label class="form-check-label" for="field_${fieldName}_${index}">
-                        <strong>${sourceDisplayName} (${confidence}%)</strong>
+                        <strong>${sourceDisplayName}</strong>
                         <div class="mt-1">${displayValue}</div>
                     </label>
                 </div>
@@ -155,10 +155,10 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
             }
         });
 
-        // Create header with sources and combined confidence
+        // CRITICAL FIX: Create clean header without individual confidence scores
         const headerText = sourceDisplayNames.length > 1 ?
-            `${label} ${sourceDisplayNames.join(' + ')} (${avgConfidence}%)` :
-            `${label} ${sourceDisplayNames[0]} (${avgConfidence}%)`;
+            `${label} (${sourceDisplayNames.join(' + ')})` :
+            `${label} (${sourceDisplayNames[0]})`;
 
         return `
             <div class="col-md-6 mb-3">

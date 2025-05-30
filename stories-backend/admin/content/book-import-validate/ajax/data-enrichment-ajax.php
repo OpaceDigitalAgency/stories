@@ -151,9 +151,11 @@ try {
                 // CRITICAL FIX: Filter out duplicate ISBN fields that match current book data
                 if (!empty($amazonPayload['enrichment_fields'])) {
                     foreach ($amazonPayload['enrichment_fields'] as $fieldName => $fieldData) {
-                        // Skip ISBN fields if they match current book data to prevent duplicates
+                        // CRITICAL FIX: Skip ISBN fields if they match current book data to prevent duplicates
                         if (($fieldName === 'isbn' || $fieldName === 'isbn13') && $currentBookData) {
                             $currentValue = null;
+
+                            // Map field names correctly - getCurrentBookData returns 'isbn' and 'isbn13'
                             if ($fieldName === 'isbn' && isset($currentBookData['isbn'])) {
                                 $currentValue = $currentBookData['isbn'];
                             } elseif ($fieldName === 'isbn13' && isset($currentBookData['isbn13'])) {
@@ -163,6 +165,8 @@ try {
                             // Normalize both values for comparison (remove hyphens)
                             $normalizedCurrent = preg_replace('/[^0-9X]/i', '', $currentValue ?? '');
                             $normalizedAmazon = preg_replace('/[^0-9X]/i', '', $fieldData['new_data']['value'] ?? '');
+
+                            error_log("DUPLICATE_FIX: Comparing $fieldName - current: '$normalizedCurrent' vs amazon: '$normalizedAmazon'");
 
                             if ($normalizedCurrent === $normalizedAmazon && !empty($normalizedCurrent)) {
                                 error_log("DUPLICATE_FIX: Skipping Amazon $fieldName field in AJAX - matches current value exactly ($normalizedCurrent)");

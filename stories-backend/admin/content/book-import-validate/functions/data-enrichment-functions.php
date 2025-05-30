@@ -1157,10 +1157,19 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
             break;
 
         case 'age_range':
-            // Open Library subject_facet[] contains specific patterns
+            // CRITICAL FIX: Handle direct age range values from Google Books
             $ageRange = null;
 
-            if (isset($match['subject_facet']) && is_array($match['subject_facet'])) {
+            // First check if there's a direct age_range field (Google Books)
+            if (isset($match['age_range']) && !empty($match['age_range'])) {
+                $rawAgeRange = $match['age_range'];
+                // Use the same mapping function as Amazon data
+                $ageRange = mapAmazonAgeRangeToStandard($rawAgeRange);
+                error_log("GOOGLE_BOOKS_AGE_RANGE: Mapped '$rawAgeRange' to '$ageRange'");
+            }
+
+            // Open Library subject_facet[] contains specific patterns
+            if (!$ageRange && isset($match['subject_facet']) && is_array($match['subject_facet'])) {
                 foreach ($match['subject_facet'] as $subject) {
                     if (stripos($subject, "Children's Books/Ages 9-12 Fiction") !== false) {
                         $ageRange = '9-10 years'; // Use standard synchronized value

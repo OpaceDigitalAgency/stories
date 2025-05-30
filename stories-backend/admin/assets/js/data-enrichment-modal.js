@@ -544,15 +544,22 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     return;
                 }
 
-                // CRITICAL FIX: Check for duplicate ISBN fields before processing
+                // CRITICAL FIX: Prevent duplicate ISBN fields completely
                 if ((fieldName === 'isbn' || fieldName === 'isbn13')) {
-                    // Check if this ISBN field already exists in the DOM
-                    const existingFieldElement = $(`.enrichment-field[data-field="${fieldName}"]`);
-                    if (existingFieldElement.length > 0) {
-                        console.log(`📦 DUPLICATE_FIX: ISBN field ${fieldName} already exists in DOM - merging instead of creating new`);
+                    console.log(`📦 DUPLICATE_FIX: Processing Amazon ${fieldName} field`);
 
-                        // Find the existing field and merge Amazon data as additional source
-                        if (existingField && existingField.new_data) {
+                    // Check if this ISBN field already exists in the enrichment data
+                    if (existingField) {
+                        console.log(`📦 DUPLICATE_FIX: ${fieldName} field already exists in data - merging Amazon as additional source`);
+
+                        // If the existing field has the same value as Amazon, skip it entirely
+                        if (existingField.current_value === amazonFieldData.new_data.value) {
+                            console.log(`📦 DUPLICATE_FIX: Skipping ${fieldName} - Amazon value matches current value exactly`);
+                            return; // Skip this field completely
+                        }
+
+                        // If existing field has new_data, merge Amazon as additional source
+                        if (existingField.new_data) {
                             if (!existingField.new_data.options) {
                                 // Convert single source to multi-source
                                 const originalData = {
@@ -579,7 +586,16 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                             existingField.new_data.source += ' + amazon';
                             console.log(`📦 DUPLICATE_FIX: Merged Amazon data into existing ${fieldName} field`);
                             return; // Skip creating new field
+                        } else {
+                            // Field exists but has no new_data (matches database) - don't add Amazon data
+                            console.log(`📦 DUPLICATE_FIX: ${fieldName} matches database exactly - skipping Amazon data`);
+                            return; // Skip this field completely
                         }
+                    } else {
+                        // Field doesn't exist in enrichment data - this shouldn't happen for ISBN fields
+                        // but if it does, we should not create a new field if it matches current value
+                        console.log(`📦 DUPLICATE_FIX: ${fieldName} field not found in enrichment data - this is unexpected`);
+                        return; // Skip creating new field to prevent duplicates
                     }
                 }
 

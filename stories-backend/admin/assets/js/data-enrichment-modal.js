@@ -927,7 +927,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
 
         // Listen for age range source changes (radio buttons)
         $(document).on('change', 'input[type="radio"][name*="age_range"]', function() {
-            console.log('🔄 Age range source changed:', $(this).val());
+            console.log('🔄 Age range source changed:', $(this).val(), $(this).attr('name'));
 
             // Only sync if the age range field is currently selected
             const ageRangeFieldSelected = $('input[type="checkbox"][value="age_range"]').is(':checked');
@@ -936,14 +936,19 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 return;
             }
 
-            const selectedAgeRange = getSelectedFieldValue('age_range');
-            console.log('🔄 New age range source value:', selectedAgeRange);
+            // Wait a moment for the UI to update, then get the selected value
+            setTimeout(() => {
+                const selectedAgeRange = getSelectedFieldValue('age_range');
+                console.log('🔄 New age range source value:', selectedAgeRange);
 
-            if (selectedAgeRange && ageToReadingMap[selectedAgeRange]) {
-                const expectedReading = ageToReadingMap[selectedAgeRange];
-                console.log('🔄 Syncing to reading level:', expectedReading);
-                syncReadingLevelField(expectedReading);
-            }
+                if (selectedAgeRange && ageToReadingMap[selectedAgeRange]) {
+                    const expectedReading = ageToReadingMap[selectedAgeRange];
+                    console.log('🔄 Syncing to reading level:', expectedReading);
+                    syncReadingLevelField(expectedReading);
+                } else {
+                    console.log('🔄 No mapping found for age range:', selectedAgeRange);
+                }
+            }, 100);
         });
 
         // Listen for changes in reading level selections - ENHANCED event handling for source switching
@@ -966,24 +971,42 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 return;
             }
 
-            const selectedReadingLevel = getSelectedFieldValue('reading_level');
-            console.log('🔄 Selected reading level:', selectedReadingLevel);
-            console.log('🔄 Available mappings:', Object.keys(readingToAgeMap));
+            // Wait a moment for the UI to update, then get the selected value
+            setTimeout(() => {
+                const selectedReadingLevel = getSelectedFieldValue('reading_level');
+                console.log('🔄 Selected reading level:', selectedReadingLevel);
+                console.log('🔄 Available mappings:', Object.keys(readingToAgeMap));
 
-            if (selectedReadingLevel && readingToAgeMap[selectedReadingLevel]) {
-                const expectedAge = readingToAgeMap[selectedReadingLevel];
-                console.log('🔄 Expected age range:', expectedAge);
-                syncAgeRangeField(expectedAge);
-            } else {
-                console.log('🔄 No mapping found for reading level:', selectedReadingLevel);
-                console.log('🔄 Exact match check:', readingToAgeMap[selectedReadingLevel]);
-            }
+                if (selectedReadingLevel && readingToAgeMap[selectedReadingLevel]) {
+                    const expectedAge = readingToAgeMap[selectedReadingLevel];
+                    console.log('🔄 Expected age range:', expectedAge);
+                    syncAgeRangeField(expectedAge);
+                } else {
+                    console.log('🔄 No mapping found for reading level:', selectedReadingLevel);
+                    console.log('🔄 Exact match check:', readingToAgeMap[selectedReadingLevel]);
+
+                    // Try partial matching for reading levels
+                    const partialMatch = Object.keys(readingToAgeMap).find(key =>
+                        selectedReadingLevel && key.toLowerCase().includes(selectedReadingLevel.toLowerCase())
+                    );
+                    if (partialMatch) {
+                        console.log('🔄 Found partial match:', partialMatch, '→', readingToAgeMap[partialMatch]);
+                        syncAgeRangeField(readingToAgeMap[partialMatch]);
+                    }
+                }
+            }, 100);
         });
     }
 
     // Get the currently selected value for a field
     function getSelectedFieldValue(fieldName) {
         console.log('🔍 Getting selected value for field:', fieldName);
+
+        const fieldData = window.currentEnrichmentData?.fields?.[fieldName];
+        if (!fieldData) {
+            console.log('🔍 No field data found for:', fieldName);
+            return null;
+        }
 
         // Check for multi-option fields first
         const checkedOption = $(`input[name="field_${fieldName}_option"]:checked`);
@@ -993,33 +1016,31 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             const optionIndex = parseInt(checkedOption.val());
             console.log('🔍 Selected option index:', optionIndex);
 
-            const fieldData = window.currentEnrichmentData.fields[fieldName];
-            console.log('🔍 Field data:', fieldData);
-
-            if (fieldData && fieldData.new_data && fieldData.new_data.options) {
-                const value = fieldData.new_data.options[optionIndex]?.value;
+            if (fieldData.new_data && fieldData.new_data.options && fieldData.new_data.options[optionIndex]) {
+                const value = fieldData.new_data.options[optionIndex].value;
                 console.log('🔍 Multi-option field value:', value);
                 console.log('🔍 All options:', fieldData.new_data.options);
                 return value;
             } else {
-                console.log('🔍 No options found in field data');
+                console.log('🔍 No options found at index:', optionIndex);
             }
         }
 
-        // Check for single-source fields with various naming patterns
-        const checkedField = $(`input[name="field_${fieldName}"]:checked, input[name="fields[]"][value="${fieldName}"]:checked`);
-        console.log('🔍 Checked field elements found:', checkedField.length);
-
-        if (checkedField.length > 0) {
-            const fieldData = window.currentEnrichmentData.fields[fieldName];
-            const value = fieldData?.new_data?.value;
+        // For single-source fields, return the new_data value directly
+        if (fieldData.new_data && fieldData.new_data.value !== undefined) {
+            const value = fieldData.new_data.value;
             console.log('🔍 Single field value:', value);
-            console.log('🔍 Field data structure:', fieldData);
             return value;
         }
 
+        // Fallback to current value if no new data
+        if (fieldData.current_value !== undefined) {
+            console.log('🔍 Fallback to current value:', fieldData.current_value);
+            return fieldData.current_value;
+        }
+
         console.log('🔍 No value found for field:', fieldName);
-        console.log('🔍 Available fields:', window.currentEnrichmentData ? Object.keys(window.currentEnrichmentData.fields) : 'No enrichment data');
+        console.log('🔍 Field data structure:', fieldData);
         return null;
     }
 

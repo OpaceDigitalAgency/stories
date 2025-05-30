@@ -1050,7 +1050,15 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             // Update both field displays with auto-check
             setTimeout(() => {
                 updateFieldDisplay('age_range', null, true);
-                updateFieldDisplay('reading_level', null, true);
+                // CRITICAL: Update reading level with the mapped value
+                const ageRangeValue = getSelectedFieldValue('age_range');
+                const mappedReadingLevel = ageToReadingMap[ageRangeValue];
+                if (mappedReadingLevel) {
+                    console.log('🔄 Mapping age range', ageRangeValue, 'to reading level', mappedReadingLevel);
+                    updateFieldDisplay('reading_level', mappedReadingLevel, true);
+                } else {
+                    updateFieldDisplay('reading_level', null, true);
+                }
             }, 50);
         });
 
@@ -1224,8 +1232,20 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         const valuesDiffer = normalizeValue(currentValue) !== normalizeValue(displayValue);
         console.log('🎨 Values differ:', valuesDiffer, 'normalized current:', normalizeValue(currentValue), 'normalized display:', normalizeValue(displayValue));
 
-        // Auto-check checkbox if values differ and autoCheck is true
-        if (autoCheck && valuesDiffer && fieldCheckbox.length) {
+        // CRITICAL FIX: For reading_level, also check if age_range is checked (synchronized fields)
+        let shouldAutoCheck = autoCheck && valuesDiffer && fieldCheckbox.length;
+
+        // Special case: if this is reading_level and age_range is checked, auto-check reading_level too
+        if (fieldName === 'reading_level') {
+            const ageRangeCheckbox = $(`.enrichment-field[data-field="age_range"] input[type="checkbox"][value="age_range"]`);
+            if (ageRangeCheckbox.length && ageRangeCheckbox.is(':checked') && valuesDiffer) {
+                shouldAutoCheck = true;
+                console.log('🎨 Auto-checking reading_level because age_range is checked and values differ');
+            }
+        }
+
+        // Auto-check checkbox if conditions are met
+        if (shouldAutoCheck) {
             fieldCheckbox.prop('checked', true);
             console.log('🎨 Auto-checked checkbox for field:', fieldName);
         }

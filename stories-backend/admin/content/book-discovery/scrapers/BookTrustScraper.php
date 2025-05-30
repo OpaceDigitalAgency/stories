@@ -12,7 +12,9 @@ class BookTrustScraper {
      * Check if this scraper can handle the given URL
      */
     public function canHandle($url) {
-        return strpos($url, 'booktrust.org.uk') !== false;
+        $canHandle = strpos($url, 'booktrust.org.uk') !== false;
+        error_log("BookTrustScraper: canHandle('{$url}') = " . ($canHandle ? 'true' : 'false'));
+        return $canHandle;
     }
     
     /**
@@ -21,30 +23,79 @@ class BookTrustScraper {
     public function scrape($url) {
         $books = [];
         
+        error_log("BookTrustScraper: Starting scrape of {$url}");
+        
         // Get HTML content
         $html = $this->fetchPage($url);
         if (!$html) {
-            error_log("Failed to fetch page: {$url}");
+            error_log("BookTrustScraper: Failed to fetch page: {$url}");
             return $books;
         }
+        
+        error_log("BookTrustScraper: Successfully fetched HTML, length: " . strlen($html));
         
         // Parse with DOMDocument
         $dom = new DOMDocument();
         libxml_use_internal_errors(true); // Suppress HTML parsing warnings
-        @$dom->loadHTML($html);
+        $loadResult = @$dom->loadHTML($html);
         libxml_clear_errors();
+        
+        if (!$loadResult) {
+            error_log("BookTrustScraper: Failed to parse HTML with DOMDocument");
+            return $books;
+        }
+        
+        error_log("BookTrustScraper: Successfully parsed HTML with DOMDocument");
         
         $xpath = new DOMXPath($dom);
         
         // Extract age range from URL or page title
         $defaultAgeRange = $this->extractAgeRange($url, $xpath);
+        error_log("BookTrustScraper: Default age range: " . $defaultAgeRange);
         
         // Find all book items (using the correct selector from Python script)
         $bookItems = $xpath->query('//li[@class="reading-width"]');
-        error_log("Found " . $bookItems->length . " book items on {$url}");
+        error_log("BookTrustScraper: Found " . $bookItems->length . " book items with selector //li[@class=\"reading-width\"]");
         
-        foreach ($bookItems as $item) {
+        // If no items found, try alternative selectors for debugging
+        if ($bookItems->length === 0) {
+            error_log("BookTrustScraper: No items found with reading-width class, trying alternatives...");
+            
+            // Try finding any li elements
+            $allLi = $xpath->query('//li');
+            error_log("BookTrustScraper: Found " . $allLi->length . " total li elements");
+            
+            // Try finding elements with book-related classes
+            $bookClasses = ['book-item', 'book', 'item', 'card'];
+            foreach ($bookClasses as $class) {
+                $items = $xpath->query("//li[@class='{$class}']");
+                if ($items->length > 0) {
+                    error_log("BookTrustScraper: Found " . $items->length . " items with class '{$class}'");
+                }
+            }
+            
+            // Try finding the book list container
+            $bookList = $xpath->query('//ul[@class="grid grid-cols-books gap-x-lg"]');
+            error_log("BookTrustScraper: Found " . $bookList->length . " book list containers");
+            
+            if ($bookList->length > 0) {
+                $listItems = $xpath->query('.//li', $bookList->item(0));
+                error_log("BookTrustScraper: Found " . $listItems->length . " li elements inside book list container");
+                
+                // Check classes of first few items
+                for ($i = 0; $i < min(3, $listItems->length); $i++) {
+                    $item = $listItems->item($i);
+                    $class = $item->getAttribute('class');
+                    error_log("BookTrustScraper: Li item {$i} has class: '{$class}'");
+                }
+            }
+        }
+        
+        foreach ($bookItems as $index => $item) {
+            error_log("BookTrustScraper: Processing book item " . ($index + 1));
             $book = $this->parseBookItem($item, $xpath);
+            
+            error_log("BookTrustScraper: Parsed book - Title: '{$book['title']}', Author: '{$book['author']}'");
             
             // Add default age range if not found
             if (empty($book['age_range']) && !empty($defaultAgeRange)) {
@@ -59,10 +110,13 @@ class BookTrustScraper {
                 }
                 
                 $books[] = $book;
-                error_log("Scraped book: " . $book['title']);
+                error_log("BookTrustScraper: Successfully added book: " . $book['title']);
+            } else {
+                error_log("BookTrustScraper: Skipping book with empty title");
             }
         }
         
+        error_log("BookTrustScraper: Completed scraping, found " . count($books) . " books");
         return $books;
     }
     
@@ -213,6 +267,8 @@ class BookTrustScraper {
      * Fetch a page using cURL
      */
     private function fetchPage($url) {
+        error_log("BookTrustScraper: fetchPage() called with URL: {$url}");
+        
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -222,21 +278,31 @@ class BookTrustScraper {
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
         
+        error_log("BookTrustScraper: Executing cURL request...");
         $html = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $error = curl_error($ch);
+        $effectiveUrl = curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
         curl_close($ch);
         
+        error_log("BookTrustScraper: cURL completed - HTTP Code: {$httpCode}, Effective URL: {$effectiveUrl}");
+        
         if ($error) {
-            error_log("cURL error fetching {$url}: {$error}");
+            error_log("BookTrustScraper: cURL error fetching {$url}: {$error}");
             return false;
         }
         
         if ($httpCode !== 200) {
-            error_log("HTTP {$httpCode} fetching {$url}");
+            error_log("BookTrustScraper: HTTP {$httpCode} fetching {$url}");
             return false;
         }
         
+        if ($html === false) {
+            error_log("BookTrustScraper: cURL returned false for {$url}");
+            return false;
+        }
+        
+        error_log("BookTrustScraper: Successfully fetched HTML, length: " . strlen($html));
         return $html;
     }
     

@@ -1115,6 +1115,19 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     console.log('🔄 Detected field radio change for:', fieldName);
                     setTimeout(() => {
                         updateFieldDisplay(fieldName, null, true);
+
+                        // CRITICAL: If age_range radio changed, also update reading_level
+                        if (fieldName === 'age_range') {
+                            const ageRangeValue = getSelectedFieldValue('age_range');
+                            const mappedReadingLevel = ageToReadingMap[ageRangeValue];
+                            if (mappedReadingLevel) {
+                                console.log('🔄 Radio change: Mapping age range', ageRangeValue, 'to reading level', mappedReadingLevel);
+                                updateFieldDisplay('reading_level', mappedReadingLevel, true);
+                            } else {
+                                console.log('🔄 Radio change: No mapping found for age range', ageRangeValue);
+                                updateFieldDisplay('reading_level', null, true);
+                            }
+                        }
                     }, 100);
                 }
             }

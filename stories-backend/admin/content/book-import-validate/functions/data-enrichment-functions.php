@@ -2496,7 +2496,15 @@ function getAmazonEnrichmentData($isbn, $currentBookData = null) {
                     if (empty($value)) continue;
                 }
 
-                $fieldKey = $amazonField === 'print_length' ? 'page_count' : $amazonField;
+                // CRITICAL FIX: Map Amazon field names to database field names
+                $fieldKey = $amazonField;
+                if ($amazonField === 'print_length') {
+                    $fieldKey = 'page_count';
+                } elseif ($amazonField === 'isbn_10') {
+                    $fieldKey = 'isbn';
+                } elseif ($amazonField === 'isbn_13') {
+                    $fieldKey = 'isbn13';
+                }
 
                 // CRITICAL FIX: Skip ISBN fields if they match current book data
                 if (($fieldKey === 'isbn' || $fieldKey === 'isbn13') && $currentBookData) {

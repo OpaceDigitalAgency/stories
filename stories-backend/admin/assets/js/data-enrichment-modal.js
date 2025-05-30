@@ -681,6 +681,10 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             // Re-render the enrichment fields to include the new Amazon data
             displayEnrichmentFields(window.currentEnrichmentData.fields);
 
+            // CRITICAL FIX: Update Amazon status badge to show completion
+            $('#amazon-status-badge').html('<span class="badge badge-success">✓ Amazon</span>');
+            console.log('✅ Updated Amazon status to success');
+
             // Restore checkbox states after re-rendering
             setTimeout(() => {
                 Object.keys(checkboxStates).forEach(fieldName => {
@@ -1566,6 +1570,11 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             openLibraryElement.html('<span class="badge badge-secondary">OpenLibrary</span>');
             console.log('⚪ Updated OpenLibrary status to not checked');
         }
+
+        // CRITICAL FIX: Add Amazon status badge handling
+        // Amazon is checked separately via AJAX, so we start it as "Checking..." and update later
+        $('#amazon-status-badge').html('<span class="badge badge-info">Amazon - Checking...</span>');
+        console.log('🔄 Set Amazon status to checking');
     }
 
     // Auto-select fields with single source and beneficial updates

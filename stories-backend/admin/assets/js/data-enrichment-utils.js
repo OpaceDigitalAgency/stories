@@ -382,26 +382,41 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
 
     /**
      * Compare tag lists (order-independent)
+     * CRITICAL FIX: Enhanced to handle exact case from user's issue
      */
     function compareTagLists(current, newValue) {
-        console.log('🔍 Comparing tag lists:', { current, newValue });
+        console.log('🏷️ CRITICAL_TAG_FIX: Comparing tag lists:', { current, newValue });
 
-        const currentTags = splitTagString(current).map(tag => tag.toLowerCase().trim()).sort();
-        const newTags = splitTagString(newValue).map(tag => tag.toLowerCase().trim()).sort();
+        // Handle the exact case from user's issue
+        const currentTags = splitTagString(current).map(tag => tag.toLowerCase().trim()).filter(tag => tag.length > 0).sort();
+        const newTags = splitTagString(newValue).map(tag => tag.toLowerCase().trim()).filter(tag => tag.length > 0).sort();
 
-        console.log('🔍 Parsed tags:', {
+        console.log('🏷️ CRITICAL_TAG_FIX: Parsed tags:', {
             currentRaw: current,
             newRaw: newValue,
             currentParsed: currentTags,
-            newParsed: newTags
+            newParsed: newTags,
+            currentLength: currentTags.length,
+            newLength: newTags.length
         });
 
-        // Check if arrays contain the same elements
+        // Check if arrays contain the same elements (order-independent)
         const isEqual = currentTags.length === newTags.length &&
                        currentTags.every(tag => newTags.includes(tag)) &&
                        newTags.every(tag => currentTags.includes(tag));
 
-        console.log('🔍 Tags equal:', isEqual);
+        console.log('🏷️ CRITICAL_TAG_FIX: Tags equal:', isEqual);
+
+        // If not equal, show detailed comparison for debugging
+        if (!isEqual) {
+            const onlyInCurrent = currentTags.filter(tag => !newTags.includes(tag));
+            const onlyInNew = newTags.filter(tag => !currentTags.includes(tag));
+            console.log('🏷️ CRITICAL_TAG_FIX: Differences found:', {
+                onlyInCurrent: onlyInCurrent,
+                onlyInNew: onlyInNew
+            });
+        }
+
         return isEqual;
     }
 

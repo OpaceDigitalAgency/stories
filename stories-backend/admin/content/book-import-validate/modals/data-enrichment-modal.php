@@ -59,7 +59,8 @@
                     <div class="mt-3">
                         <span id="google-books-status-badge" class="badge badge-info mr-2">Google Books - Checking...</span>
                         <span id="open-library-status-badge" class="badge badge-info mr-2">OpenLibrary - Checking...</span>
-                        <span id="goodreads-status-badge" class="badge badge-info">Goodreads - Checking...</span>
+                        <span id="goodreads-status-badge" class="badge badge-info mr-2">Goodreads - Checking...</span>
+                        <span id="amazon-status-badge" class="badge badge-info">Amazon - Checking...</span>
                     </div>
                 </div>
 

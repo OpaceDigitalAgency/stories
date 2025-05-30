@@ -60,9 +60,15 @@ try {
             break;
             
         case 'enrich_book':
-            $bookData = $_POST['book'] ?? [];
-            if (empty($bookData)) {
+            $bookJson = $_POST['book'] ?? '';
+            if (empty($bookJson)) {
                 throw new Exception('No book data provided');
+            }
+            
+            // Decode JSON book data
+            $bookData = json_decode($bookJson, true);
+            if (!$bookData) {
+                throw new Exception('Invalid book data format');
             }
             
             // Get enriched data from APIs
@@ -88,9 +94,15 @@ try {
             break;
             
         case 'import_book':
-            $bookData = $_POST['book'] ?? [];
-            if (empty($bookData)) {
+            $bookJson = $_POST['book'] ?? '';
+            if (empty($bookJson)) {
                 throw new Exception('No book data provided');
+            }
+            
+            // Decode JSON book data
+            $bookData = json_decode($bookJson, true);
+            if (!$bookData) {
+                throw new Exception('Invalid book data format');
             }
             
             // Import book function

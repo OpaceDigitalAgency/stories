@@ -141,12 +141,14 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
             }
         }
 
-        // Check if any option exactly matches current value
-        const hasExactMatch = options.some(option => {
-            const currentVal = normalizeValue(field.current_value);
-            const newVal = normalizeValue(option.value);
-            return currentVal === newVal && currentVal !== '' && currentVal !== null;
-        });
+        // Update hasExactMatch based on exact value comparison (already declared above)
+        if (!hasExactMatch) {
+            hasExactMatch = options.some(option => {
+                const currentVal = normalizeValue(field.current_value);
+                const newVal = normalizeValue(option.value);
+                return currentVal === newVal && currentVal !== '' && currentVal !== null;
+            });
+        }
 
         // Apply exact match styling if found
         const exactMatchClass = (hasExactMatch || bestBenefitLevel === 'exact_match') ? ' exact-match' : '';

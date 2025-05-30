@@ -544,11 +544,25 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     return;
                 }
 
-                if (existingField && existingField.new_data) {
-                    // Field already exists with data from other sources - merge Amazon as third source
-                    console.log(`📦 Merging Amazon data with existing field: ${fieldName}`);
+                if (existingField) {
+                    // Field already exists - check if it has new_data or is just showing current value
+                    console.log(`📦 Field ${fieldName} already exists:`, {
+                        hasNewData: !!existingField.new_data,
+                        currentValue: existingField.current_value,
+                        amazonValue: amazonFieldData.new_data.value
+                    });
 
-                    if (existingField.new_data.options) {
+                    // Skip if Amazon value is the same as current value (no point adding duplicate)
+                    if (existingField.current_value === amazonFieldData.new_data.value) {
+                        console.log(`📦 Skipping Amazon field ${fieldName} - same as current value`);
+                        return;
+                    }
+
+                    if (existingField.new_data) {
+                        // Field has new_data from other sources - merge Amazon as additional source
+                        console.log(`📦 Merging Amazon data with existing field: ${fieldName}`);
+
+                        if (existingField.new_data.options) {
                         // Field already has multiple sources - add Amazon as another option
                         console.log(`📦 Adding Amazon as additional option to multi-source field: ${fieldName}`);
                         existingField.new_data.options.push({
@@ -587,6 +601,12 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                             ],
                             source: (originalData.source || 'unknown') + ' + amazon'
                         };
+                        }
+                    } else {
+                        // Field exists but has no new_data (e.g., "Matches Database 100%")
+                        // Don't add Amazon data if it's the same as current value (already checked above)
+                        console.log(`📦 Field ${fieldName} exists but has no new_data - skipping Amazon merge`);
+                        return;
                     }
                 } else {
                     // Field doesn't exist or has no data - add Amazon data as new field

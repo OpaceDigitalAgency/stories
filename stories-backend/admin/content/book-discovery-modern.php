@@ -113,6 +113,14 @@ include_once '../includes/header.php';
                     <div id="currentBookInfo" class="alert alert-info" style="display: none;">
                         <strong>Processing:</strong> <span id="currentBookTitle"></span>
                     </div>
+                    <div class="mt-3">
+                        <button id="cancelButton" class="btn btn-warning" style="display: none;" onclick="discovery.cancelProcess()">
+                            <i class="fas fa-stop"></i> Cancel Process
+                        </button>
+                        <button id="showResultsButton" class="btn btn-info" style="display: none;" onclick="discovery.showPartialResults()">
+                            <i class="fas fa-table"></i> Show Results So Far
+                        </button>
+                    </div>
                 </div>
             </div>
             
@@ -145,6 +153,7 @@ class ModernBookDiscovery {
         this.processedBooks = 0;
         this.importedBooks = 0;
         this.errorBooks = 0;
+        this.cancelled = false;
         
         this.initEventListeners();
     }
@@ -172,6 +181,11 @@ class ModernBookDiscovery {
         this.processedBooks = 0;
         this.importedBooks = 0;
         this.errorBooks = 0;
+        this.cancelled = false;
+        
+        // Show cancel button
+        document.getElementById('cancelButton').style.display = 'inline-block';
+        document.getElementById('showResultsButton').style.display = 'none';
         
         try {
             // Step 1: Discover all books
@@ -217,6 +231,15 @@ class ModernBookDiscovery {
     
     async processBooks() {
         for (let i = 0; i < this.books.length; i++) {
+            // Check if process was cancelled
+            if (this.cancelled) {
+                this.updateProgress(this.getCurrentProgress(i), 'Process cancelled by user', 'warning');
+                document.getElementById('currentBookInfo').style.display = 'none';
+                document.getElementById('cancelButton').style.display = 'none';
+                document.getElementById('showResultsButton').style.display = 'inline-block';
+                return;
+            }
+            
             const book = this.books[i];
             const progress = 10 + ((i / this.books.length) * 80); // 10-90%
             
@@ -278,8 +301,9 @@ class ModernBookDiscovery {
             await new Promise(resolve => setTimeout(resolve, 100));
         }
         
-        // Hide current book info
+        // Hide current book info and cancel button
         document.getElementById('currentBookInfo').style.display = 'none';
+        document.getElementById('cancelButton').style.display = 'none';
         this.updateProgress(100, 'Processing complete!', 'success');
     }
     
@@ -293,6 +317,66 @@ class ModernBookDiscovery {
         
         progressMessage.textContent = message;
         progressMessage.className = `alert alert-${type}`;
+getCurrentProgress(currentIndex) {
+        return 10 + ((currentIndex / this.books.length) * 80);
+    }
+    
+    cancelProcess() {
+        this.cancelled = true;
+        this.updateProgress(this.getCurrentProgress(this.processedBooks), 'Cancelling process...', 'warning');
+    }
+    
+    showPartialResults() {
+        // Show results section with processed books so far
+        document.getElementById('resultsSection').style.display = 'block';
+        
+        // Update summary for partial results
+        const summaryInfo = document.getElementById('summaryInfo');
+        summaryInfo.className = 'alert alert-warning mb-4';
+        let summaryHtml = `
+            <h6>Partial Results (Process Cancelled):</h6>
+            <ul class="mb-0">
+                <li>Total books discovered: ${this.totalBooks}</li>
+                <li>Successfully processed: ${this.processedBooks}</li>
+                <li>Remaining unprocessed: ${this.totalBooks - this.processedBooks}</li>
+                <li>Errors: ${this.errorBooks}</li>
+        `;
+        
+        if (this.autoEnrich) {
+            summaryHtml += `<li>Books enriched with API data: ${this.processedBooks}</li>`;
+        }
+        
+        if (this.importToDb) {
+            summaryHtml += `<li>Successfully imported: ${this.importedBooks}</li>`;
+        }
+        
+        summaryHtml += '</ul>';
+        summaryInfo.innerHTML = summaryHtml;
+        
+        // Show only processed books in table
+        const processedBooks = this.books.slice(0, this.processedBooks);
+        const tableData = processedBooks.map((book, index) => ({
+            id: index + 1,
+            title: book.title || '',
+            author: book.author || '',
+            age_range: book.age_range || '',
+            year: book.year || '',
+            isbn: book.isbn || '',
+            isbn13: book.isbn13 || '',
+            publisher: book.publisher || '',
+            tags: Array.isArray(book.tags) ? book.tags.join(', ') : (book.tags || ''),
+            source: book.source || 'booktrust',
+            enriched: this.autoEnrich ? 'Yes' : 'No',
+            imported: book.imported ? 'Yes' : 'No',
+            status: book.processing_error ? 'Error' : (book.imported ? 'Imported' : 'Ready')
+        }));
+        
+        // Create enhanced table HTML
+        this.renderEnhancedTable(tableData);
+        
+        // Hide the show results button
+        document.getElementById('showResultsButton').style.display = 'none';
+    }
     }
     
     showResults() {

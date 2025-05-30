@@ -1047,98 +1047,80 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
     // Sync reading level field based on age range
     function syncReadingLevelField(expectedReading, isRevertMode = false) {
         console.log('🔄 syncReadingLevelField called with:', expectedReading, 'revert mode:', isRevertMode);
-        const readingField = window.currentEnrichmentData.fields['reading_level'];
+        const readingField = window.currentEnrichmentData?.fields?.['reading_level'];
         if (!readingField) {
             console.log('🔄 No reading_level field found');
             return;
         }
 
-        // Check if we have options to select from
+        // Check if we have options to select from (multi-source field)
         if (readingField.new_data && readingField.new_data.options) {
             console.log('🔄 Reading level has multiple options:', readingField.new_data.options);
-            // Find matching option
+
+            // Find matching option by exact match or partial match
+            let matchingIndex = -1;
             readingField.new_data.options.forEach((option, index) => {
-                if (option.value === expectedReading) {
+                if (option.value === expectedReading ||
+                    (option.value && option.value.toLowerCase().includes(expectedReading.toLowerCase())) ||
+                    (expectedReading && expectedReading.toLowerCase().includes(option.value.toLowerCase()))) {
+                    matchingIndex = index;
                     console.log(`🔄 Found matching reading level option at index ${index}:`, option.value);
-                    $(`input[name="field_reading_level_option"][value="${index}"]`).prop('checked', true);
-
-                    // Auto-check the reading level field unless in revert mode
-                    if (!isRevertMode) {
-                        $(`input[name="field_reading_level"]`).prop('checked', true);
-                        $(`input[name="fields[]"][value="reading_level"]`).prop('checked', true);
-                        console.log('🔄 Auto-selected reading level field for saving');
-                    } else {
-                        // In revert mode, uncheck the reading level field
-                        $(`input[name="field_reading_level"]`).prop('checked', false);
-                        $(`input[name="fields[]"][value="reading_level"]`).prop('checked', false);
-                        console.log('🔄 Unchecked reading level field in revert mode');
-                    }
-
-                    // Update the visual display of the new value
-                    const $readingFieldDiv = $(`.enrichment-field[data-field="reading_level"]`);
-                    let $newValueDiv = $readingFieldDiv.find('.new-value').first();
-
-                    // If no .new-value div found, look for other possible containers
-                    if ($newValueDiv.length === 0) {
-                        $newValueDiv = $readingFieldDiv.find('.mt-1, .mt-2, .field-new-value').first();
-                    }
-
-                    // If still no container found, create one
-                    if ($newValueDiv.length === 0) {
-                        $readingFieldDiv.append('<div class="new-value mt-1"></div>');
-                        $newValueDiv = $readingFieldDiv.find('.new-value').last();
-                    }
-
-                    if ($newValueDiv.length > 0) {
-                        $newValueDiv.html(`<span class="badge badge-info">${expectedReading}</span>`);
-                        console.log('🔄 Updated reading level visual display');
-                    } else {
-                        console.log('🔄 Could not find or create visual display container for reading level');
-                    }
-
-                    // CRITICAL FIX: Update the actual badge in the field display
-                    const $readingFieldContainer = $(`.enrichment-field[data-field="reading_level"]`);
-                    $readingFieldContainer.find('.badge-light, .badge-info').text(expectedReading);
-                    console.log('🔄 Updated reading level badge display to:', expectedReading);
                 }
             });
-        } else if (readingField.new_data) {
-            // Single source field - update the value and visual display
-            console.log('🔄 Single reading level field found. Current value:', readingField.new_data.value, 'Expected:', expectedReading);
 
-            // Update the data structure
-            readingField.new_data.value = expectedReading;
-            console.log('🔄 Updated reading level data to:', expectedReading);
+            if (matchingIndex >= 0) {
+                // Select the matching radio button
+                $(`input[name="field_reading_level_option"][value="${matchingIndex}"]`).prop('checked', true).trigger('change');
 
-            // Enable the field but DON'T auto-check it - let user decide
-            $(`input[name="field_reading_level"]`).prop('disabled', false);
+                // CRITICAL: Force UI update by triggering the change event
+                setTimeout(() => {
+                    $(`input[name="field_reading_level_option"][value="${matchingIndex}"]`).trigger('click');
+                }, 50);
 
-            // Update the visual display
-            const $readingFieldDiv = $(`.enrichment-field[data-field="reading_level"]`);
+                // Auto-check the reading level field unless in revert mode
+                if (!isRevertMode) {
+                    $(`input[name="field_reading_level"]`).prop('checked', true);
+                    $(`input[name="fields[]"][value="reading_level"]`).prop('checked', true);
+                    console.log('🔄 Auto-selected reading level field for saving');
+                }
 
-            // Remove disabled styling
-            $readingFieldDiv.removeClass('disabled-field exact-match');
-            $readingFieldDiv.find('label').removeClass('text-muted');
-            $readingFieldDiv.find('input').prop('disabled', false);
-
-            // Update the "New Value" display
-            const $newValueContainer = $readingFieldDiv.find('strong:contains("New Value:")').parent();
-            if ($newValueContainer.length > 0) {
-                // Find the content after "New Value:" and update it
-                const newValueHtml = $newValueContainer.html();
-                const updatedHtml = newValueHtml.replace(
-                    /(New Value:<\/strong>\s*).*/,
-                    `$1<span class="badge badge-info">${expectedReading}</span>`
-                );
-                $newValueContainer.html(updatedHtml);
-                console.log('🔄 Updated reading level visual display to:', expectedReading);
+                console.log('🔄 Successfully synced reading level to:', readingField.new_data.options[matchingIndex].value);
             } else {
-                console.log('🔄 Could not find New Value container for reading level');
+                console.log('🔄 No matching reading level option found for:', expectedReading);
             }
+        } else if (readingField.new_data) {
+            // Single source field - create a new option or update existing
+            console.log('🔄 Single reading level field found. Creating/updating with:', expectedReading);
 
-            // Update border styling to show it's beneficial
-            $readingFieldDiv.removeClass('border-secondary border-danger').addClass('border-success');
+            // If it's a single source, we need to create options structure
+            if (!readingField.new_data.options) {
+                // Convert single source to multi-source with the new value
+                const originalValue = readingField.new_data.value;
+                const originalSource = readingField.new_data.source || 'unknown';
 
+                readingField.new_data.options = [
+                    {
+                        value: originalValue,
+                        source: originalSource,
+                        confidence: readingField.new_data.confidence || 80
+                    },
+                    {
+                        value: expectedReading,
+                        source: 'synchronized',
+                        confidence: 95
+                    }
+                ];
+
+                console.log('🔄 Converted single source to multi-source with sync option');
+
+                // Re-render the field to show the new options
+                displayEnrichmentFields(window.currentEnrichmentData.fields);
+
+                // Select the synchronized option
+                setTimeout(() => {
+                    $(`input[name="field_reading_level_option"][value="1"]`).prop('checked', true).trigger('change');
+                }, 100);
+            }
         } else {
             console.log('🔄 No reading level field data found');
         }
@@ -1147,98 +1129,80 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
     // Sync age range field based on reading level
     function syncAgeRangeField(expectedAge, isRevertMode = false) {
         console.log('🔄 syncAgeRangeField called with:', expectedAge, 'revert mode:', isRevertMode);
-        const ageField = window.currentEnrichmentData.fields['age_range'];
+        const ageField = window.currentEnrichmentData?.fields?.['age_range'];
         if (!ageField) {
             console.log('🔄 No age_range field found');
             return;
         }
 
-        // Check if we have options to select from
+        // Check if we have options to select from (multi-source field)
         if (ageField.new_data && ageField.new_data.options) {
             console.log('🔄 Age range has multiple options:', ageField.new_data.options);
-            // Find matching option
+
+            // Find matching option by exact match or partial match
+            let matchingIndex = -1;
             ageField.new_data.options.forEach((option, index) => {
-                if (option.value === expectedAge) {
+                if (option.value === expectedAge ||
+                    (option.value && option.value.toLowerCase().includes(expectedAge.toLowerCase())) ||
+                    (expectedAge && expectedAge.toLowerCase().includes(option.value.toLowerCase()))) {
+                    matchingIndex = index;
                     console.log(`🔄 Found matching age range option at index ${index}:`, option.value);
-                    $(`input[name="field_age_range_option"][value="${index}"]`).prop('checked', true);
-
-                    // Auto-check the age range field unless in revert mode
-                    if (!isRevertMode) {
-                        $(`input[name="field_age_range"]`).prop('checked', true);
-                        $(`input[name="fields[]"][value="age_range"]`).prop('checked', true);
-                        console.log('🔄 Auto-selected age range field for saving');
-                    } else {
-                        // In revert mode, uncheck the age range field
-                        $(`input[name="field_age_range"]`).prop('checked', false);
-                        $(`input[name="fields[]"][value="age_range"]`).prop('checked', false);
-                        console.log('🔄 Unchecked age range field in revert mode');
-                    }
-
-                    // Update the visual display of the new value
-                    const $ageFieldDiv = $(`.enrichment-field[data-field="age_range"]`);
-                    let $newValueDiv = $ageFieldDiv.find('.new-value').first();
-
-                    // If no .new-value div found, look for other possible containers
-                    if ($newValueDiv.length === 0) {
-                        $newValueDiv = $ageFieldDiv.find('.mt-1, .mt-2, .field-new-value').first();
-                    }
-
-                    // If still no container found, create one
-                    if ($newValueDiv.length === 0) {
-                        $ageFieldDiv.append('<div class="new-value mt-1"></div>');
-                        $newValueDiv = $ageFieldDiv.find('.new-value').last();
-                    }
-
-                    if ($newValueDiv.length > 0) {
-                        $newValueDiv.html(`<span class="badge badge-light">${expectedAge}</span>`);
-                        console.log('🔄 Updated age range visual display');
-                    } else {
-                        console.log('🔄 Could not find or create visual display container for age range');
-                    }
-
-                    // CRITICAL FIX: Update the actual badge in the field display
-                    const $ageFieldContainer = $(`.enrichment-field[data-field="age_range"]`);
-                    $ageFieldContainer.find('.badge-light, .badge-info').text(expectedAge);
-                    console.log('🔄 Updated age range badge display to:', expectedAge);
                 }
             });
-        } else if (ageField.new_data) {
-            // Single source field - update the value and visual display
-            console.log('🔄 Single age range field found. Current value:', ageField.new_data.value, 'Expected:', expectedAge);
 
-            // Update the data structure
-            ageField.new_data.value = expectedAge;
-            console.log('🔄 Updated age range data to:', expectedAge);
+            if (matchingIndex >= 0) {
+                // Select the matching radio button
+                $(`input[name="field_age_range_option"][value="${matchingIndex}"]`).prop('checked', true).trigger('change');
 
-            // Enable the field but DON'T auto-check it - let user decide
-            $(`input[name="field_age_range"]`).prop('disabled', false);
+                // CRITICAL: Force UI update by triggering the change event
+                setTimeout(() => {
+                    $(`input[name="field_age_range_option"][value="${matchingIndex}"]`).trigger('click');
+                }, 50);
 
-            // Update the visual display
-            const $ageFieldDiv = $(`.enrichment-field[data-field="age_range"]`);
+                // Auto-check the age range field unless in revert mode
+                if (!isRevertMode) {
+                    $(`input[name="field_age_range"]`).prop('checked', true);
+                    $(`input[name="fields[]"][value="age_range"]`).prop('checked', true);
+                    console.log('🔄 Auto-selected age range field for saving');
+                }
 
-            // Remove disabled styling
-            $ageFieldDiv.removeClass('disabled-field exact-match');
-            $ageFieldDiv.find('label').removeClass('text-muted');
-            $ageFieldDiv.find('input').prop('disabled', false);
-
-            // Update the "New Value" display
-            const $newValueContainer = $ageFieldDiv.find('strong:contains("New Value:")').parent();
-            if ($newValueContainer.length > 0) {
-                // Find the content after "New Value:" and update it
-                const newValueHtml = $newValueContainer.html();
-                const updatedHtml = newValueHtml.replace(
-                    /(New Value:<\/strong>\s*).*/,
-                    `$1<span class="badge badge-light">${expectedAge}</span>`
-                );
-                $newValueContainer.html(updatedHtml);
-                console.log('🔄 Updated age range visual display to:', expectedAge);
+                console.log('🔄 Successfully synced age range to:', ageField.new_data.options[matchingIndex].value);
             } else {
-                console.log('🔄 Could not find New Value container for age range');
+                console.log('🔄 No matching age range option found for:', expectedAge);
             }
+        } else if (ageField.new_data) {
+            // Single source field - create a new option or update existing
+            console.log('🔄 Single age range field found. Creating/updating with:', expectedAge);
 
-            // Update border styling to show it's beneficial
-            $ageFieldDiv.removeClass('border-secondary border-danger').addClass('border-success');
+            // If it's a single source, we need to create options structure
+            if (!ageField.new_data.options) {
+                // Convert single source to multi-source with the new value
+                const originalValue = ageField.new_data.value;
+                const originalSource = ageField.new_data.source || 'unknown';
 
+                ageField.new_data.options = [
+                    {
+                        value: originalValue,
+                        source: originalSource,
+                        confidence: ageField.new_data.confidence || 80
+                    },
+                    {
+                        value: expectedAge,
+                        source: 'synchronized',
+                        confidence: 95
+                    }
+                ];
+
+                console.log('🔄 Converted single source to multi-source with sync option');
+
+                // Re-render the field to show the new options
+                displayEnrichmentFields(window.currentEnrichmentData.fields);
+
+                // Select the synchronized option
+                setTimeout(() => {
+                    $(`input[name="field_age_range_option"][value="1"]`).prop('checked', true).trigger('change');
+                }, 100);
+            }
         } else {
             console.log('🔄 No age range field data found');
         }

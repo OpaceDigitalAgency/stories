@@ -2445,19 +2445,19 @@ function syncAgeRangeFromReading() {
     const selectedReading = readingLevelSelect.value;
     console.log('Reading level changed to:', selectedReading);
 
-    // COMPLETE mapping from reading levels to age ranges
+    // COMPLETE mapping from reading levels to age ranges - UPDATED to match UK standards
     const readingToAgeMapping = {
         'Pre-literacy (Sensory)': '0-12 months',
         'Pre-literacy (Naming)': '12-24 months',
         'Pre-literacy (Mimicry)': '2-3 years',
         'Early Pre-reader': '3-4 years',
         'Beginning Reader': '4-5 years',
-        'Early Reader': '5-6 years',
-        'Developing Reader': '6-7 years',
+        'Early Reader': '5-6 years',        // Maps to user's current database value
+        'Developing Reader': '5-6 years',   // FIXED: was '6-7 years', now maps to Early Reader range
         'Transitional Reader': '7-8 years',
-        'Fluent Reader': '8-9 years', // Default to youngest fluent reader age
-        'Advanced Reader': '11-14 years', // Default to middle advanced age
-        'Proficient Reader': '18+ years'
+        'Fluent Reader': '8-9 years',       // Maps to Amazon's 8-9 years
+        'Advanced Reader': '11-14 years',   // Default to middle advanced age
+        'Proficient Reader': '18+ years'    // Maps to Google Books 18+ years
     };
 
     // Extract the reading stage from the selected value

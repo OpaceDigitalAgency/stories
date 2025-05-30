@@ -1,13 +1,18 @@
 <?php
 /**
  * Enhanced Book Discovery Process Page
- * 
+ *
  * Features:
  * - Real-time progress updates with WebSocket-like streaming
  * - Enhanced table component with bulk actions and pagination
  * - Automatic API enrichment (Google Books, Open Library)
  * - Modern UX with progress indicators
  */
+
+// Disable output buffering for real-time updates
+if (ob_get_level()) {
+    ob_end_clean();
+}
 
 // Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
@@ -38,19 +43,27 @@ include_once '../includes/header.php';
 
 // Flush output function for real-time updates
 function flushDiscoveryOutput() {
-    if (ob_get_level()) {
+    // Force output to browser immediately
+    while (ob_get_level()) {
         ob_end_flush();
     }
     flush();
-    if (ob_get_level() == 0) {
-        ob_start();
-    }
+    
+    // Add padding to force browser to display content
+    echo str_repeat(' ', 1024);
+    flush();
 }
 
 // Progress update function
 function sendProgressUpdate($step, $current, $total, $message = '') {
     $progress = $total > 0 ? round(($current / $total) * 100) : 0;
-    echo "<script>updateProgress('{$step}', {$current}, {$total}, {$progress}, '" . addslashes($message) . "');</script>";
+    echo "<script>";
+    echo "if (typeof updateProgress === 'function') {";
+    echo "updateProgress('{$step}', {$current}, {$total}, {$progress}, '" . addslashes($message) . "');";
+    echo "} else {";
+    echo "console.log('Progress: {$step} - {$current}/{$total} - {$message}');";
+    echo "}";
+    echo "</script>";
     flushDiscoveryOutput();
 }
 
@@ -135,6 +148,58 @@ function importBook($db, $book) {
     }
 }
 ?>
+
+<!-- Load JavaScript first -->
+<script>
+function showDiscoveryProgress() {
+    document.getElementById('discoveryProgress').style.display = 'flex';
+}
+
+function hideDiscoveryProgress() {
+    document.getElementById('discoveryProgress').style.display = 'none';
+}
+
+function updateProgress(step, current, total, percentage, message) {
+    const progressBar = document.getElementById('discoveryProgressBar');
+    const progressMessage = document.getElementById('discoveryProgressMessage');
+    const steps = document.querySelectorAll('.step');
+    
+    // Update progress bar
+    if (progressBar) {
+        progressBar.style.width = percentage + '%';
+        progressBar.setAttribute('aria-valuenow', percentage);
+        progressBar.textContent = percentage + '%';
+    }
+    
+    // Update message
+    if (progressMessage) {
+        progressMessage.textContent = message;
+    }
+    
+    // Update step status
+    steps.forEach(stepEl => {
+        const stepName = stepEl.getAttribute('data-step');
+        const statusEl = stepEl.querySelector('.step-status');
+        
+        if (stepName === step) {
+            stepEl.classList.add('active');
+            stepEl.classList.remove('completed');
+            if (statusEl) statusEl.textContent = `${current}/${total}`;
+        } else if (stepName === 'discovery' && step === 'enrichment') {
+            stepEl.classList.remove('active');
+            stepEl.classList.add('completed');
+            if (statusEl) statusEl.textContent = 'completed';
+        } else if (stepName === 'enrichment' && step === 'complete') {
+            stepEl.classList.remove('active');
+            stepEl.classList.add('completed');
+            if (statusEl) statusEl.textContent = 'completed';
+        } else if (stepName === 'complete' && step === 'complete') {
+            stepEl.classList.add('active', 'completed');
+            if (statusEl) statusEl.textContent = 'completed';
+        }
+    });
+}
+</script>
 
 <div class="container-fluid">
     <div class="row">
@@ -523,51 +588,6 @@ function importBook($db, $book) {
 </style>
 
 <script>
-function showDiscoveryProgress() {
-    document.getElementById('discoveryProgress').style.display = 'flex';
-}
-
-function hideDiscoveryProgress() {
-    document.getElementById('discoveryProgress').style.display = 'none';
-}
-
-function updateProgress(step, current, total, percentage, message) {
-    const progressBar = document.getElementById('discoveryProgressBar');
-    const progressMessage = document.getElementById('discoveryProgressMessage');
-    const steps = document.querySelectorAll('.step');
-    
-    // Update progress bar
-    progressBar.style.width = percentage + '%';
-    progressBar.setAttribute('aria-valuenow', percentage);
-    progressBar.textContent = percentage + '%';
-    
-    // Update message
-    progressMessage.textContent = message;
-    
-    // Update step status
-    steps.forEach(stepEl => {
-        const stepName = stepEl.getAttribute('data-step');
-        const statusEl = stepEl.querySelector('.step-status');
-        
-        if (stepName === step) {
-            stepEl.classList.add('active');
-            stepEl.classList.remove('completed');
-            statusEl.textContent = `${current}/${total}`;
-        } else if (stepName === 'discovery' && step === 'enrichment') {
-            stepEl.classList.remove('active');
-            stepEl.classList.add('completed');
-            statusEl.textContent = 'completed';
-        } else if (stepName === 'enrichment' && step === 'complete') {
-            stepEl.classList.remove('active');
-            stepEl.classList.add('completed');
-            statusEl.textContent = 'completed';
-        } else if (stepName === 'complete' && step === 'complete') {
-            stepEl.classList.add('active', 'completed');
-            statusEl.textContent = 'completed';
-        }
-    });
-}
-
 // Auto-hide progress overlay after completion
 setTimeout(() => {
     const progressOverlay = document.getElementById('discoveryProgress');

@@ -697,10 +697,12 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                         };
                         }
                     } else {
-                        // Field exists but has no new_data (e.g., "Matches Database 100%")
-                        // Don't add Amazon data if it's the same as current value (already checked above)
-                        console.log(`📦 Field ${fieldName} exists but has no new_data - skipping Amazon merge`);
-                        return;
+                        // Field exists but has no new_data - add Amazon data
+                        console.log(`📦 Field ${fieldName} exists but has no new_data - adding Amazon data`);
+                        existingField.new_data = {
+                            ...amazonFieldData.new_data,
+                            status: 'ready' // CRITICAL FIX: Set status to ready when Amazon data arrives
+                        };
                     }
                 } else {
                     // Field doesn't exist or has no data - add Amazon data as new field

@@ -1341,15 +1341,6 @@ require_once '../includes/header.php';
                             <h4>Book Discovery</h4>
                             <p>Discover new children's books from various sources and import them into your library.</p>
                             
-                            <!-- Modern Discovery Option -->
-                            <div class="alert alert-info mb-4">
-                                <h5><i class="fas fa-rocket"></i> Try the New Modern Discovery Experience!</h5>
-                                <p class="mb-2">Experience real-time book discovery with individual progress updates, enhanced tables, and modern AJAX processing.</p>
-                                <a href="book-discovery-modern.php" class="btn btn-success">
-                                    <i class="fas fa-magic"></i> Launch Modern Discovery
-                                </a>
-                            </div>
-                            
                             <div class="card mb-4">
                                 <div class="card-header">
                                     <h5>URL-based Discovery</h5>

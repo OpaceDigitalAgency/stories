@@ -60,14 +60,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <form id="discoveryForm">
                         <div class="form-group">
                             <label for="discovery_url">Website URL</label>
-                            <select class="form-control" id="discovery_url" name="discovery_url">
-                                <option value="https://www.booktrust.org.uk/booklists/0-5-years/" <?php echo $initialUrl === 'https://www.booktrust.org.uk/booklists/0-5-years/' ? 'selected' : ''; ?>>BookTrust 0-5 years</option>
-                                <option value="https://www.booktrust.org.uk/booklists/5-8-years/" <?php echo $initialUrl === 'https://www.booktrust.org.uk/booklists/5-8-years/' ? 'selected' : ''; ?>>BookTrust 5-8 years</option>
-                                <option value="https://www.booktrust.org.uk/booklists/8-12-years/" <?php echo $initialUrl === 'https://www.booktrust.org.uk/booklists/8-12-years/' ? 'selected' : ''; ?>>BookTrust 8-12 years</option>
-                                <?php if ($initialUrl && !in_array($initialUrl, ['https://www.booktrust.org.uk/booklists/0-5-years/', 'https://www.booktrust.org.uk/booklists/5-8-years/', 'https://www.booktrust.org.uk/booklists/8-12-years/'])): ?>
-                                    <option value="<?php echo htmlspecialchars($initialUrl); ?>" selected><?php echo htmlspecialchars($initialUrl); ?></option>
-                                <?php endif; ?>
-                            </select>
+                            <input type="url" class="form-control" id="discovery_url" name="discovery_url"
+                                   placeholder="https://www.booktrust.org.uk/booklists/..." 
+                                   value="<?php echo htmlspecialchars($initialUrl); ?>" required>
+                            <small class="form-text text-muted">
+                                Supported sites: BookTrust, Waterstones, LoveReading4Kids, and many more
+                            </small>
                         </div>
                         
                         <div class="form-group">
@@ -172,19 +170,6 @@ class ModernBookDiscovery {
         this.cancelled = false;
         
         this.initEventListeners();
-<?php if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($initialUrl)): ?>
-<script>
-// Auto-start discovery if form was submitted
-document.addEventListener('DOMContentLoaded', function() {
-    // Small delay to ensure everything is loaded
-    setTimeout(function() {
-        if (discovery && typeof discovery.startDiscovery === 'function') {
-            discovery.startDiscovery();
-        }
-    }, 500);
-});
-</script>
-<?php endif; ?>
     }
     
     initEventListeners() {
@@ -346,7 +331,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         progressMessage.textContent = message;
         progressMessage.className = `alert alert-${type}`;
-getCurrentProgress(currentIndex) {
+    }
+    
+    getCurrentProgress(currentIndex) {
         return 10 + ((currentIndex / this.books.length) * 80);
     }
     
@@ -406,7 +393,6 @@ getCurrentProgress(currentIndex) {
         // Hide the show results button
         document.getElementById('showResultsButton').style.display = 'none';
     }
-    }
     
     showResults() {
         // Show results section
@@ -419,7 +405,7 @@ getCurrentProgress(currentIndex) {
             <ul class="mb-0">
                 <li>Total books discovered: ${this.totalBooks}</li>
                 <li>Successfully processed: ${this.processedBooks}</li>
-<li>Errors: ${this.errorBooks}</li>
+                <li>Errors: ${this.errorBooks}</li>
         `;
         
         if (this.autoEnrich) {
@@ -628,6 +614,18 @@ getCurrentProgress(currentIndex) {
 
 // Initialize the discovery system
 const discovery = new ModernBookDiscovery();
+
+<?php if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($initialUrl)): ?>
+// Auto-start discovery if form was submitted
+document.addEventListener('DOMContentLoaded', function() {
+    // Small delay to ensure everything is loaded
+    setTimeout(function() {
+        if (discovery && typeof discovery.startDiscovery === 'function') {
+            discovery.startDiscovery();
+        }
+    }, 500);
+});
+<?php endif; ?>
 </script>
 
 <style>

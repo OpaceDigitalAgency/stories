@@ -67,7 +67,7 @@ try {
     }
 
     // Validate tab value
-    $validTabs = ['existing', 'import', 'reviews', 'sources', 'batch', 'ai', 'validate'];
+    $validTabs = ['existing', 'import', 'reviews', 'sources', 'batch', 'ai', 'validate', 'discovery'];
     if (!in_array($currentTab, $validTabs)) {
         $currentTab = 'existing';
     }
@@ -475,6 +475,9 @@ require_once '../includes/header.php';
                                 </a>
                                 <a href="book-validation.php" class="btn btn-outline-primary m-1">
                                     <i class="fas fa-check-circle"></i> ISBN & Data Validation
+                                </a>
+                                <a href="book-import-tool.php?tab=discovery" class="btn btn-outline-primary m-1">
+                                    <i class="fas fa-search"></i> Discovery
                                 </a>
                             </div>
                         </div>
@@ -1327,6 +1330,75 @@ require_once '../includes/header.php';
 
                                         <button type="submit" class="btn btn-primary">
                                             <i class="fas fa-sync"></i> Start Data Enrichment
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Discovery Tab -->
+                        <div class="tab-pane fade <?php echo $currentTab === 'discovery' ? 'show active' : ''; ?>" id="discovery" role="tabpanel">
+                            <h4>Book Discovery</h4>
+                            <p>Discover new children's books from various sources and import them into your library.</p>
+                            
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h5>URL-based Discovery</h5>
+                                </div>
+                                <div class="card-body">
+                                    <p>Enter a URL from a book recommendation website to discover and import books.</p>
+                                    
+                                    <form method="post" action="book-discovery-process.php">
+                                        <input type="hidden" name="action" value="discover_from_url">
+                                        
+                                        <div class="form-group">
+                                            <label for="discovery_url">Website URL</label>
+                                            <input type="url" class="form-control" id="discovery_url" name="url"
+                                                   placeholder="https://www.booktrust.org.uk/booklists/..." required>
+                                            <small class="form-text text-muted">
+                                                Supported sites: BookTrust, Waterstones, LoveReading4Kids, and many more
+                                            </small>
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <label for="discovery_limit">Maximum books to discover</label>
+                                            <select class="form-control" id="discovery_limit" name="limit">
+                                                <option value="10">10 books</option>
+                                                <option value="25" selected>25 books</option>
+                                                <option value="50">50 books</option>
+                                                <option value="100">100 books</option>
+                                                <option value="0">All books</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-search"></i> Discover Books
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                            
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>Automated Source Discovery</h5>
+                                </div>
+                                <div class="card-body">
+                                    <p>Automatically discover new book recommendation sources.</p>
+                                    
+                                    <form method="post" action="book-discovery-process.php">
+                                        <input type="hidden" name="action" value="discover_sources">
+                                        
+                                        <div class="form-group">
+                                            <label for="source_keywords">Search Keywords</label>
+                                            <input type="text" class="form-control" id="source_keywords" name="keywords"
+                                                   value="children's book recommendations" required>
+                                            <small class="form-text text-muted">
+                                                Keywords to search for book recommendation websites
+                                            </small>
+                                        </div>
+                                        
+                                        <button type="submit" class="btn btn-secondary">
+                                            <i class="fas fa-globe"></i> Find New Sources
                                         </button>
                                     </form>
                                 </div>

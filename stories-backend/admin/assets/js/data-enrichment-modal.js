@@ -1279,22 +1279,65 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             console.log('🔍 PUBLISHER_DEBUG: Extracted actual value from recommendation:', newValue, '→', actualNewValue);
         }
 
-        // Special handling for tags/genres - use proper comparison
-        if (Array.isArray(currentValue) && typeof actualNewValue === 'string') {
-            // Current value is array of tags, new value is comma-separated string
-            const currentTags = currentValue.map(tag => tag.toLowerCase().trim()).sort();
-            const newTags = actualNewValue.split(',').map(tag => tag.toLowerCase().trim()).sort();
-
-            console.log('🏷️ TAG_DEBUG: Comparing tags:', {
-                current: currentTags,
-                new: newTags,
-                currentString: currentTags.join(','),
-                newString: newTags.join(',')
+        // Special handling for tags/genres - use proper comparison for all tag formats
+        if (fieldName === 'tags') {
+            console.log('🏷️ TAG_DEBUG: Comparing tags for field:', fieldName, {
+                currentValue: currentValue,
+                currentType: typeof currentValue,
+                currentIsArray: Array.isArray(currentValue),
+                actualNewValue: actualNewValue,
+                newType: typeof actualNewValue,
+                newIsArray: Array.isArray(actualNewValue)
             });
 
-            if (currentTags.join(',') === newTags.join(',')) {
-                console.log('🏷️ TAG_DEBUG: Tags match exactly');
+            // Normalize both values to arrays for comparison
+            let currentTags = [];
+            let newTags = [];
+
+            // Handle current value
+            if (Array.isArray(currentValue)) {
+                currentTags = currentValue.map(tag => tag.toLowerCase().trim()).sort();
+            } else if (typeof currentValue === 'string') {
+                currentTags = currentValue.split(',').map(tag => tag.toLowerCase().trim()).sort();
+            }
+
+            // Handle new value
+            if (Array.isArray(actualNewValue)) {
+                newTags = actualNewValue.map(tag => tag.toLowerCase().trim()).sort();
+            } else if (typeof actualNewValue === 'string') {
+                newTags = actualNewValue.split(',').map(tag => tag.toLowerCase().trim()).sort();
+            }
+
+            console.log('🏷️ TAG_DEBUG: Normalized tags for comparison:', {
+                currentTags: currentTags,
+                newTags: newTags,
+                currentLength: currentTags.length,
+                newLength: newTags.length
+            });
+
+            // Compare arrays element by element
+            const arraysEqual = currentTags.length === newTags.length &&
+                               currentTags.every((tag, index) => {
+                                   const isEqual = tag === newTags[index];
+                                   console.log(`🏷️ TAG_DEBUG: Comparing "${tag}" vs "${newTags[index]}" = ${isEqual}`);
+                                   return isEqual;
+                               });
+
+            console.log('🏷️ TAG_DEBUG: Final comparison result:', {
+                arraysEqual: arraysEqual,
+                currentEmpty: currentTags.length === 0,
+                newEmpty: newTags.length === 0
+            });
+
+            if (arraysEqual) {
+                console.log('🏷️ TAG_DEBUG: Tags match exactly - returning matches_database');
                 return 'matches_database';
+            } else if (currentTags.length === 0) {
+                console.log('🏷️ TAG_DEBUG: Current tags empty - returning database_empty');
+                return 'database_empty';
+            } else {
+                console.log('🏷️ TAG_DEBUG: Tags differ - returning database_wrong');
+                return 'database_wrong';
             }
         }
 

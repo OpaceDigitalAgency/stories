@@ -327,7 +327,10 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
         const normalized = {};
 
         for (const [format, data] of Object.entries(linksObj)) {
-            normalized[format] = { price: data.price };
+            normalized[format] = {
+                price: data.price,
+                is_selected: data.is_selected || false
+            };
         }
 
         return normalized;

@@ -585,10 +585,13 @@ function handleApplyEnrichment() {
                 break;
 
             case 'page_count':
-                // Ensure it's a number
-                if (is_numeric($value)) {
+                // Ensure it's a number and not null
+                if (is_numeric($value) && $value !== null && $value !== '') {
                     $updateFields[] = "page_count = ?";
                     $params[] = intval($value);
+                    error_log("SAVE_TEST: Adding page_count to update: " . intval($value));
+                } else {
+                    error_log("SAVE_TEST: SKIPPING page_count - invalid value: " . json_encode($value));
                 }
                 break;
 

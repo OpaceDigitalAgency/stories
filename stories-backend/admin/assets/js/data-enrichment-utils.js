@@ -635,14 +635,29 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
                     const selectedOption = $(`input[name="field_${fieldName}_option"]:checked`);
                     if (selectedOption.length > 0) {
                         const optionIndex = parseInt(selectedOption.val());
+                        const optionValue = fieldData.new_data.options[optionIndex].value;
+
+                        // CRITICAL FIX: Don't include options with null/unknown values
+                        if (optionValue === null || optionValue === undefined ||
+                            fieldData.new_data.options[optionIndex].source === 'unknown') {
+                            console.log(`SAVE_TEST: SKIPPING multi-source field ${fieldName} - selected option has null/unknown value:`, fieldData.new_data.options[optionIndex]);
+                            return; // Skip this field
+                        }
+
                         selectedFields[fieldName] = {
-                            value: fieldData.new_data.options[optionIndex].value,
+                            value: optionValue,
                             source: fieldData.new_data.options[optionIndex].source,
                             confidence: fieldData.new_data.options[optionIndex].confidence
                         };
                         console.log(`SAVE_TEST: Multi-source field ${fieldName}:`, selectedFields[fieldName]);
                     }
                 } else if (fieldData.new_data) {
+                    // CRITICAL FIX: Don't include fields with null/unknown values
+                    if (fieldData.new_data.value === null || fieldData.new_data.value === undefined ||
+                        fieldData.new_data.source === 'unknown') {
+                        console.log(`SAVE_TEST: SKIPPING field ${fieldName} - has null/unknown value:`, fieldData.new_data);
+                        return; // Skip this field
+                    }
                     selectedFields[fieldName] = fieldData.new_data;
                     console.log(`SAVE_TEST: Single-source field ${fieldName}:`, selectedFields[fieldName]);
                 }

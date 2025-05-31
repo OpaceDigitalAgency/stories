@@ -1,4 +1,8 @@
 // Data Enrichment Modal JavaScript
+// 🚨 CRITICAL WARNING: This system is EXTREMELY fragile due to tight coupling
+// 🚨 READ stories-backend/docs/DATA_ENRICHMENT_CRITICAL_WARNINGS.md BEFORE MAKING ANY CHANGES
+// 🚨 TAGS FIELD CORRUPTION IS A RECURRING ISSUE - FOLLOW PROTECTION PATTERNS STRICTLY
+
 // Prevents multiple script loading with a guard
 if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
     window.dataEnrichmentModalLoaded = true;
@@ -88,6 +92,26 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
     window.currentBookId = null;
     window.currentBookISBN = null;
     window.tagsFieldProcessed = false; // Track if tags field has been processed to prevent corruption
+
+    /**
+     * 🛡️ CRITICAL PROTECTION FUNCTION - PREVENTS TAGS FIELD CORRUPTION
+     * Call this before ANY function that might process fields
+     * @param {string} functionName - Name of function being called
+     * @param {string} fieldName - Field being processed (if applicable)
+     * @returns {boolean} - true if safe to proceed, false if should abort
+     */
+    function protectTagsField(functionName, fieldName = null) {
+        if (fieldName === 'tags') {
+            console.error(`🚨 PROTECTION TRIGGERED: ${functionName} attempted to process tags field - BLOCKED`);
+            console.error(`🚨 READ: stories-backend/docs/DATA_ENRICHMENT_CRITICAL_WARNINGS.md`);
+            console.trace('🚨 Call stack that triggered protection:');
+            return false; // BLOCK the operation
+        }
+        return true; // Safe to proceed
+    }
+
+    // Make protection function globally available
+    window.protectTagsField = protectTagsField;
 
     function openDataEnrichmentModal(bookId, title, author, currentISBN = '') {
         console.log('🚀 openDataEnrichmentModal called with:', { bookId, title, author, currentISBN, type: typeof currentISBN });
@@ -1558,17 +1582,10 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
 
         console.log('🎨 Database state:', databaseState, 'isChecked:', isChecked, 'valuesDiffer:', valuesDiffer);
 
-        // CRITICAL FIX: Auto-uncheck checkbox if values match database (should be disabled)
-        if (databaseState === 'matches_database' && isChecked) {
-            console.log('🎨 CRITICAL_FIX: Values match database - unchecking and disabling field');
-            fieldCheckbox.prop('checked', false);
-            fieldCheckbox.prop('disabled', true);
-            isChecked = false; // Update the local variable
-        } else if (databaseState !== 'matches_database' && fieldCheckbox.prop('disabled')) {
-            // Re-enable checkbox if it was previously disabled but now has different values
-            console.log('🎨 CRITICAL_FIX: Values differ from database - re-enabling field');
-            fieldCheckbox.prop('disabled', false);
-        }
+        // CRITICAL FIX: Remove the auto-disable logic that was preventing checkbox re-selection
+        // The original logic was flawed and prevented users from manually selecting fields
+        // Users should always be able to select/unselect fields manually
+        console.log('🎨 Database state determined:', databaseState, 'User can manually override if needed');
 
         // Remove existing state classes
         fieldContainer.removeClass('disabled-field matches-database database-wrong database-empty');
@@ -1986,8 +2003,9 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         const benefitClass = getBenefitColorClass(benefitLevel);
         const benefitBorder = getBenefitBorderClass(benefitLevel);
 
-        // Add disabled styling classes - exact matches should be disabled
-        const shouldDisable = isUnknown || isPendingAmazon || benefitLevel === 'not_beneficial' || benefitLevel === 'exact_match' || databaseState === 'matches_database';
+        // CRITICAL FIX: Don't auto-disable fields - let users decide what to select
+        // Only disable if truly unknown or pending data, not for exact matches
+        const shouldDisable = isUnknown || isPendingAmazon;
         const disabledClass = shouldDisable ? ' disabled-field' : '';
         const labelClass = shouldDisable ? ' text-muted' : '';
 

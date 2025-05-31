@@ -1,6 +1,7 @@
 <?php
 /**
  * AJAX handler for data enrichment operations
+ * UPDATED: 2024-12-19 with database transaction fixes
  */
 
 // Set JSON header first

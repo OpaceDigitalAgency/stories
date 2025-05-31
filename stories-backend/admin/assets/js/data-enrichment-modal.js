@@ -740,10 +740,25 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                                 existingField.new_data.source = currentSources + ' + amazon';
                             }
                         } else if (fieldName === 'tags') {
-                            // CRITICAL FIX: Special handling for tags - merge instead of creating options
-                            console.log(`📦 TAGS_MERGE: Merging Amazon tags with existing tags for ${fieldName}`);
-                            console.log(`📦 TAGS_MERGE: Existing value:`, existingField.new_data.value);
+                            // CRITICAL FIX: Only merge tags if Amazon actually has tags data
+                            console.log(`📦 TAGS_MERGE: Checking if Amazon has tags data for ${fieldName}`);
                             console.log(`📦 TAGS_MERGE: Amazon value:`, amazonFieldData.new_data.value);
+
+                            // Check if Amazon actually has meaningful tags data
+                            let amazonHasTags = false;
+                            if (typeof amazonFieldData.new_data.value === 'string') {
+                                amazonHasTags = amazonFieldData.new_data.value.trim().length > 0;
+                            } else if (Array.isArray(amazonFieldData.new_data.value)) {
+                                amazonHasTags = amazonFieldData.new_data.value.length > 0;
+                            }
+
+                            if (!amazonHasTags) {
+                                console.log(`📦 TAGS_MERGE: Amazon has no tags data - skipping merge for ${fieldName}`);
+                                return; // Skip processing this field entirely
+                            }
+
+                            console.log(`📦 TAGS_MERGE: Amazon has tags data - proceeding with merge for ${fieldName}`);
+                            console.log(`📦 TAGS_MERGE: Existing value:`, existingField.new_data.value);
 
                             // Parse existing tags
                             let existingTags = [];

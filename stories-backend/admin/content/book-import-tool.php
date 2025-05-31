@@ -1851,22 +1851,20 @@ $(document).ready(function() {
             
             progressSection.style.display = 'block';
             document.getElementById('resultsSection').style.display = 'none';
-        
-        // Reset counters
-        discoveryCurrentIndex = 0;
-        discoveryProcessedBooks = 0;
-        discoveryImportedBooks = 0;
-        discoveryErrorBooks = 0;
-        discoveryCancelled = false;
-        
-        // Show cancel button
-        document.getElementById('cancelButton').style.display = 'inline-block';
-        document.getElementById('showResultsButton').style.display = 'none';
-        
-        // Disable form
-        $('#startDiscoveryBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Discovering...');
-        
-        try {
+            
+            // Reset counters
+            discoveryCurrentIndex = 0;
+            discoveryProcessedBooks = 0;
+            discoveryImportedBooks = 0;
+            discoveryErrorBooks = 0;
+            discoveryCancelled = false;
+            
+            // Show cancel button
+            document.getElementById('cancelButton').style.display = 'inline-block';
+            document.getElementById('showResultsButton').style.display = 'none';
+            
+            // Disable form
+            $('#startDiscoveryBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Discovering...');
             // Step 1: Discover all books
             console.log('Updating progress to 0%');
             updateDiscoveryProgress(0, 'Discovering books from website...');

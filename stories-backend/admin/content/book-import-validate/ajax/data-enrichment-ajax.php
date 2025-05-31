@@ -93,6 +93,19 @@ try {
                 // Log the result for debugging
                 error_log("Amazon payload result: " . json_encode($amazonPayload));
 
+                // CRITICAL DEBUG: Check if selected_format and selected_price are being set
+                error_log("AMAZON_DEBUG: selected_format = " . ($amazonPayload['selected_format'] ?? 'NULL'));
+                error_log("AMAZON_DEBUG: selected_price = " . ($amazonPayload['selected_price'] ?? 'NULL'));
+                error_log("AMAZON_DEBUG: buying_options = " . json_encode($amazonPayload['buying_options'] ?? []));
+
+                // Check each buying option for is_selected flag
+                if (!empty($amazonPayload['buying_options'])) {
+                    foreach ($amazonPayload['buying_options'] as $format => $data) {
+                        $isSelected = isset($data['is_selected']) ? ($data['is_selected'] ? 'TRUE' : 'FALSE') : 'NOT_SET';
+                        error_log("AMAZON_DEBUG: Format '$format' - is_selected: $isSelected, price: " . ($data['price'] ?? 'NULL'));
+                    }
+                }
+
                 // Structure the Amazon data properly for the enrichment system
                 $structuredData = [];
 

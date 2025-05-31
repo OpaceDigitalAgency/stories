@@ -555,6 +555,19 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         console.log('📦 Format field in Amazon data:', amazonData.format);
         console.log('📦 Price Range field in Amazon data:', amazonData.price_range);
 
+        // CRITICAL DEBUG: Check if format and price_range are missing from Amazon data
+        if (!amazonData.format) {
+            console.log('🚨 CRITICAL: format field is MISSING from Amazon data!');
+        } else {
+            console.log('✅ format field found in Amazon data:', amazonData.format);
+        }
+
+        if (!amazonData.price_range) {
+            console.log('🚨 CRITICAL: price_range field is MISSING from Amazon data!');
+        } else {
+            console.log('✅ price_range field found in Amazon data:', amazonData.price_range);
+        }
+
         // Merge Amazon data into the current enrichment data
         if (window.currentEnrichmentData && window.currentEnrichmentData.fields) {
             // Store current checkbox states before re-rendering

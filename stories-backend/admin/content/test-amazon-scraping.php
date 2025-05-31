@@ -50,17 +50,17 @@ if (isset($amazonData10['metadata']['reading_age'])) {
     echo "<h3>❌ No reading_age found in Amazon data (ISBN-10)</h3>";
 }
 
-// Test the full enrichment process
-echo "<h3>Full Enrichment Data:</h3>";
-$enrichmentData = getEnrichmentData($testISBN, 'Test Book', 'Test Author');
+// Test the Amazon enrichment data function
+echo "<h3>Amazon Enrichment Data:</h3>";
+$amazonEnrichmentData = getAmazonEnrichmentData($testISBN);
 
-if (isset($enrichmentData['fields']['age_range'])) {
+if (isset($amazonEnrichmentData['fields']['age_range'])) {
     echo "<h4>Age Range Field Data:</h4>";
     echo "<pre>";
-    print_r($enrichmentData['fields']['age_range']);
+    print_r($amazonEnrichmentData['fields']['age_range']);
     echo "</pre>";
 } else {
-    echo "<h4>❌ No age_range field in enrichment data</h4>";
+    echo "<h4>❌ No age_range field in Amazon enrichment data</h4>";
 }
 
 // Test Chronicles of Narnia too
@@ -89,8 +89,8 @@ curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_TIMEOUT, 15);
 curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
-curl_setopt($ch, CURLOPT_ENCODING, '');
+curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+
 $response = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 curl_close($ch);
@@ -101,7 +101,7 @@ echo "<p><strong>Response Length:</strong> " . strlen($response) . " characters<
 // Look for reading age in the response
 if ($response) {
     echo "<h3>Searching for Reading Age in Response:</h3>";
-    
+
     // Search for reading age patterns
     $patterns = [
         '/<span[^>]*class="a-text-bold"[^>]*>Reading age[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
@@ -109,7 +109,7 @@ if ($response) {
         '/Reading age[^>]*>([^<]+)</i',
         '/<span>Reading age<\/span>.*?<span[^>]*>([^<]+)<\/span>/is'
     ];
-    
+
     $found = false;
     foreach ($patterns as $i => $pattern) {
         if (preg_match($pattern, $response, $matches)) {
@@ -117,29 +117,33 @@ if ($response) {
             $found = true;
         }
     }
-    
+
     if (!$found) {
-        echo "<p><strong>No reading age patterns found in response.</strong></p>";
-        
+        echo "<p><strong>❌ No reading age patterns found in response</strong></p>";
+
         // Look for any mention of "age" in the response
         if (preg_match_all('/[^>]*age[^<]*/i', $response, $ageMatches)) {
             echo "<h4>All mentions of 'age' in response:</h4>";
-            foreach (array_slice($ageMatches[0], 0, 10) as $match) {
-                echo "<p>" . htmlspecialchars(trim($match)) . "</p>";
+            foreach (array_slice($ageMatches[0], 0, 10) as $i => $match) {
+                echo "<p>" . ($i + 1) . ": " . htmlspecialchars(trim($match)) . "</p>";
             }
         }
     }
-    
-    // Check if the page is actually for the book we want
-    if (preg_match('/<title>([^<]+)<\/title>/i', $response, $titleMatch)) {
-        echo "<p><strong>Page Title:</strong> " . htmlspecialchars($titleMatch[1]) . "</p>";
-    }
-    
-    // Check for "Opal Moonbaby" in the response
-    if (stripos($response, 'Opal Moonbaby') !== false) {
-        echo "<p><strong>✅ Book title found in response</strong></p>";
+
+    // Also check for detail bullets section
+    if (preg_match('/<div[^>]*id="detailBullets_feature_div"[^>]*>(.*?)<\/div>/is', $response, $bulletMatch)) {
+        echo "<h4>Detail bullets section found - length: " . strlen($bulletMatch[1]) . " characters</h4>";
+
+        // Look for reading age in bullets
+        if (preg_match('/reading age/i', $bulletMatch[1])) {
+            echo "<p><strong>✅ 'Reading age' found in detail bullets section</strong></p>";
+        } else {
+            echo "<p><strong>❌ 'Reading age' NOT found in detail bullets section</strong></p>";
+        }
     } else {
-        echo "<p><strong>❌ Book title NOT found in response</strong></p>";
+        echo "<p><strong>❌ Detail bullets section not found</strong></p>";
     }
+} else {
+    echo "<p><strong>❌ No response received</strong></p>";
 }
 ?>

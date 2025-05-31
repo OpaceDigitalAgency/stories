@@ -1289,6 +1289,12 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             // FIXED: Re-enable auto-sync checkboxes
             $('input[type="checkbox"][value="reading_level"]').prop('checked', isChecked);
 
+            // CRITICAL FIX: Update field display to remove disabled styling when checkbox is checked
+            setTimeout(() => {
+                updateFieldDisplay('reading_level');
+                updateFieldDisplay('age_range');
+            }, 50);
+
             if (isChecked) {
                 // Both fields selected - sync reading level to match current age range selection
                 const selectedAgeRange = getSelectedFieldValue('age_range');
@@ -1321,6 +1327,12 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
 
             // FIXED: Re-enable auto-sync checkboxes
             $('input[type="checkbox"][value="age_range"]').prop('checked', isChecked);
+
+            // CRITICAL FIX: Update field display to remove disabled styling when checkbox is checked
+            setTimeout(() => {
+                updateFieldDisplay('reading_level');
+                updateFieldDisplay('age_range');
+            }, 50);
 
             if (isChecked) {
                 // Both fields selected - sync age range to match current reading level selection

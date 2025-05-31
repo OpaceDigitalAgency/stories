@@ -779,6 +779,10 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
 
             // CRITICAL FIX: Re-render the enrichment fields to include the new Amazon data
             console.log('📦 CRITICAL_FIX: Re-rendering fields after Amazon data integration');
+            console.log('📦 CRITICAL_FIX: Fields being passed to displayEnrichmentFields:', Object.keys(window.currentEnrichmentData.fields));
+            console.log('📦 CRITICAL_FIX: Purchase links field after update:', window.currentEnrichmentData.fields.purchase_links);
+            console.log('📦 CRITICAL_FIX: Format field after update:', window.currentEnrichmentData.fields.format);
+            console.log('📦 CRITICAL_FIX: Price range field after update:', window.currentEnrichmentData.fields.price_range);
             displayEnrichmentFields(window.currentEnrichmentData.fields);
 
             // CRITICAL FIX: Update Amazon status badge to show completion

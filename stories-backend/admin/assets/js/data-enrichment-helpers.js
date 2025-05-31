@@ -358,23 +358,29 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
         } else if (fieldName === 'preview_link') {
             return `<a href="${value}" target="_blank" class="btn btn-sm btn-outline-primary">View Preview</a>`;
         } else if (fieldName === 'tags') {
-            // CRITICAL FIX: Simplified tags display - no complex processing during initial display
+            // CRITICAL FIX: Prevent recursive processing of tags field
             console.log('🏷️ TAGS_DISPLAY: Processing tags field with value:', value);
+
+            // If this is already formatted HTML, return it as-is
+            if (typeof value === 'string' && value.includes('<span class="badge')) {
+                console.log('🏷️ TAGS_DISPLAY: Already formatted HTML, returning as-is');
+                return value;
+            }
+
+            // If this is a very long string (likely already processed), just show first part
+            if (typeof value === 'string' && value.length > 100) {
+                console.log('🏷️ TAGS_DISPLAY: Very long string detected, truncating to prevent expansion');
+                const truncated = value.substring(0, 50) + '...';
+                return `<span class="badge badge-success mr-1">${truncated}</span>`;
+            }
 
             if (Array.isArray(value)) {
                 // Remove duplicates and create badges
                 const uniqueTags = [...new Set(value.map(tag => tag.trim()).filter(tag => tag.length > 0))];
                 return uniqueTags.map(item => `<span class="badge badge-success mr-1">${item}</span>`).join('');
             } else if (typeof value === 'string') {
-                // Check if this is already a formatted string with badges (prevent double processing)
-                if (value.includes('<span class="badge')) {
-                    console.log('🏷️ TAGS_DISPLAY: Already formatted, returning as-is');
-                    return value; // Already formatted, return as-is
-                }
-
-                // SIMPLE APPROACH: Just display the raw value as a single badge
-                // Don't try to split or process it during initial display
-                console.log('🏷️ TAGS_DISPLAY: Displaying raw value as single badge:', value);
+                // Simple display - no splitting or complex processing
+                console.log('🏷️ TAGS_DISPLAY: Displaying simple string value');
                 return `<span class="badge badge-success mr-1">${value}</span>`;
             }
             return `<span class="badge badge-success">${value}</span>`;

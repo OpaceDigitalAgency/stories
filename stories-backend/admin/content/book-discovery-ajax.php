@@ -56,24 +56,30 @@ try {
             error_log("Valid URL: " . $url);
             error_log("Creating BookDiscoveryEngine");
             $discoveryEngine = new BookDiscoveryEngine($db);
+            error_log("Calling discoverFromURL");
             $books = $discoveryEngine->discoverFromURL($url);
+            error_log("Discovery completed. Found " . count($books) . " books");
             
             // Filter by age if specified
             $ageFilter = $_POST['age_filter'] ?? '';
             if ($ageFilter && !empty($books)) {
+                error_log("Applying age filter: " . $ageFilter);
                 $books = array_filter($books, function($book) use ($ageFilter) {
                     $bookAge = strtolower($book['age_range'] ?? '');
                     $filterAge = strtolower($ageFilter);
-                    return strpos($bookAge, $filterAge) !== false || 
+                    return strpos($bookAge, $filterAge) !== false ||
                            strpos($bookAge, str_replace('-', ' to ', $filterAge)) !== false;
                 });
+                error_log("After filtering: " . count($books) . " books");
             }
             
-            echo json_encode([
+            $response = [
                 'success' => true,
                 'books' => array_values($books),
                 'total' => count($books)
-            ]);
+            ];
+            error_log("Sending response: " . json_encode($response));
+            echo json_encode($response);
             break;
             
         case 'enrich_book':
@@ -132,6 +138,8 @@ try {
     }
     
 } catch (Exception $e) {
+    error_log("AJAX Discovery Error: " . $e->getMessage());
+    error_log("Stack trace: " . $e->getTraceAsString());
     echo json_encode([
         'success' => false,
         'error' => $e->getMessage()

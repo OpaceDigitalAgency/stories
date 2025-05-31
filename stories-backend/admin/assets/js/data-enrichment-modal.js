@@ -1011,23 +1011,32 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 console.log('📦 Restored all checkbox and option states after Amazon field updates');
 
                 // CRITICAL FIX: Force layout recalculation after Amazon data loads
-                // This ensures all fields have consistent 3-column layout
+                // This ensures ALL fields have consistent 3-column layout
                 setTimeout(() => {
-                    console.log('🎨 LAYOUT_FIX: Forcing layout recalculation after Amazon data integration');
+                    console.log('🎨 LAYOUT_FIX: Forcing 3-column layout on ALL fields after Amazon data integration');
 
-                    // Force all col-md-6 elements to use 3-column layout
-                    $('#enrichment-fields .col-md-6').each(function() {
+                    // Force ALL col-md-6 elements to use 3-column layout (both existing and new)
+                    $('#enrichment-fields .col-md-6, .modal-body .col-md-6, .enrichment-field').each(function() {
                         $(this).css({
-                            'flex': '0 0 33.333333%',
-                            'max-width': '33.333333%',
-                            'width': '33.333333%'
+                            'flex': '0 0 33.333333% !important',
+                            'max-width': '33.333333% !important',
+                            'width': '33.333333% !important',
+                            'flex-basis': '33.333333% !important'
                         });
                     });
 
-                    // Trigger a layout reflow
-                    $('#enrichment-fields')[0].offsetHeight;
+                    // Also force the parent row to use flexbox properly
+                    $('#enrichment-fields').css({
+                        'display': 'flex',
+                        'flex-wrap': 'wrap'
+                    });
 
-                    console.log('🎨 LAYOUT_FIX: Applied 3-column layout to all fields after Amazon data');
+                    // Trigger multiple layout reflows to ensure changes stick
+                    $('#enrichment-fields')[0].offsetHeight;
+                    $('#enrichment-fields .col-md-6')[0]?.offsetWidth;
+
+                    console.log('🎨 LAYOUT_FIX: Applied 3-column layout to ALL fields (existing + Amazon)');
+                    console.log('🎨 LAYOUT_FIX: Total fields processed:', $('#enrichment-fields .col-md-6').length);
                 }, 200);
             }, 150);
 
@@ -1108,6 +1117,29 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 container.append(createCurrentOnlyField(fieldName, field, label));
             }
         });
+
+        // CRITICAL FIX: Force 3-column layout immediately after initial field display
+        setTimeout(() => {
+            console.log('🎨 INITIAL_LAYOUT_FIX: Forcing 3-column layout on initial field display');
+
+            // Force ALL col-md-6 elements to use 3-column layout from the start
+            $('#enrichment-fields .col-md-6, .modal-body .col-md-6, .enrichment-field').each(function() {
+                $(this).css({
+                    'flex': '0 0 33.333333% !important',
+                    'max-width': '33.333333% !important',
+                    'width': '33.333333% !important',
+                    'flex-basis': '33.333333% !important'
+                });
+            });
+
+            // Force the parent row to use flexbox properly
+            $('#enrichment-fields').css({
+                'display': 'flex',
+                'flex-wrap': 'wrap'
+            });
+
+            console.log('🎨 INITIAL_LAYOUT_FIX: Applied 3-column layout to initial fields');
+        }, 100);
 
         // Add change handlers
         $('.field-checkbox').change(function() {

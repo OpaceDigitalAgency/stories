@@ -1804,21 +1804,43 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         let hasExactMatch = false;
         let databaseState = null;
 
-        if (fieldName === 'tags' && !isUnknown && !isPendingAmazon) {
+        if (fieldName === 'tags' && !isUnknown && !isPendingAmazon && newData.value && newData.value.trim().length > 0) {
             console.log('🏷️ UX_FIX: Processing tags field for intelligent comparison');
 
-            // Get current tags as array
+            // Get current tags as array using the same normalization as the comparison logic
             let currentTags = [];
             if (Array.isArray(field.current_value)) {
-                currentTags = field.current_value.map(tag => tag.toLowerCase().trim()).filter(tag => tag.length > 0);
+                currentTags = field.current_value
+                    .map(tag => normalizeTagForComparison(tag.toLowerCase().trim()))
+                    .filter(tag => tag.length > 0);
             } else if (typeof field.current_value === 'string' && field.current_value.includes(',')) {
-                currentTags = field.current_value.split(',').map(tag => tag.toLowerCase().trim()).filter(tag => tag.length > 0);
+                currentTags = field.current_value.split(',')
+                    .map(tag => normalizeTagForComparison(tag.toLowerCase().trim()))
+                    .filter(tag => tag.length > 0);
+            } else if (typeof field.current_value === 'string' && field.current_value.length > 0) {
+                // Handle single tag or concatenated string
+                const splitTags = splitConcatenatedTags(field.current_value);
+                if (splitTags.length > 1) {
+                    currentTags = splitTags.map(tag => normalizeTagForComparison(tag.toLowerCase().trim())).filter(tag => tag.length > 0);
+                } else {
+                    currentTags = [normalizeTagForComparison(field.current_value.toLowerCase().trim())].filter(tag => tag.length > 0);
+                }
             }
 
-            // Get new tags as array
+            // Get new tags as array using the same normalization
             let newTags = [];
             if (typeof newData.value === 'string' && newData.value.includes(',')) {
-                newTags = newData.value.split(',').map(tag => tag.toLowerCase().trim()).filter(tag => tag.length > 0);
+                newTags = newData.value.split(',')
+                    .map(tag => normalizeTagForComparison(tag.toLowerCase().trim()))
+                    .filter(tag => tag.length > 0);
+            } else if (typeof newData.value === 'string' && newData.value.length > 0) {
+                // Handle single tag or concatenated string
+                const splitTags = splitConcatenatedTags(newData.value);
+                if (splitTags.length > 1) {
+                    newTags = splitTags.map(tag => normalizeTagForComparison(tag.toLowerCase().trim())).filter(tag => tag.length > 0);
+                } else {
+                    newTags = [normalizeTagForComparison(newData.value.toLowerCase().trim())].filter(tag => tag.length > 0);
+                }
             }
 
             // Remove duplicates from both arrays

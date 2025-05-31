@@ -311,11 +311,12 @@
     padding: 0.75rem !important;
 }
 
-/* Better responsive behavior for 3-column layout */
-@media (min-width: 992px) {
-    .col-lg-4 {
-        flex: 0 0 33.333333%;
-        max-width: 33.333333%;
+/* CRITICAL FIX: Override Bootstrap's 50% width constraint for better layout */
+@media (min-width: 768px) {
+    #enrichment-fields .col-md-6 {
+        -ms-flex: 0 0 33.333333% !important;
+        flex: 0 0 33.333333% !important;
+        max-width: 33.333333% !important;
     }
 }
 

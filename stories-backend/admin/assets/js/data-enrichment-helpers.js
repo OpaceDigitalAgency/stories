@@ -198,7 +198,7 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
         }
 
         return `
-            <div class="col-lg-4 col-md-6 mb-3">
+            <div class="col-md-6 mb-3">
                 <div class="enrichment-field ${benefitBorder}${exactMatchClass}${disabledClass}" data-field="${fieldName}">
                     <div class="form-check">
                         <input class="form-check-input field-checkbox" type="checkbox"
@@ -222,7 +222,7 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
 
     function createCurrentOnlyField(fieldName, field, label) {
         return `
-            <div class="col-lg-4 col-md-6 mb-3">
+            <div class="col-md-6 mb-3">
                 <div class="enrichment-field" data-field="${fieldName}">
                     <div class="form-check">
                         <input class="form-check-input field-checkbox" type="checkbox"

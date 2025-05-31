@@ -641,23 +641,34 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
                 // Handle multi-source fields
                 if (fieldData.new_data && fieldData.new_data.options) {
                     const selectedOption = $(`input[name="field_${fieldName}_option"]:checked`);
+                    console.log(`SAVE_TEST: Multi-source field ${fieldName} - found ${selectedOption.length} selected radio buttons`);
+
                     if (selectedOption.length > 0) {
                         const optionIndex = parseInt(selectedOption.val());
-                        const optionValue = fieldData.new_data.options[optionIndex].value;
+                        console.log(`SAVE_TEST: Selected option index for ${fieldName}:`, optionIndex);
+                        console.log(`SAVE_TEST: Available options for ${fieldName}:`, fieldData.new_data.options);
 
-                        // CRITICAL FIX: Don't include options with null/unknown values
-                        if (optionValue === null || optionValue === undefined ||
-                            fieldData.new_data.options[optionIndex].source === 'unknown') {
-                            console.log(`SAVE_TEST: SKIPPING multi-source field ${fieldName} - selected option has null/unknown value:`, fieldData.new_data.options[optionIndex]);
-                            return; // Skip this field
+                        if (fieldData.new_data.options[optionIndex]) {
+                            const optionValue = fieldData.new_data.options[optionIndex].value;
+
+                            // CRITICAL FIX: Don't include options with null/unknown values
+                            if (optionValue === null || optionValue === undefined ||
+                                fieldData.new_data.options[optionIndex].source === 'unknown') {
+                                console.log(`SAVE_TEST: SKIPPING multi-source field ${fieldName} - selected option has null/unknown value:`, fieldData.new_data.options[optionIndex]);
+                                return; // Skip this field
+                            }
+
+                            selectedFields[fieldName] = {
+                                value: optionValue,
+                                source: fieldData.new_data.options[optionIndex].source,
+                                confidence: fieldData.new_data.options[optionIndex].confidence
+                            };
+                            console.log(`SAVE_TEST: Multi-source field ${fieldName}:`, selectedFields[fieldName]);
+                        } else {
+                            console.log(`SAVE_TEST: ERROR - Option index ${optionIndex} not found in options array for ${fieldName}`);
                         }
-
-                        selectedFields[fieldName] = {
-                            value: optionValue,
-                            source: fieldData.new_data.options[optionIndex].source,
-                            confidence: fieldData.new_data.options[optionIndex].confidence
-                        };
-                        console.log(`SAVE_TEST: Multi-source field ${fieldName}:`, selectedFields[fieldName]);
+                    } else {
+                        console.log(`SAVE_TEST: No radio button selected for multi-source field ${fieldName}`);
                     }
                 } else if (fieldData.new_data) {
                     // CRITICAL FIX: Don't include fields with null/unknown values

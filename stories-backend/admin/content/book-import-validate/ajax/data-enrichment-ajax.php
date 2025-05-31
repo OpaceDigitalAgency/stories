@@ -744,22 +744,27 @@ function handleApplyEnrichment() {
     // Add book ID parameter
     $params[] = $bookId;
 
-    // Execute update
-    $sql = "UPDATE books SET " . implode(', ', $updateFields) . " WHERE directory_item_id = ?";
+    // CRITICAL FIX: Start database transaction to ensure data persistence
+    try {
+        $db->beginTransaction();
+        error_log("SAVE_TEST: Started database transaction");
 
-    error_log("Final SQL: $sql");
-    error_log("Final params: " . json_encode($params));
+        // Execute update
+        $sql = "UPDATE books SET " . implode(', ', $updateFields) . " WHERE directory_item_id = ?";
 
-    // CRITICAL DEBUG: Verify book exists before update
-    $checkStmt = $db->prepare("SELECT directory_item_id, page_count, age_range, reading_level FROM books WHERE directory_item_id = ?");
-    $checkStmt->execute([$bookId]);
-    $existingBook = $checkStmt->fetch(PDO::FETCH_ASSOC);
-    error_log("SAVE_TEST: Book exists check - Book ID: $bookId");
-    error_log("SAVE_TEST: Existing book data: " . json_encode($existingBook));
+        error_log("Final SQL: $sql");
+        error_log("Final params: " . json_encode($params));
 
-    // Execute the update
-    $stmt = $db->prepare($sql);
-    if ($stmt->execute($params)) {
+        // CRITICAL DEBUG: Verify book exists before update
+        $checkStmt = $db->prepare("SELECT directory_item_id, page_count, age_range, reading_level FROM books WHERE directory_item_id = ?");
+        $checkStmt->execute([$bookId]);
+        $existingBook = $checkStmt->fetch(PDO::FETCH_ASSOC);
+        error_log("SAVE_TEST: Book exists check - Book ID: $bookId");
+        error_log("SAVE_TEST: Existing book data: " . json_encode($existingBook));
+
+        // Execute the update
+        $stmt = $db->prepare($sql);
+        if ($stmt->execute($params)) {
         $affectedRows = $stmt->rowCount();
         error_log("SAVE_TEST: SQL execution successful");
         error_log("SAVE_TEST: Affected rows: $affectedRows");
@@ -802,26 +807,37 @@ function handleApplyEnrichment() {
             }
         }
 
-        // Log the enrichment
-        logEnrichmentActivity($bookId, array_keys($fields));
+            // Log the enrichment
+            logEnrichmentActivity($bookId, array_keys($fields));
 
-        echo json_encode([
-            'success' => true,
-            'message' => 'Book data updated successfully',
-            'updated_fields' => array_keys($fields),
-            'additional_updates' => $additionalUpdates,
-            'debug' => [
-                'affected_rows' => $affectedRows,
-                'book_id' => $bookId,
-                'sql' => $sql,
-                'params' => $params,
-                'existing_book_data' => $existingBook
-            ]
-        ]);
-    } else {
-        $errorInfo = $stmt->errorInfo();
-        error_log("SQL execution failed. Error info: " . json_encode($errorInfo));
-        echo json_encode(['success' => false, 'message' => 'Database update failed: ' . $errorInfo[2]]);
+            // CRITICAL FIX: Commit the transaction to ensure data persistence
+            $db->commit();
+            error_log("SAVE_TEST: Database transaction committed successfully");
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'Book data updated successfully',
+                'updated_fields' => array_keys($fields),
+                'additional_updates' => $additionalUpdates,
+                'debug' => [
+                    'affected_rows' => $affectedRows,
+                    'book_id' => $bookId,
+                    'sql' => $sql,
+                    'params' => $params,
+                    'existing_book_data' => $existingBook
+                ]
+            ]);
+        } else {
+            $errorInfo = $stmt->errorInfo();
+            error_log("SAVE_TEST: SQL execution failed. Error info: " . json_encode($errorInfo));
+            $db->rollBack();
+            error_log("SAVE_TEST: Database transaction rolled back due to SQL failure");
+            echo json_encode(['success' => false, 'message' => 'Database update failed: ' . $errorInfo[2]]);
+        }
+    } catch (Exception $e) {
+        $db->rollBack();
+        error_log("SAVE_TEST: Database transaction rolled back due to exception: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Database transaction failed: ' . $e->getMessage()]);
     }
 }
 

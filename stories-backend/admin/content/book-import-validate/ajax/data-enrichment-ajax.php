@@ -1079,7 +1079,9 @@ function filterRelevantFields($fields, $currentBookData) {
     // Process maturity_rating separately and map to age_range if needed
     if (isset($fields['maturity_rating']) && !empty($fields['maturity_rating']['value'])) {
         $maturityRating = $fields['maturity_rating']['value'];
+        error_log("MATURITY_DEBUG: Processing maturity_rating: '$maturityRating'");
         $mappedAgeRange = mapMaturityToAgeRangeFromTable($maturityRating);
+        error_log("MATURITY_DEBUG: Mapped to age_range: '$mappedAgeRange'");
 
         if ($mappedAgeRange) {
             // Add age_range to the fields if it's not already there or if current age_range is empty
@@ -1091,12 +1093,19 @@ function filterRelevantFields($fields, $currentBookData) {
                     'source' => $fields['maturity_rating']['source'] ?? 'google_books',
                     'confidence' => $fields['maturity_rating']['confidence'] ?? 0.8
                 ];
-                error_log("Mapped maturity_rating '$maturityRating' to age_range '$mappedAgeRange'");
+                error_log("MATURITY_DEBUG: Added age_range field: '$mappedAgeRange' from maturity_rating");
             }
         }
 
         // Remove maturity_rating from fields since it's not a database column
         unset($fields['maturity_rating']);
+    }
+
+    // CRITICAL DEBUG: Check if age_range field exists and what its value is
+    if (isset($fields['age_range'])) {
+        error_log("AGE_RANGE_DEBUG: age_range field exists with value: '" . ($fields['age_range']['value'] ?? 'NO_VALUE') . "' from source: '" . ($fields['age_range']['source'] ?? 'NO_SOURCE') . "'");
+    } else {
+        error_log("AGE_RANGE_DEBUG: No age_range field found in enrichment data");
     }
     // Define actual database fields that exist in books table
     $validDbFields = [

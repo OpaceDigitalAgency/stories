@@ -1177,25 +1177,34 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
             // REMOVED: All maturity rating processing to eliminate 12+ issue
             // Google Books age range extraction - only from categories and subject_facet
             $ageRange = null;
+            error_log("AGE_RANGE_EXTRACT_DEBUG: Starting age range extraction for source: " . ($match['source'] ?? 'unknown'));
 
             // Check Google Books categories for explicit age patterns
             if (isset($match['categories']) && is_array($match['categories'])) {
+                error_log("AGE_RANGE_EXTRACT_DEBUG: Found categories: " . json_encode($match['categories']));
                 foreach ($match['categories'] as $category) {
                     if (is_string($category)) {
+                        error_log("AGE_RANGE_EXTRACT_DEBUG: Checking category: '$category'");
                         // Look for explicit age patterns in categories
                         if (preg_match('/(\d+)\s*-\s*(\d+)\s*years?/i', $category, $matches)) {
                             $rawAgeRange = $matches[0]; // e.g., "8-12 years"
+                            error_log("AGE_RANGE_EXTRACT_DEBUG: Found age pattern '$rawAgeRange' in category");
                             $ageRange = mapAmazonAgeRangeToStandard($rawAgeRange);
+                            error_log("AGE_RANGE_EXTRACT_DEBUG: Mapped to standard range: '$ageRange'");
                             if ($ageRange) break;
                         } elseif (stripos($category, 'young adult') !== false) {
                             $ageRange = '14-16 years';
+                            error_log("AGE_RANGE_EXTRACT_DEBUG: Found 'young adult' in category, setting to '14-16 years'");
                             break;
                         } elseif (stripos($category, 'teen') !== false) {
                             $ageRange = '11-14 years';
+                            error_log("AGE_RANGE_EXTRACT_DEBUG: Found 'teen' in category, setting to '11-14 years'");
                             break;
                         }
                     }
                 }
+            } else {
+                error_log("AGE_RANGE_EXTRACT_DEBUG: No categories found or categories not an array");
             }
 
             // Check if there's a direct age_range field (unlikely but possible)
@@ -1233,6 +1242,7 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
 
             // NO MATURITY RATING PROCESSING - this was causing the 12+ issue
             // Return null if no age range found from explicit sources
+            error_log("AGE_RANGE_EXTRACT_DEBUG: Final age range result: " . ($ageRange ?? 'null'));
             return $ageRange;
 
         case 'reading_level':

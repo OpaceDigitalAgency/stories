@@ -801,18 +801,35 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                             return; // Skip processing this field entirely
 
                         } else if (existingField.new_data.status === 'pending_amazon_data') {
-                        // CRITICAL FIX: Field was pending Amazon data - replace with actual Amazon data
-                        console.log(`📦 URGENT_FIX: Field ${fieldName} was pending Amazon data - replacing with Amazon data`);
-                        console.log(`📦 URGENT_FIX: Before replacement - status:`, existingField.new_data.status);
-                        console.log(`📦 URGENT_FIX: Amazon data to replace with:`, amazonFieldData.new_data);
+                        // CRITICAL FIX: Field was pending Amazon data - ADD Amazon as additional source, don't replace
+                        console.log(`📦 URGENT_FIX: Field ${fieldName} was pending Amazon data - adding Amazon as additional source`);
+                        console.log(`📦 URGENT_FIX: Before addition - existing data:`, existingField.new_data);
+                        console.log(`📦 URGENT_FIX: Amazon data to add:`, amazonFieldData.new_data);
 
-                        existingField.new_data = {
-                            ...amazonFieldData.new_data,
-                            status: 'ready' // CRITICAL FIX: Set status to ready when Amazon data arrives
+                        // Convert to multi-source field with original data + Amazon
+                        const originalData = {
+                            value: existingField.new_data.value,
+                            source: existingField.new_data.source,
+                            confidence: existingField.new_data.confidence,
+                            label: existingField.label
                         };
 
-                        console.log(`📦 URGENT_FIX: After replacement - status:`, existingField.new_data.status);
-                        console.log(`📦 URGENT_FIX: After replacement - full new_data:`, existingField.new_data);
+                        existingField.new_data = {
+                            options: [
+                                originalData,
+                                {
+                                    value: amazonFieldData.new_data.value,
+                                    source: amazonFieldData.new_data.source,
+                                    confidence: amazonFieldData.new_data.confidence,
+                                    label: amazonFieldData.label || existingField.label,
+                                    status: 'ready'
+                                }
+                            ],
+                            source: (originalData.source || 'unknown') + ' + amazon',
+                            status: 'ready'
+                        };
+
+                        console.log(`📦 URGENT_FIX: After conversion to multi-source:`, existingField.new_data);
                     } else {
                         // Field has single source - convert to multi-source with Amazon
                         console.log(`📦 Converting single-source field to multi-source: ${fieldName}`);
@@ -873,12 +890,19 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             console.log('📦 CRITICAL_FIX: Format field after update:', window.currentEnrichmentData.fields.format);
             console.log('📦 CRITICAL_FIX: Price range field after update:', window.currentEnrichmentData.fields.price_range);
 
-            // CRITICAL FIX: Force re-evaluation of database states for ALL Amazon-derived fields
+            // CRITICAL FIX: Force re-evaluation of database states for ALL Amazon-integrated fields
             console.log('📦 CRITICAL_FIX: Re-evaluating database states after Amazon integration');
             Object.keys(amazonData).forEach(fieldName => {
                 const field = window.currentEnrichmentData.fields[fieldName];
-                if (field && field.new_data && field.new_data.source === 'amazon_derived' && field.new_data.status === 'ready') {
-                    console.log(`📦 CRITICAL_FIX: Re-evaluating database state for ${fieldName}`);
+                // Check if field has Amazon data (either as source or in options)
+                const hasAmazonData = field && field.new_data && (
+                    field.new_data.source === 'amazon_derived' ||
+                    field.new_data.source?.includes('amazon') ||
+                    (field.new_data.options && field.new_data.options.some(opt => opt.source === 'amazon_derived'))
+                );
+
+                if (hasAmazonData && field.new_data.status === 'ready') {
+                    console.log(`📦 CRITICAL_FIX: Re-evaluating database state for ${fieldName} (has Amazon data)`);
                     // Force update the field display to recalculate database state
                     setTimeout(() => {
                         updateFieldDisplay(fieldName, null, false);
@@ -902,18 +926,31 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 }
 
                 const field = window.currentEnrichmentData.fields[fieldName];
-                if (field && field.new_data && field.new_data.source === 'amazon_derived') {
+                // Check if field has Amazon data (either as source or in options)
+                const hasAmazonData = field && field.new_data && (
+                    field.new_data.source === 'amazon_derived' ||
+                    field.new_data.source?.includes('amazon') ||
+                    (field.new_data.options && field.new_data.options.some(opt => opt.source === 'amazon_derived'))
+                );
+
+                if (hasAmazonData) {
                     // Update only this specific field in the DOM
                     const fieldContainer = $(`.enrichment-field[data-field="${fieldName}"]`);
                     if (fieldContainer.length) {
-                        console.log(`📦 TAGS_FIX: Updating individual field display for ${fieldName}`);
+                        console.log(`📦 TAGS_FIX: Updating individual field display for ${fieldName} (has Amazon data)`);
 
                         // Remove the old field and recreate it
                         fieldContainer.remove();
                         const label = field.label || fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                         const isUnknown = field.new_data.status === 'unknown';
                         const isPendingAmazon = field.new_data.status === 'pending_amazon_data';
-                        $('#enrichment-fields').append(createSingleSourceField(fieldName, field, label, isUnknown, isPendingAmazon));
+
+                        // Determine if this is a multi-source field or single-source field
+                        if (field.new_data.options) {
+                            $('#enrichment-fields').append(createMultiSourceField(fieldName, field, label));
+                        } else {
+                            $('#enrichment-fields').append(createSingleSourceField(fieldName, field, label, isUnknown, isPendingAmazon));
+                        }
                     }
                 }
             });
@@ -1575,11 +1612,32 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         // The checkbox state should not affect what the database state message shows
         let databaseState = null;
 
-        // Always compare the new data with current database value, regardless of checkbox state
-        if (valuesDiffer) {
-            databaseState = isEmpty(currentValue) ? 'database_empty' : 'database_wrong';
-        } else {
-            databaseState = 'matches_database';
+        // CRITICAL FIX: Always compare against the ORIGINAL database value, not processed display value
+        // This prevents the logic flip when Amazon data loads
+        const actualCurrentValue = fieldData.current_value;
+        const actualNewValue = displayValue;
+
+        console.log('🎯 CRITICAL_FIX: Database state comparison:', {
+            fieldName: fieldName,
+            actualCurrentValue: actualCurrentValue,
+            actualNewValue: actualNewValue,
+            currentType: typeof actualCurrentValue,
+            newType: typeof actualNewValue
+        });
+
+        // Use the determineDatabaseState function for consistent logic
+        databaseState = determineDatabaseState(actualCurrentValue, actualNewValue,
+                                             fieldData.new_data?.source || 'unknown',
+                                             fieldData.new_data, fieldName);
+
+        // Fallback if determineDatabaseState returns null
+        if (!databaseState) {
+            const actualValuesDiffer = !isExactMatch(actualCurrentValue, actualNewValue);
+            if (actualValuesDiffer) {
+                databaseState = isEmpty(actualCurrentValue) ? 'database_empty' : 'database_wrong';
+            } else {
+                databaseState = 'matches_database';
+            }
         }
 
         console.log('🎨 Database state logic:', {

@@ -819,6 +819,13 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 // Single source field with new data
                 const isUnknown = field.new_data.status === 'unknown';
                 const isPendingAmazon = field.new_data.status === 'pending_amazon_data';
+
+                // URGENT DEBUG: Check field status when rendering
+                console.log(`📦 RENDER_DEBUG: Rendering field ${fieldName} with status:`, field.new_data.status, 'isPendingAmazon:', isPendingAmazon);
+                if (fieldName === 'format' || fieldName === 'price_range') {
+                    console.log(`📦 RENDER_DEBUG: ${fieldName} full field data:`, field);
+                }
+
                 container.append(createSingleSourceField(fieldName, field, label, isUnknown, isPendingAmazon));
             } else {
                 // Field with no new data - show current value only (disabled)
@@ -840,6 +847,13 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 // Single source field with new data
                 const isUnknown = field.new_data.status === 'unknown';
                 const isPendingAmazon = field.new_data.status === 'pending_amazon_data';
+
+                // URGENT DEBUG: Check field status when rendering (remaining fields)
+                console.log(`📦 RENDER_DEBUG: Rendering remaining field ${fieldName} with status:`, field.new_data.status, 'isPendingAmazon:', isPendingAmazon);
+                if (fieldName === 'format' || fieldName === 'price_range') {
+                    console.log(`📦 RENDER_DEBUG: ${fieldName} remaining field data:`, field);
+                }
+
                 container.append(createSingleSourceField(fieldName, field, label, isUnknown, isPendingAmazon));
             } else {
                 // Field with no new data - show current value only (disabled)

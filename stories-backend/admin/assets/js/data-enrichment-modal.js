@@ -811,6 +811,20 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             console.log('📦 CRITICAL_FIX: Purchase links field after update:', window.currentEnrichmentData.fields.purchase_links);
             console.log('📦 CRITICAL_FIX: Format field after update:', window.currentEnrichmentData.fields.format);
             console.log('📦 CRITICAL_FIX: Price range field after update:', window.currentEnrichmentData.fields.price_range);
+
+            // CRITICAL FIX: Force re-evaluation of database states for Amazon-derived fields
+            console.log('📦 CRITICAL_FIX: Re-evaluating database states after Amazon integration');
+            ['purchase_links', 'format', 'price_range'].forEach(fieldName => {
+                const field = window.currentEnrichmentData.fields[fieldName];
+                if (field && field.new_data && field.new_data.source === 'amazon_derived' && field.new_data.status === 'ready') {
+                    console.log(`📦 CRITICAL_FIX: Re-evaluating database state for ${fieldName}`);
+                    // Force update the field display to recalculate database state
+                    setTimeout(() => {
+                        updateFieldDisplay(fieldName, null, false);
+                    }, 100);
+                }
+            });
+
             displayEnrichmentFields(window.currentEnrichmentData.fields);
 
             // CRITICAL FIX: Update Amazon status badge to show completion

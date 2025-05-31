@@ -227,7 +227,11 @@ require_once '../includes/header.php';
                                 } else {
                                     // Optional: Still check for specific tag types if needed
                                     if (empty($genreTags)) $missingFields[] = 'Genre Tags';
-                                    if (empty($ageRangeTags)) $missingFields[] = 'Age Range Tags';
+                                }
+
+                                // Check age_range field in books table (not tags)
+                                if (empty($book['age_range']) || trim($book['age_range']) === '') {
+                                    $missingFields[] = 'Age Range';
                                 }
 
                                 $missingDataDisplay = !empty($missingFields) ?

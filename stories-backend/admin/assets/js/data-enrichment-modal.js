@@ -2014,28 +2014,27 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 console.log('🏷️ TAGS_DEBUG: New value is string, checking format...');
 
                 // CRITICAL FIX: Check for duplicate content (the issue you mentioned)
-                if (actualNewValue.includes(',') && actualNewValue.includes('People Places')) {
-                    console.log('🏷️ TAGS_DEBUG: ⚠️ DETECTED DUPLICATE CONTENT in new value!');
-                    console.log('🏷️ TAGS_DEBUG: Raw new value with duplicates:', actualNewValue);
+                if (actualNewValue.includes(',')) {
+                    console.log('🏷️ TAGS_DEBUG: Processing comma-separated new value with potential duplicates:', actualNewValue);
 
                     // Split by comma first, then clean up duplicates
                     const commaSplit = actualNewValue.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
                     console.log('🏷️ TAGS_DEBUG: After comma split:', commaSplit);
 
-                    // Remove duplicates and normalize
-                    const uniqueTags = [...new Set(commaSplit.map(tag => normalizeTagForComparison(tag.toLowerCase().trim())))];
-                    newTags = uniqueTags.filter(tag => tag.length > 0).sort();
+                    // CRITICAL FIX: Remove duplicates using case-insensitive comparison
+                    const uniqueTags = [];
+                    const seenTags = new Set();
+
+                    commaSplit.forEach(tag => {
+                        const normalizedTag = normalizeTagForComparison(tag.toLowerCase().trim());
+                        if (normalizedTag.length > 0 && !seenTags.has(normalizedTag)) {
+                            seenTags.add(normalizedTag);
+                            uniqueTags.push(normalizedTag);
+                        }
+                    });
+
+                    newTags = uniqueTags.sort();
                     console.log('🏷️ TAGS_DEBUG: After deduplication:', newTags);
-
-                } else if (actualNewValue.includes(',')) {
-                    const splitTags = actualNewValue.split(',')
-                        .map(tag => normalizeTagForComparison(tag.toLowerCase().trim()))
-                        .filter(tag => tag.length > 0);
-
-                    // CRITICAL FIX: Remove duplicates after normalization
-                    newTags = [...new Set(splitTags)].sort();
-                    console.log('🏷️ TAGS_DEBUG: Split comma-separated new value (before dedup):', splitTags);
-                    console.log('🏷️ TAGS_DEBUG: Split comma-separated new value (after dedup):', newTags);
                 } else {
                     // Single tag or concatenated string
                     console.log('🏷️ TAGS_DEBUG: Attempting to split concatenated new value:', actualNewValue);

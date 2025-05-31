@@ -360,21 +360,63 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
         } else if (fieldName === 'tags') {
             // CRITICAL FIX: Handle tags/genres field properly to prevent duplicate display
             if (Array.isArray(value)) {
-                return value.map(item => `<span class="badge badge-success mr-1">${item}</span>`).join('');
+                // Remove duplicates and create badges
+                const uniqueTags = [...new Set(value.map(tag => tag.trim()).filter(tag => tag.length > 0))];
+                return uniqueTags.map(item => `<span class="badge badge-success mr-1">${item}</span>`).join('');
             } else if (typeof value === 'string') {
                 // Check if this is already a formatted string with badges (prevent double processing)
                 if (value.includes('<span class="badge')) {
                     return value; // Already formatted, return as-is
                 }
 
+                // CRITICAL FIX: Handle the duplicate content issue you mentioned
+                let processedValue = value;
+
+                // Check for duplicate content patterns and clean them up
+                if (value.includes(',') && value.includes('Children\'s Stories')) {
+                    console.log('🏷️ DUPLICATE_FIX: Detected potential duplicate content in tags:', value);
+
+                    // Split by comma and remove duplicates
+                    const tags = value.split(',')
+                        .map(tag => tag.trim())
+                        .filter(tag => tag.length > 0);
+
+                    // Remove duplicates (case-insensitive)
+                    const uniqueTags = [];
+                    const seenTags = new Set();
+
+                    tags.forEach(tag => {
+                        const normalizedTag = tag.toLowerCase().trim();
+                        if (!seenTags.has(normalizedTag)) {
+                            seenTags.add(normalizedTag);
+                            uniqueTags.push(tag);
+                        }
+                    });
+
+                    console.log('🏷️ DUPLICATE_FIX: Original tags:', tags);
+                    console.log('🏷️ DUPLICATE_FIX: Unique tags:', uniqueTags);
+
+                    return uniqueTags.map(item => `<span class="badge badge-success mr-1">${item}</span>`).join('');
+                }
+
                 // Check if it's a comma-separated list
                 if (value.includes(',')) {
-                    return value.split(',').map(item => `<span class="badge badge-success mr-1">${item.trim()}</span>`).join('');
+                    const tags = value.split(',').map(item => item.trim()).filter(item => item.length > 0);
+                    // Remove duplicates
+                    const uniqueTags = [...new Set(tags.map(tag => tag.toLowerCase()))].map(tag => {
+                        // Find original case version
+                        return tags.find(originalTag => originalTag.toLowerCase() === tag) || tag;
+                    });
+                    return uniqueTags.map(item => `<span class="badge badge-success mr-1">${item}</span>`).join('');
                 } else {
                     // This might be a concatenated string - try to split it intelligently
                     const tags = splitConcatenatedTags(value);
                     if (tags.length > 1) {
-                        return tags.map(item => `<span class="badge badge-success mr-1">${item}</span>`).join('');
+                        // Remove duplicates
+                        const uniqueTags = [...new Set(tags.map(tag => tag.toLowerCase()))].map(tag => {
+                            return tags.find(originalTag => originalTag.toLowerCase() === tag) || tag;
+                        });
+                        return uniqueTags.map(item => `<span class="badge badge-success mr-1">${item}</span>`).join('');
                     } else {
                         // Single tag or unrecognized format
                         return `<span class="badge badge-success mr-1">${value}</span>`;

@@ -3,31 +3,87 @@
 require_once '../../../config/db-connect.php';
 require_once 'book-import-validate/functions/data-enrichment-functions.php';
 
-// Test ISBN from the user's example
-$testISBN = '1444004786';
+// Test ISBN from the user's example - both versions
+$testISBN = '9781444004786'; // Full ISBN-13
+$testISBN10 = '1444004786'; // ISBN-10
 
 echo "<h2>Testing Amazon Scraping for ISBN: $testISBN</h2>";
-echo "<p>URL: https://www.amazon.co.uk/dp/$testISBN</p>";
+echo "<p>Testing both ISBN-13: $testISBN and ISBN-10: $testISBN10</p>";
 
 // Enable debug mode
 define('AMAZON_DEBUG', true);
 
-echo "<h3>Amazon Scraping Results:</h3>";
+// Test the main scraping function that should extract reading age
+echo "<h3>Testing scrapeAmazonBuyingOptions function:</h3>";
 $amazonData = scrapeAmazonBuyingOptions($testISBN);
 
-echo "<h3>Raw Amazon Data:</h3>";
-echo "<pre>" . htmlspecialchars(json_encode($amazonData, JSON_PRETTY_PRINT)) . "</pre>";
+echo "<h4>Raw Amazon Data (ISBN-13):</h4>";
+echo "<pre>";
+print_r($amazonData);
+echo "</pre>";
 
-echo "<h3>Amazon Enrichment Data:</h3>";
-$enrichmentData = getAmazonEnrichmentData($testISBN);
-echo "<pre>" . htmlspecialchars(json_encode($enrichmentData, JSON_PRETTY_PRINT)) . "</pre>";
+// Test with ISBN-10 too
+$amazonData10 = scrapeAmazonBuyingOptions($testISBN10);
+echo "<h4>Raw Amazon Data (ISBN-10):</h4>";
+echo "<pre>";
+print_r($amazonData10);
+echo "</pre>";
 
-// Test the specific URL manually
-echo "<h3>Manual URL Test:</h3>";
-$url = "https://www.amazon.co.uk/dp/$testISBN";
+// Test age range mapping
+if (isset($amazonData['metadata']['reading_age'])) {
+    echo "<h3>Age Range Mapping (ISBN-13):</h3>";
+    echo "Original Amazon reading age: " . $amazonData['metadata']['reading_age'] . "<br>";
+
+    $mappedAge = mapAmazonAgeRangeToStandard($amazonData['metadata']['reading_age']);
+    echo "Mapped to standard range: " . ($mappedAge ?: 'No mapping found') . "<br>";
+} else {
+    echo "<h3>❌ No reading_age found in Amazon data (ISBN-13)</h3>";
+}
+
+if (isset($amazonData10['metadata']['reading_age'])) {
+    echo "<h3>Age Range Mapping (ISBN-10):</h3>";
+    echo "Original Amazon reading age: " . $amazonData10['metadata']['reading_age'] . "<br>";
+
+    $mappedAge10 = mapAmazonAgeRangeToStandard($amazonData10['metadata']['reading_age']);
+    echo "Mapped to standard range: " . ($mappedAge10 ?: 'No mapping found') . "<br>";
+} else {
+    echo "<h3>❌ No reading_age found in Amazon data (ISBN-10)</h3>";
+}
+
+// Test the full enrichment process
+echo "<h3>Full Enrichment Data:</h3>";
+$enrichmentData = getEnrichmentData($testISBN, 'Test Book', 'Test Author');
+
+if (isset($enrichmentData['fields']['age_range'])) {
+    echo "<h4>Age Range Field Data:</h4>";
+    echo "<pre>";
+    print_r($enrichmentData['fields']['age_range']);
+    echo "</pre>";
+} else {
+    echo "<h4>❌ No age_range field in enrichment data</h4>";
+}
+
+// Test Chronicles of Narnia too
+echo "<hr><h2>Testing Chronicles of Narnia ISBN: 9780007115617</h2>";
+$narniaData = scrapeAmazonBuyingOptions('9780007115617');
+echo "<h4>Narnia Amazon Data:</h4>";
+echo "<pre>";
+print_r($narniaData);
+echo "</pre>";
+
+if (isset($narniaData['metadata']['reading_age'])) {
+    echo "Narnia reading age: " . $narniaData['metadata']['reading_age'] . "<br>";
+    $narniaMapped = mapAmazonAgeRangeToStandard($narniaData['metadata']['reading_age']);
+    echo "Mapped: " . ($narniaMapped ?: 'No mapping') . "<br>";
+} else {
+    echo "❌ No reading_age found in Narnia data<br>";
+}
+
+// Test direct URL access
+echo "<hr><h3>Direct URL Test:</h3>";
+$url = "https://www.amazon.co.uk/dp/$testISBN10";
 echo "<p>Testing URL: <a href='$url' target='_blank'>$url</a></p>";
 
-// Test with curl
 $ch = curl_init($url);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_TIMEOUT, 15);

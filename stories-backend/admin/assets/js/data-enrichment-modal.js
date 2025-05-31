@@ -613,20 +613,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
 
         // Merge Amazon data into the current enrichment data
         if (window.currentEnrichmentData && window.currentEnrichmentData.fields) {
-            // CRITICAL FIX: Apply layout enforcement IMMEDIATELY before any field changes
-            console.log('🎨 PRE_AMAZON_LAYOUT_FIX: Applying layout before Amazon field processing');
-            $('#enrichment-fields .col-md-6, .modal-body .col-md-6, .enrichment-field').each(function() {
-                $(this).css({
-                    'flex': '0 0 33.333333% !important',
-                    'max-width': '33.333333% !important',
-                    'width': '33.333333% !important',
-                    'flex-basis': '33.333333% !important'
-                });
-            });
-            $('#enrichment-fields').css({
-                'display': 'flex',
-                'flex-wrap': 'wrap'
-            });
+
 
             // Store current checkbox states before re-rendering
             const checkboxStates = {};
@@ -993,20 +980,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 .show();
             console.log('✅ Updated Amazon status to success');
 
-            // CRITICAL FIX: Apply layout enforcement IMMEDIATELY after all Amazon field updates
-            console.log('🎨 POST_AMAZON_LAYOUT_FIX: Applying layout after all Amazon field updates');
-            $('#enrichment-fields .col-md-6, .modal-body .col-md-6, .enrichment-field').each(function() {
-                $(this).css({
-                    'flex': '0 0 33.333333% !important',
-                    'max-width': '33.333333% !important',
-                    'width': '33.333333% !important',
-                    'flex-basis': '33.333333% !important'
-                });
-            });
-            $('#enrichment-fields').css({
-                'display': 'flex',
-                'flex-wrap': 'wrap'
-            });
+
 
             // Restore checkbox states after individual field updates
             setTimeout(() => {
@@ -1148,28 +1122,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             }
         });
 
-        // CRITICAL FIX: Force 3-column layout immediately after initial field display
-        setTimeout(() => {
-            console.log('🎨 INITIAL_LAYOUT_FIX: Forcing 3-column layout on initial field display');
 
-            // Force ALL col-md-6 elements to use 3-column layout from the start
-            $('#enrichment-fields .col-md-6, .modal-body .col-md-6, .enrichment-field').each(function() {
-                $(this).css({
-                    'flex': '0 0 33.333333% !important',
-                    'max-width': '33.333333% !important',
-                    'width': '33.333333% !important',
-                    'flex-basis': '33.333333% !important'
-                });
-            });
-
-            // Force the parent row to use flexbox properly
-            $('#enrichment-fields').css({
-                'display': 'flex',
-                'flex-wrap': 'wrap'
-            });
-
-            console.log('🎨 INITIAL_LAYOUT_FIX: Applied 3-column layout to initial fields');
-        }, 100);
 
         // Add change handlers
         $('.field-checkbox').change(function() {

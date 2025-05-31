@@ -407,3 +407,17 @@ body {
   object-fit: cover !important;
   border-radius: var(--radius-sm, 0.25rem) !important;
 }
+
+/* ===== Data Enrichment Modal Layout Fixes ===== */
+/* CRITICAL FIX: Force consistent 2-column layout for enrichment fields */
+@media (min-width: 768px) {
+    .col-md-6 {
+        max-width: unset !important;
+    }
+}
+
+/* CRITICAL FIX: Remove padding from nested col-md-6 elements in enrichment fields */
+.enrichment-field .col-md-6 {
+    padding-left: 0px !important;
+    padding-right: 0px !important;
+}

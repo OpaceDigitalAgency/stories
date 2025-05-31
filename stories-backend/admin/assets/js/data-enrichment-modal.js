@@ -1804,21 +1804,29 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         let hasExactMatch = false;
         let databaseState = null;
 
-        // CRITICAL DEBUG: Check what's triggering tags field processing
+        // CRITICAL FIX: Prevent re-processing of tags field that has already been evaluated
         if (fieldName === 'tags') {
-            console.log('🏷️ AMAZON_DEBUG: Tags field processing check:', {
+            // Check if this field has already been processed and user has made a decision
+            const fieldContainer = $(`#field-container-${fieldName}`);
+            const hasBeenProcessed = fieldContainer.find('.badge-success, .badge-warning, .badge-secondary').length > 0;
+            const isChecked = $(`#field_${fieldName}`).prop('checked');
+
+            console.log('🏷️ REPROCESS_DEBUG: Tags field re-processing check:', {
                 fieldName: fieldName,
-                isUnknown: isUnknown,
-                isPendingAmazon: isPendingAmazon,
-                hasNewDataValue: !!newData.value,
-                newDataValue: newData.value,
+                hasBeenProcessed: hasBeenProcessed,
+                isChecked: isChecked,
                 newDataSource: newData.source,
-                newDataStatus: newData.status,
-                shouldProcess: !isUnknown && !isPendingAmazon && newData.value && newData.value.trim().length > 0 && newData.source !== 'amazon_derived'
+                shouldSkipReprocessing: hasBeenProcessed && !isChecked
             });
+
+            // Skip re-processing if field has been processed and user hasn't selected it
+            if (hasBeenProcessed && !isChecked) {
+                console.log('🏷️ REPROCESS_DEBUG: Skipping re-processing of tags field - already evaluated and not selected');
+                return displayValue; // Return original display value without re-processing
+            }
         }
 
-        if (fieldName === 'tags' && !isUnknown && !isPendingAmazon && newData.value && newData.value.trim().length > 0 && newData.source !== 'amazon_derived') {
+        if (fieldName === 'tags' && !isUnknown && !isPendingAmazon && newData.value && newData.value.trim().length > 0) {
             console.log('🏷️ UX_FIX: Processing tags field for intelligent comparison');
 
             // Get current tags as array using the same normalization as the comparison logic

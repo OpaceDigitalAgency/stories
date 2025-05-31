@@ -57,8 +57,28 @@ try {
             error_log("Creating BookDiscoveryEngine");
             $discoveryEngine = new BookDiscoveryEngine($db);
             error_log("Calling discoverFromURL");
+            
+            // Add progress updates during discovery
+            echo json_encode(['progress' => 5, 'message' => 'Connecting to website...']) . "\n";
+            flush();
+            
+            // Add a small delay to show the progress update
+            usleep(500000); // 0.5 seconds
+            
+            echo json_encode(['progress' => 15, 'message' => 'Downloading page content...']) . "\n";
+            flush();
+            
             $books = $discoveryEngine->discoverFromURL($url);
             error_log("Discovery completed. Found " . count($books) . " books");
+            
+            echo json_encode(['progress' => 25, 'message' => 'Parsing book data...']) . "\n";
+            flush();
+            
+            // Add another small delay
+            usleep(300000); // 0.3 seconds
+            
+            echo json_encode(['progress' => 30, 'message' => 'Processing discovered books...']) . "\n";
+            flush();
             
             // Filter by age if specified
             $ageFilter = $_POST['age_filter'] ?? '';
@@ -108,10 +128,10 @@ try {
             // Merge enriched data with original book data
             if (!empty($enrichedData['fields'])) {
                 foreach ($enrichedData['fields'] as $field => $data) {
-                    if (!empty($data['new_data']['value'])) {
+                    if (!empty($data['value'])) {
                         // Always add enriched data, don't check if field is empty
-                        $bookData[$field] = $data['new_data']['value'];
-                        error_log("Added enriched field $field: " . $data['new_data']['value']);
+                        $bookData[$field] = $data['value'];
+                        error_log("Added enriched field $field: " . $data['value']);
                     }
                 }
             }

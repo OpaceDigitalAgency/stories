@@ -1903,19 +1903,60 @@ $(document).ready(function() {
                 throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
             }
             
-            const responseText = await response.text();
-            console.log('Raw response length:', responseText.length);
-            console.log('Raw response:', responseText);
+            // Handle streaming response for progress updates
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            let result = null;
             
-            let result;
-            try {
-                result = JSON.parse(responseText);
-            } catch (parseError) {
-                console.error('JSON parse error:', parseError);
-                throw new Error('Invalid JSON response from server');
+            while (true) {
+                const { done, value } = await reader.read();
+                
+                if (done) break;
+                
+                buffer += decoder.decode(value, { stream: true });
+                
+                // Process complete JSON lines
+                const lines = buffer.split('\n');
+                buffer = lines.pop(); // Keep incomplete line in buffer
+                
+                for (const line of lines) {
+                    if (line.trim()) {
+                        try {
+                            const jsonData = JSON.parse(line.trim());
+                            console.log('Streaming data:', jsonData);
+                            
+                            if (jsonData.progress !== undefined) {
+                                // This is a progress update
+                                updateDiscoveryProgress(jsonData.progress, jsonData.message);
+                            } else if (jsonData.success !== undefined) {
+                                // This is the final result
+                                result = jsonData;
+                            }
+                        } catch (parseError) {
+                            console.warn('Failed to parse streaming line:', line, parseError);
+                        }
+                    }
+                }
             }
             
-            console.log('Parsed result:', result);
+            // Process any remaining buffer
+            if (buffer.trim()) {
+                try {
+                    const jsonData = JSON.parse(buffer.trim());
+                    if (jsonData.success !== undefined) {
+                        result = jsonData;
+                    }
+                } catch (parseError) {
+                    console.warn('Failed to parse final buffer:', buffer, parseError);
+                }
+            }
+            
+            if (!result) {
+                throw new Error('No valid result received from server');
+            }
+            
+            console.log('Final result:', result);
             
             if (!result.success) {
                 throw new Error(result.error || 'Unknown error from server');

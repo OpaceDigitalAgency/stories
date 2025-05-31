@@ -1791,10 +1791,36 @@ $(document).ready(function() {
     let discoveryErrorBooks = 0;
     let discoveryCancelled = false;
 
+    console.log('Discovery JavaScript loaded');
+    
+    // Test if form exists
+    $(document).ready(function() {
+        console.log('Document ready');
+        const form = $('#discoveryForm');
+        console.log('Discovery form found:', form.length > 0);
+        
+        if (form.length === 0) {
+            console.error('Discovery form not found in DOM');
+        }
+    });
+
     $('#discoveryForm').on('submit', function(e) {
         e.preventDefault();
-        console.log('Discovery form submitted');
+        console.log('Discovery form submitted - preventDefault called');
+        alert('Form submission intercepted by JavaScript');
         startDiscovery();
+        return false;
+    });
+    
+    // Also try with document ready wrapper
+    $(document).ready(function() {
+        $('#discoveryForm').off('submit').on('submit', function(e) {
+            e.preventDefault();
+            console.log('Discovery form submitted via document ready handler');
+            alert('Form submission intercepted by JavaScript (document ready)');
+            startDiscovery();
+            return false;
+        });
     });
 
     async function startDiscovery() {

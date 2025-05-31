@@ -739,6 +739,47 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                             if (!currentSources.includes('amazon')) {
                                 existingField.new_data.source = currentSources + ' + amazon';
                             }
+                        } else if (fieldName === 'tags') {
+                            // CRITICAL FIX: Special handling for tags - merge instead of creating options
+                            console.log(`📦 TAGS_MERGE: Merging Amazon tags with existing tags for ${fieldName}`);
+                            console.log(`📦 TAGS_MERGE: Existing value:`, existingField.new_data.value);
+                            console.log(`📦 TAGS_MERGE: Amazon value:`, amazonFieldData.new_data.value);
+
+                            // Parse existing tags
+                            let existingTags = [];
+                            if (typeof existingField.new_data.value === 'string') {
+                                existingTags = existingField.new_data.value.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+                            } else if (Array.isArray(existingField.new_data.value)) {
+                                existingTags = existingField.new_data.value;
+                            }
+
+                            // Parse Amazon tags
+                            let amazonTags = [];
+                            if (typeof amazonFieldData.new_data.value === 'string') {
+                                amazonTags = amazonFieldData.new_data.value.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+                            } else if (Array.isArray(amazonFieldData.new_data.value)) {
+                                amazonTags = amazonFieldData.new_data.value;
+                            }
+
+                            // Merge and deduplicate tags (case-insensitive)
+                            const allTags = [...existingTags, ...amazonTags];
+                            const uniqueTags = [];
+                            const seenTags = new Set();
+
+                            for (const tag of allTags) {
+                                const lowerTag = tag.toLowerCase().trim();
+                                if (!seenTags.has(lowerTag) && lowerTag.length > 0) {
+                                    seenTags.add(lowerTag);
+                                    uniqueTags.push(tag.trim());
+                                }
+                            }
+
+                            console.log(`📦 TAGS_MERGE: Merged result:`, uniqueTags);
+
+                            // Update the field with merged tags
+                            existingField.new_data.value = uniqueTags.join(', ');
+                            existingField.new_data.source = 'google_books + open_library + amazon';
+
                         } else if (existingField.new_data.status === 'pending_amazon_data') {
                         // CRITICAL FIX: Field was pending Amazon data - replace with actual Amazon data
                         console.log(`📦 URGENT_FIX: Field ${fieldName} was pending Amazon data - replacing with Amazon data`);
@@ -1866,32 +1907,42 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
 
         // Special handling for tags/genres - use proper comparison for all tag formats
         if (fieldName === 'tags') {
-            console.log('🏷️ TAG_DEBUG: Comparing tags for field:', fieldName, {
+            console.log('🏷️ TAGS_DEBUG: ===== STARTING TAG COMPARISON =====');
+            console.log('🏷️ TAGS_DEBUG: Raw input values:', {
                 currentValue: currentValue,
                 currentType: typeof currentValue,
-                currentIsArray: Array.isArray(currentValue),
+                currentLength: currentValue?.length,
                 actualNewValue: actualNewValue,
                 newType: typeof actualNewValue,
-                newIsArray: Array.isArray(actualNewValue)
+                newLength: actualNewValue?.length,
+                source: source
             });
 
             // Normalize both values to arrays for comparison
             let currentTags = [];
             let newTags = [];
 
-            // Handle current value - it might be a concatenated string without separators
+            // CRITICAL FIX: Process current value (database value)
+            console.log('🏷️ TAGS_DEBUG: Processing current value (database)...');
             if (Array.isArray(currentValue)) {
                 currentTags = currentValue.map(tag => tag.toLowerCase().trim()).sort();
+                console.log('🏷️ TAGS_DEBUG: Current value is array:', currentTags);
             } else if (typeof currentValue === 'string') {
-                // Check if it's a concatenated string like "AfricaAlgeriaBerbersChildren's Fiction..."
+                console.log('🏷️ TAGS_DEBUG: Current value is string, checking format...');
+
+                // Check if it's a comma-separated list
                 if (currentValue.includes(',')) {
                     currentTags = currentValue.split(',').map(tag => tag.toLowerCase().trim()).sort();
+                    console.log('🏷️ TAGS_DEBUG: Split comma-separated current value:', currentTags);
                 } else {
-                    // CRITICAL FIX: Use the same intelligent splitting function
+                    // CRITICAL FIX: Use intelligent splitting for concatenated strings
+                    console.log('🏷️ TAGS_DEBUG: Attempting to split concatenated current value:', currentValue);
                     const splitTags = splitConcatenatedTags(currentValue);
+                    console.log('🏷️ TAGS_DEBUG: Split result:', splitTags);
+
                     if (splitTags.length > 1) {
                         currentTags = splitTags.map(tag => tag.toLowerCase().trim()).sort();
-                        console.log('🏷️ TAG_DEBUG: Split concatenated current value:', {
+                        console.log('🏷️ TAGS_DEBUG: Successfully split concatenated current value:', {
                             original: currentValue,
                             split: splitTags,
                             normalized: currentTags
@@ -1899,37 +1950,114 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     } else {
                         // Single tag or unrecognized format
                         currentTags = [currentValue.toLowerCase().trim()];
+                        console.log('🏷️ TAGS_DEBUG: Treating as single tag:', currentTags);
                     }
                 }
+            } else {
+                console.log('🏷️ TAGS_DEBUG: Current value is neither array nor string:', typeof currentValue);
+                currentTags = [];
             }
 
-            // Handle new value
+            // CRITICAL FIX: Process new value (API response)
+            console.log('🏷️ TAGS_DEBUG: Processing new value (API response)...');
             if (Array.isArray(actualNewValue)) {
                 newTags = actualNewValue.map(tag => tag.toLowerCase().trim()).sort();
+                console.log('🏷️ TAGS_DEBUG: New value is array:', newTags);
             } else if (typeof actualNewValue === 'string') {
-                if (actualNewValue.includes(',')) {
+                console.log('🏷️ TAGS_DEBUG: New value is string, checking format...');
+
+                // CRITICAL FIX: Check for duplicate content (the issue you mentioned)
+                if (actualNewValue.includes(',') && actualNewValue.includes('People Places')) {
+                    console.log('🏷️ TAGS_DEBUG: ⚠️ DETECTED DUPLICATE CONTENT in new value!');
+                    console.log('🏷️ TAGS_DEBUG: Raw new value with duplicates:', actualNewValue);
+
+                    // Split by comma first, then clean up duplicates
+                    const commaSplit = actualNewValue.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+                    console.log('🏷️ TAGS_DEBUG: After comma split:', commaSplit);
+
+                    // Remove duplicates and normalize
+                    const uniqueTags = [...new Set(commaSplit.map(tag => tag.toLowerCase().trim()))];
+                    newTags = uniqueTags.sort();
+                    console.log('🏷️ TAGS_DEBUG: After deduplication:', newTags);
+
+                } else if (actualNewValue.includes(',')) {
                     newTags = actualNewValue.split(',').map(tag => tag.toLowerCase().trim()).sort();
+                    console.log('🏷️ TAGS_DEBUG: Split comma-separated new value:', newTags);
                 } else {
                     // Single tag or concatenated string
-                    newTags = [actualNewValue.toLowerCase().trim()];
+                    console.log('🏷️ TAGS_DEBUG: Attempting to split concatenated new value:', actualNewValue);
+                    const splitTags = splitConcatenatedTags(actualNewValue);
+                    console.log('🏷️ TAGS_DEBUG: Split result for new value:', splitTags);
+
+                    if (splitTags.length > 1) {
+                        newTags = splitTags.map(tag => tag.toLowerCase().trim()).sort();
+                        console.log('🏷️ TAGS_DEBUG: Successfully split concatenated new value:', newTags);
+                    } else {
+                        newTags = [actualNewValue.toLowerCase().trim()];
+                        console.log('🏷️ TAGS_DEBUG: Treating new value as single tag:', newTags);
+                    }
                 }
+            } else {
+                console.log('🏷️ TAGS_DEBUG: New value is neither array nor string:', typeof actualNewValue);
+                newTags = [];
             }
 
-            console.log('🏷️ TAG_DEBUG: Normalized tags for comparison:', {
-                currentTags: currentTags,
-                newTags: newTags,
-                currentLength: currentTags.length,
-                newLength: newTags.length
+            console.log('🏷️ TAGS_DEBUG: ===== NORMALIZED TAGS FOR COMPARISON =====');
+            console.log('🏷️ TAGS_DEBUG: Current tags (database):', {
+                tags: currentTags,
+                count: currentTags.length,
+                joined: currentTags.join(', ')
+            });
+            console.log('🏷️ TAGS_DEBUG: New tags (API):', {
+                tags: newTags,
+                count: newTags.length,
+                joined: newTags.join(', ')
             });
 
-            // CRITICAL FIX: Better handling for concatenated strings
+            // CRITICAL FIX: Order-independent comparison
+            console.log('🏷️ TAGS_DEBUG: ===== STARTING ORDER-INDEPENDENT COMPARISON =====');
+
+            // Check if arrays contain the same elements (order-independent)
+            const arraysEqual = currentTags.length === newTags.length &&
+                               currentTags.every(tag => newTags.includes(tag)) &&
+                               newTags.every(tag => currentTags.includes(tag));
+
+            console.log('🏷️ TAGS_DEBUG: Order-independent comparison result:', {
+                lengthsMatch: currentTags.length === newTags.length,
+                allCurrentInNew: currentTags.every(tag => newTags.includes(tag)),
+                allNewInCurrent: newTags.every(tag => currentTags.includes(tag)),
+                finalResult: arraysEqual
+            });
+
+            if (!arraysEqual) {
+                // Show detailed differences for debugging
+                const onlyInCurrent = currentTags.filter(tag => !newTags.includes(tag));
+                const onlyInNew = newTags.filter(tag => !currentTags.includes(tag));
+                console.log('🏷️ TAGS_DEBUG: ===== DIFFERENCES FOUND =====');
+                console.log('🏷️ TAGS_DEBUG: Only in current (database):', onlyInCurrent);
+                console.log('🏷️ TAGS_DEBUG: Only in new (API):', onlyInNew);
+
+                // Try fuzzy matching for similar tags
+                console.log('🏷️ TAGS_DEBUG: Checking for fuzzy matches...');
+                onlyInCurrent.forEach(currentTag => {
+                    onlyInNew.forEach(newTag => {
+                        const similarity = calculateTagSimilarity(currentTag, newTag);
+                        if (similarity > 0.8) {
+                            console.log(`🏷️ TAGS_DEBUG: Fuzzy match found: "${currentTag}" ≈ "${newTag}" (${Math.round(similarity * 100)}%)`);
+                        }
+                    });
+                });
+            }
+
+            // LEGACY: Keep the old concatenated string handling for edge cases
             if (currentTags.length === 1 && newTags.length === 1) {
                 const currentStr = currentTags[0];
                 const newStr = newTags[0];
 
-                // If both are long strings, they might be concatenated tags
+                // If both are long strings, they might be concatenated tags that weren't split properly
                 if (currentStr.length > 30 && newStr.length > 30) {
-                    console.log('🏷️ TAG_DEBUG: Detected concatenated tag strings, checking content similarity');
+                    console.log('🏷️ TAGS_DEBUG: ===== LEGACY CONCATENATED STRING HANDLING =====');
+                    console.log('🏷️ TAGS_DEBUG: Detected long concatenated strings, checking content similarity');
 
                     // CRITICAL FIX: Enhanced word extraction for concatenated genre strings
                     const extractWords = (str) => {
@@ -2002,28 +2130,22 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 }
             }
 
-            // Compare arrays element by element
-            const arraysEqual = currentTags.length === newTags.length &&
-                               currentTags.every((tag, index) => {
-                                   const isEqual = tag === newTags[index];
-                                   console.log(`🏷️ TAG_DEBUG: Comparing "${tag}" vs "${newTags[index]}" = ${isEqual}`);
-                                   return isEqual;
-                               });
-
-            console.log('🏷️ TAG_DEBUG: Final comparison result:', {
+            // FINAL RESULT: Use the order-independent comparison result
+            console.log('🏷️ TAGS_DEBUG: ===== FINAL COMPARISON RESULT =====');
+            console.log('🏷️ TAGS_DEBUG: Final comparison result:', {
                 arraysEqual: arraysEqual,
                 currentEmpty: currentTags.length === 0,
                 newEmpty: newTags.length === 0
             });
 
             if (arraysEqual) {
-                console.log('🏷️ TAG_DEBUG: Tags match exactly - returning matches_database');
+                console.log('🏷️ TAGS_DEBUG: ✅ Tags match exactly - returning matches_database');
                 return 'matches_database';
             } else if (currentTags.length === 0) {
-                console.log('🏷️ TAG_DEBUG: Current tags empty - returning database_empty');
+                console.log('🏷️ TAGS_DEBUG: ➕ Current tags empty - returning database_empty');
                 return 'database_empty';
             } else {
-                console.log('🏷️ TAG_DEBUG: Tags differ - returning database_wrong');
+                console.log('🏷️ TAGS_DEBUG: ❌ Tags differ - returning database_wrong');
                 return 'database_wrong';
             }
         }
@@ -2243,6 +2365,45 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             })
             .filter(tag => tag.length > 2) // Remove very short tags
             .filter((tag, index, arr) => arr.indexOf(tag) === index); // Remove duplicates
+    }
+
+    /**
+     * Calculate similarity between two tag strings for fuzzy matching
+     * Returns a value between 0 and 1 (1 = identical)
+     */
+    function calculateTagSimilarity(str1, str2) {
+        if (!str1 || !str2) return 0;
+        if (str1 === str2) return 1;
+
+        // Normalize strings
+        const s1 = str1.toLowerCase().trim();
+        const s2 = str2.toLowerCase().trim();
+
+        // Calculate Levenshtein distance
+        const matrix = [];
+        for (let i = 0; i <= s2.length; i++) {
+            matrix[i] = [i];
+        }
+        for (let j = 0; j <= s1.length; j++) {
+            matrix[0][j] = j;
+        }
+        for (let i = 1; i <= s2.length; i++) {
+            for (let j = 1; j <= s1.length; j++) {
+                if (s2.charAt(i - 1) === s1.charAt(j - 1)) {
+                    matrix[i][j] = matrix[i - 1][j - 1];
+                } else {
+                    matrix[i][j] = Math.min(
+                        matrix[i - 1][j - 1] + 1,
+                        matrix[i][j - 1] + 1,
+                        matrix[i - 1][j] + 1
+                    );
+                }
+            }
+        }
+
+        const distance = matrix[s2.length][s1.length];
+        const maxLength = Math.max(s1.length, s2.length);
+        return maxLength === 0 ? 1 : (maxLength - distance) / maxLength;
     }
 
     // Make functions globally available

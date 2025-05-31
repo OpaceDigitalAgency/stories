@@ -2201,6 +2201,20 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             `;
         }
 
+        // CRITICAL FIX: Ensure ALL fields have a database state box
+        if (!databaseStateHtml) {
+            console.log(`🔧 MISSING_STATE: Field ${fieldName} has no database state HTML, adding fallback`);
+            databaseStateHtml = `
+                <div class="mt-2 p-2 bg-light border border-info rounded">
+                    <div class="text-info">
+                        <i class="fas fa-info-circle"></i> <strong>New Data Available</strong>
+                        <span class="badge badge-info ml-1">${confidence}%</span>
+                    </div>
+                    <small class="text-muted">New data from ${source} - review and select if needed</small>
+                </div>
+            `;
+        }
+
         // CRITICAL FIX: Mark tags field as processed to prevent re-processing
         if (fieldName === 'tags') {
             window.tagsFieldProcessed = true;

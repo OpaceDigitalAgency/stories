@@ -2309,11 +2309,109 @@ $(document).ready(function() {
         window.URL.revokeObjectURL(url);
     }
 
+    // Enhanced table bulk actions
+    function executeBulkAction() {
+        const action = document.getElementById('bulkActionSelect')?.value;
+        if (!action) {
+            alert('Please select an action');
+            return;
+        }
+
+        const checkboxes = document.querySelectorAll('#discovery-books-table input[type="checkbox"]:checked');
+        const selectedIds = Array.from(checkboxes)
+            .filter(cb => cb.id !== 'selectAll')
+            .map(cb => parseInt(cb.value));
+
+        if (selectedIds.length === 0) {
+            alert('Please select at least one book');
+            return;
+        }
+
+        const selectedBooks = selectedIds.map(id => discoveryBooks[id]).filter(book => book);
+
+        switch (action) {
+            case 'import':
+                importSelectedBooks(selectedBooks);
+                break;
+            case 'export':
+                exportSelectedBooks(selectedBooks);
+                break;
+            case 'delete':
+                deleteSelectedBooks(selectedIds);
+                break;
+        }
+    }
+
+    function toggleAllCheckboxes() {
+        const selectAll = document.getElementById('selectAll');
+        const checkboxes = document.querySelectorAll('#discovery-books-table input[type="checkbox"]:not(#selectAll)');
+        
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = selectAll.checked;
+        });
+    }
+
+    function importSelectedBooks(books) {
+        if (!confirm(`Import ${books.length} selected books?`)) return;
+        
+        // Implementation for bulk import
+        console.log('Importing books:', books);
+        alert(`Importing ${books.length} books... (Feature to be implemented)`);
+    }
+
+    function exportSelectedBooks(books) {
+        // Export selected books as CSV with enhanced columns
+        let csv = 'Title,Author,ISBN-10,ISBN-13,Age Range,Publication Date,Publisher,Language,Pages,Reading Level,Status\n';
+        
+        books.forEach(book => {
+            const cleanAuthor = (book.author || '').replace(/,\s*illustrated\s+by\s+[^,]+/gi, '').trim();
+            const formattedAge = (book.age_range || '').replace(/(\d+)\s+to\s+(\d+)\s+years?/gi, '$1-$2 years');
+            const status = book.processing_error ? 'Error' : (book.imported ? 'Imported' : 'Ready');
+            
+            const row = [
+                book.title || '',
+                cleanAuthor,
+                book.isbn || '',
+                book.isbn13 || '',
+                formattedAge,
+                book.formatted_date || (book.year ? `01/01/${book.year}` : ''),
+                book.publisher || '',
+                book.language || '',
+                book.page_count || '',
+                book.reading_level || '',
+                status
+            ].map(field => `"${field.replace(/"/g, '""')}"`).join(',');
+            
+            csv += row + '\n';
+        });
+        
+        downloadFile(csv, 'selected_books.csv', 'text/csv');
+    }
+
+    function deleteSelectedBooks(ids) {
+        if (!confirm(`Remove ${ids.length} selected books from results?`)) return;
+        
+        // Remove books from discoveryBooks array
+        ids.sort((a, b) => b - a); // Sort in descending order to avoid index issues
+        ids.forEach(id => {
+            discoveryBooks.splice(id, 1);
+        });
+        
+        // Re-render the table
+        renderDiscoveryEnhancedTable(discoveryBooks);
+        
+        // Update totals
+        discoveryTotalBooks = discoveryBooks.length;
+        showDiscoveryResults(); // Update summary
+    }
+
     // Make functions global so they can be called from onclick handlers
     window.cancelDiscovery = cancelDiscovery;
     window.showPartialResults = showPartialResults;
     window.exportDiscoveryToCSV = exportDiscoveryToCSV;
     window.exportDiscoveryToJSON = exportDiscoveryToJSON;
+    window.executeBulkAction = executeBulkAction;
+    window.toggleAllCheckboxes = toggleAllCheckboxes;
 });
 </script>
 

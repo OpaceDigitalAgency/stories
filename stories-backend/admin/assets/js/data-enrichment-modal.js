@@ -1804,7 +1804,21 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         let hasExactMatch = false;
         let databaseState = null;
 
-        if (fieldName === 'tags' && !isUnknown && !isPendingAmazon && newData.value && newData.value.trim().length > 0) {
+        // CRITICAL DEBUG: Check what's triggering tags field processing
+        if (fieldName === 'tags') {
+            console.log('🏷️ AMAZON_DEBUG: Tags field processing check:', {
+                fieldName: fieldName,
+                isUnknown: isUnknown,
+                isPendingAmazon: isPendingAmazon,
+                hasNewDataValue: !!newData.value,
+                newDataValue: newData.value,
+                newDataSource: newData.source,
+                newDataStatus: newData.status,
+                shouldProcess: !isUnknown && !isPendingAmazon && newData.value && newData.value.trim().length > 0 && newData.source !== 'amazon_derived'
+            });
+        }
+
+        if (fieldName === 'tags' && !isUnknown && !isPendingAmazon && newData.value && newData.value.trim().length > 0 && newData.source !== 'amazon_derived') {
             console.log('🏷️ UX_FIX: Processing tags field for intelligent comparison');
 
             // Get current tags as array using the same normalization as the comparison logic

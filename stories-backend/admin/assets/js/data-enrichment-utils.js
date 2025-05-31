@@ -105,16 +105,19 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
                 console.log(debugMessage);
 
                 if (response.success) {
-                    $('#dataEnrichmentModal').modal('hide');
+                    // DEBUGGING: Keep modal open to preserve console logs
+                    console.log('SAVE_TEST: 🔍 Modal kept open for debugging - check console for all logs');
+                    // $('#dataEnrichmentModal').modal('hide');
 
                     // Show success message with debug info
                     showNotification(`✅ SUCCESS! Updated ${Object.keys(selectedFields).length} field(s)!`, 'success', 3000);
                     console.log('SAVE_TEST: SUCCESS - Fields updated successfully:', debugMessage);
 
-                    // Force page refresh with cache busting
-                    setTimeout(() => {
-                        window.location.href = window.location.href.split('?')[0] + '?_refresh=' + Date.now();
-                    }, 2000);
+                    // DEBUGGING: Temporarily disable redirect to preserve console logs
+                    console.log('SAVE_TEST: 🚀 SUCCESS! Redirect disabled for debugging - check console for transaction logs');
+                    // setTimeout(() => {
+                    //     window.location.href = window.location.href.split('?')[0] + '?_refresh=' + Date.now();
+                    // }, 2000);
                 } else {
                     // Show user-friendly error message on screen
                     const errorMsg = response.message || 'Unknown error';

@@ -503,6 +503,8 @@ function handleGetEnrichmentData() {
                 'filtered_tags_after_filter' => $enrichedData['fields']['tags'] ?? 'NOT_FOUND',
                 'google_books_raw' => $rawEnrichedData['google_match'] ?? 'NOT_FOUND',
                 'openlibrary_raw' => $rawEnrichedData['openlibrary_match'] ?? 'NOT_FOUND',
+                'google_books_author' => $rawEnrichedData['google_match']['author'] ?? 'NO_AUTHOR_FIELD',
+                'openlibrary_author' => $rawEnrichedData['openlibrary_match']['author'] ?? 'NO_AUTHOR_FIELD',
                 'author_field_debug' => $enrichedData['fields']['author'] ?? 'AUTHOR_FIELD_NOT_FOUND',
                 'debug_logs' => $debugLogs
             ]

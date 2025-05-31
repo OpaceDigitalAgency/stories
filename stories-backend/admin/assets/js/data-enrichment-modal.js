@@ -395,6 +395,8 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                         console.log('🔍 FIELDS_FOUND:', response.debug.fields_found);
                         console.log('🔍 GOOGLE_RAW:', response.debug.google_books_raw);
                         console.log('🔍 OPENLIBRARY_RAW:', response.debug.openlibrary_raw);
+                        console.log('🔍 GOOGLE_AUTHOR:', response.debug.google_books_author);
+                        console.log('🔍 OPENLIBRARY_AUTHOR:', response.debug.openlibrary_author);
                     }
 
                     displayEnrichmentResults(response.data, response.debug);
@@ -2154,9 +2156,16 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             databaseState = determineDatabaseState(field.current_value, newData.value, source, newData, fieldName);
         }
 
-        // CRITICAL FIX: Ensure all fields have a database state
+        // CRITICAL FIX: Ensure all fields have a database state, even unknown/pending fields
         if (!databaseState) {
-            if (isEmpty(field.current_value) && !isEmpty(newData.value)) {
+            if (isUnknown || isPendingAmazon) {
+                // For unknown/pending fields, check if we have current data
+                if (!isEmpty(field.current_value)) {
+                    databaseState = 'matches_database'; // Current data exists, no change needed
+                } else {
+                    databaseState = 'database_empty'; // No current data
+                }
+            } else if (isEmpty(field.current_value) && !isEmpty(newData.value)) {
                 databaseState = 'database_empty';
             } else if (!isEmpty(field.current_value) && !isEmpty(newData.value)) {
                 const valuesMatch = isExactMatch(field.current_value, newData.value);

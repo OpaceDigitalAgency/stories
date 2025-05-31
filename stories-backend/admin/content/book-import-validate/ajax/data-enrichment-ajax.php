@@ -559,6 +559,17 @@ function handleApplyEnrichment() {
     error_log("Fields JSON: " . $fieldsJson);
     error_log("Raw POST data: " . json_encode($_POST));
 
+    // CRITICAL: Test database connection immediately
+    try {
+        $testQuery = $db->query("SELECT 1 as test");
+        $testResult = $testQuery->fetch();
+        error_log("SAVE_TEST: Database connection test - SUCCESS: " . json_encode($testResult));
+    } catch (Exception $e) {
+        error_log("SAVE_TEST: Database connection test - FAILED: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Database connection failed: ' . $e->getMessage()]);
+        return;
+    }
+
     if (empty($bookId) || empty($fieldsJson)) {
         $errorMsg = 'Book ID and fields are required';
         error_log("ERROR: " . $errorMsg);
@@ -784,6 +795,12 @@ function handleApplyEnrichment() {
         error_log("SAVE_TEST: Affected rows: $affectedRows");
         error_log("SAVE_TEST: Final SQL: $sql");
         error_log("SAVE_TEST: Final params: " . json_encode($params));
+
+        // CRITICAL: Verify the data was actually updated in the database
+        $verifyStmt = $db->prepare("SELECT directory_item_id, age_range, reading_level, page_count FROM books WHERE directory_item_id = ?");
+        $verifyStmt->execute([$bookId]);
+        $bookAfterUpdate = $verifyStmt->fetch(PDO::FETCH_ASSOC);
+        error_log("SAVE_TEST: Book data AFTER SQL execution: " . json_encode($bookAfterUpdate));
 
         // CRITICAL DEBUG: Check if rows were actually updated
         if ($affectedRows === 0) {

@@ -1404,9 +1404,17 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
 
         console.log('🎨 Display value determined:', displayValue, 'current:', currentValue);
 
-        // Determine if this value differs from database
-        const valuesDiffer = normalizeValue(currentValue) !== normalizeValue(displayValue);
-        console.log('🎨 Values differ:', valuesDiffer, 'normalized current:', normalizeValue(currentValue), 'normalized display:', normalizeValue(displayValue));
+        // Determine if this value differs from database - CRITICAL FIX: Use isExactMatch for sophisticated comparison
+        const valuesMatch = isExactMatch(currentValue, displayValue);
+        const valuesDiffer = !valuesMatch;
+        console.log('🎨 Values differ:', valuesDiffer, 'isExactMatch result:', valuesMatch);
+        console.log('🎨 Comparison details:', {
+            currentValue: currentValue,
+            displayValue: displayValue,
+            currentType: typeof currentValue,
+            displayType: typeof displayValue,
+            fieldName: fieldName
+        });
 
         // CRITICAL FIX: For reading_level, also check if age_range has any source selected (synchronized fields)
         let shouldAutoCheck = autoCheck && valuesDiffer && fieldCheckbox.length;

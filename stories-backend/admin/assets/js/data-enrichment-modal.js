@@ -613,6 +613,21 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
 
         // Merge Amazon data into the current enrichment data
         if (window.currentEnrichmentData && window.currentEnrichmentData.fields) {
+            // CRITICAL FIX: Apply layout enforcement IMMEDIATELY before any field changes
+            console.log('🎨 PRE_AMAZON_LAYOUT_FIX: Applying layout before Amazon field processing');
+            $('#enrichment-fields .col-md-6, .modal-body .col-md-6, .enrichment-field').each(function() {
+                $(this).css({
+                    'flex': '0 0 33.333333% !important',
+                    'max-width': '33.333333% !important',
+                    'width': '33.333333% !important',
+                    'flex-basis': '33.333333% !important'
+                });
+            });
+            $('#enrichment-fields').css({
+                'display': 'flex',
+                'flex-wrap': 'wrap'
+            });
+
             // Store current checkbox states before re-rendering
             const checkboxStates = {};
             const optionStates = {};
@@ -977,6 +992,21 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 .html('✓ Amazon - Data Found')
                 .show();
             console.log('✅ Updated Amazon status to success');
+
+            // CRITICAL FIX: Apply layout enforcement IMMEDIATELY after all Amazon field updates
+            console.log('🎨 POST_AMAZON_LAYOUT_FIX: Applying layout after all Amazon field updates');
+            $('#enrichment-fields .col-md-6, .modal-body .col-md-6, .enrichment-field').each(function() {
+                $(this).css({
+                    'flex': '0 0 33.333333% !important',
+                    'max-width': '33.333333% !important',
+                    'width': '33.333333% !important',
+                    'flex-basis': '33.333333% !important'
+                });
+            });
+            $('#enrichment-fields').css({
+                'display': 'flex',
+                'flex-wrap': 'wrap'
+            });
 
             // Restore checkbox states after individual field updates
             setTimeout(() => {

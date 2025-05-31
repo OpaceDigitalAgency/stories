@@ -1971,7 +1971,7 @@ $(document).ready(function() {
                 return;
             }
             
-            updateDiscoveryProgress(10, `Found ${discoveryTotalBooks} books. Starting processing...`);
+            updateDiscoveryProgress(35, `Found ${discoveryTotalBooks} books. Starting processing...`);
             
             // Step 2: Process books one by one
             await processDiscoveryBooks();
@@ -2098,7 +2098,7 @@ $(document).ready(function() {
     }
 
     function getCurrentDiscoveryProgress(currentIndex) {
-        return 10 + ((currentIndex / discoveryBooks.length) * 80);
+        return 35 + ((currentIndex / discoveryBooks.length) * 65);
     }
 
     function cancelDiscovery() {

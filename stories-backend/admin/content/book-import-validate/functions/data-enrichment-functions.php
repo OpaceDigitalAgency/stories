@@ -1479,9 +1479,10 @@ function mapCategoryToReadingLevel($category) {
 function mapMaturityRatingToAgeRange($maturityRating) {
     switch (strtoupper($maturityRating)) {
         case 'NOT_MATURE':
-            return 'All Ages';
+            // FIXED: Return a reasonable children's age range instead of "All Ages" which gets mapped to 18+
+            return '7-8 years';
         case 'MATURE':
-            return '18+';
+            return '18+ years';
         default:
             return $maturityRating;
     }
@@ -2413,9 +2414,13 @@ function extractAmazonMetadata($responses) {
         if (preg_match('/<div[^>]*id="detailBullets_feature_div"[^>]*>(.*?)<\/div>/is', $response, $bulletMatch)) {
             $bulletContent = $bulletMatch[1];
 
-            // Extract individual bullet points - REMOVED grade_level (not UK standard)
+            // Extract individual bullet points - UPDATED patterns based on current Amazon structure
             $bulletPatterns = [
                 'reading_age' => '/<span[^>]*class="a-text-bold"[^>]*>Reading age[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
+                // ADDITIONAL PATTERNS for reading age based on current Amazon structure
+                'reading_age_alt1' => '/Reading age[^:]*:\s*([^<\n]+)/i',
+                'reading_age_alt2' => '/Reading age[^>]*>([^<]+)</i',
+                'reading_age_alt3' => '/<span>Reading age<\/span>.*?<span[^>]*>([^<]+)<\/span>/is',
                 // REMOVED: 'grade_level' - Amazon grade levels are US-based, not UK standard
                 'publisher' => '/<span[^>]*class="a-text-bold"[^>]*>Publisher[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
                 'publication_date' => '/<span[^>]*class="a-text-bold"[^>]*>Publication date[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
@@ -2435,7 +2440,12 @@ function extractAmazonMetadata($responses) {
                     $value = trim($value, " \t\n\r\0\x0B\xE2\x80\x8F\xE2\x80\x8E"); // Remove Unicode directional marks
 
                     if (!empty($value)) {
-                        $metadata[$key] = $value;
+                        // For reading age alternatives, map them all to 'reading_age'
+                        if (strpos($key, 'reading_age') === 0) {
+                            $metadata['reading_age'] = $value;
+                        } else {
+                            $metadata[$key] = $value;
+                        }
                     }
                 }
             }

@@ -1286,17 +1286,30 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             const isChecked = $(this).is(':checked');
             console.log('🔄 Age range field checkbox changed:', isChecked);
 
-            // TEMPORARILY DISABLED: Don't auto-sync checkboxes to debug the disabled field issue
-            // $('input[type="checkbox"][value="reading_level"]').prop('checked', isChecked);
+            // FIXED: Re-enable auto-sync checkboxes
+            $('input[type="checkbox"][value="reading_level"]').prop('checked', isChecked);
 
             if (isChecked) {
                 // Both fields selected - sync reading level to match current age range selection
                 const selectedAgeRange = getSelectedFieldValue('age_range');
-                console.log('🔄 Age range selected, would sync reading level to:', selectedAgeRange);
+                console.log('🔄 Age range selected, syncing reading level to:', selectedAgeRange);
 
                 if (selectedAgeRange && ageToReadingMap[selectedAgeRange]) {
                     const expectedReading = ageToReadingMap[selectedAgeRange];
                     console.log('🔄 Expected reading level:', expectedReading);
+
+                    // Auto-select the corresponding reading level source
+                    setTimeout(() => {
+                        const readingLevelRadios = $('input[name*="reading_level"][type="radio"]');
+                        readingLevelRadios.each(function() {
+                            const radioValue = $(this).closest('.form-check').find('label').text();
+                            if (radioValue.includes(expectedReading)) {
+                                $(this).prop('checked', true);
+                                updateFieldDisplay('reading_level');
+                                return false; // Break the loop
+                            }
+                        });
+                    }, 100);
                 }
             }
         });
@@ -1306,17 +1319,30 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             const isChecked = $(this).is(':checked');
             console.log('🔄 Reading level field checkbox changed:', isChecked);
 
-            // TEMPORARILY DISABLED: Don't auto-sync checkboxes to debug the disabled field issue
-            // $('input[type="checkbox"][value="age_range"]').prop('checked', isChecked);
+            // FIXED: Re-enable auto-sync checkboxes
+            $('input[type="checkbox"][value="age_range"]').prop('checked', isChecked);
 
             if (isChecked) {
                 // Both fields selected - sync age range to match current reading level selection
                 const selectedReadingLevel = getSelectedFieldValue('reading_level');
-                console.log('🔄 Reading level selected, would sync age range to:', selectedReadingLevel);
+                console.log('🔄 Reading level selected, syncing age range to:', selectedReadingLevel);
 
                 if (selectedReadingLevel && readingToAgeMap[selectedReadingLevel]) {
                     const expectedAge = readingToAgeMap[selectedReadingLevel];
                     console.log('🔄 Expected age range:', expectedAge);
+
+                    // Auto-select the corresponding age range source
+                    setTimeout(() => {
+                        const ageRangeRadios = $('input[name*="age_range"][type="radio"]');
+                        ageRangeRadios.each(function() {
+                            const radioValue = $(this).closest('.form-check').find('label').text();
+                            if (radioValue.includes(expectedAge)) {
+                                $(this).prop('checked', true);
+                                updateFieldDisplay('age_range');
+                                return false; // Break the loop
+                            }
+                        });
+                    }, 100);
                 }
             }
         });

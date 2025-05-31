@@ -1410,6 +1410,24 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
             // to avoid duplicate Amazon API calls
             return null;
 
+        case 'author':
+            // Handle different author field formats between APIs
+            if (isset($match['author_name']) && is_array($match['author_name'])) {
+                // OpenLibrary format: author_name array
+                return !empty($match['author_name']) ? $match['author_name'][0] : null;
+            } elseif (isset($match['author_name']) && is_string($match['author_name'])) {
+                // OpenLibrary format: author_name string
+                return $match['author_name'];
+            } elseif (isset($match['author'])) {
+                // Google Books format: author field
+                if (is_array($match['author'])) {
+                    return !empty($match['author']) ? $match['author'][0] : null;
+                } else {
+                    return $match['author'];
+                }
+            }
+            return null;
+
         default:
             // Standard field extraction
             return $match[$fieldName] ?? null;

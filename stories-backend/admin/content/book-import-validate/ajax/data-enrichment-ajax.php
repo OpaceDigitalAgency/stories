@@ -773,6 +773,10 @@ function handleApplyEnrichment() {
         error_log("SAVE_TEST: Book exists check - Book ID: $bookId");
         error_log("SAVE_TEST: Existing book data: " . json_encode($existingBook));
 
+        // CRITICAL FIX: Start transaction before executing SQL
+        $db->beginTransaction();
+        error_log("SAVE_TEST: ✅ Database transaction started successfully");
+
         // Execute the update
         $stmt = $db->prepare($sql);
         if ($stmt->execute($params)) {

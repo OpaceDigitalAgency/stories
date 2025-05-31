@@ -747,60 +747,15 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                                 existingField.new_data.source = currentSources + ' + amazon';
                             }
                         } else if (fieldName === 'tags') {
-                            // CRITICAL FIX: Only merge tags if Amazon actually has tags data
-                            console.log(`📦 TAGS_MERGE: Checking if Amazon has tags data for ${fieldName}`);
-                            console.log(`📦 TAGS_MERGE: Amazon value:`, amazonFieldData.new_data.value);
+                            // CRITICAL FIX: Skip Amazon tags merging entirely to prevent status changes
+                            console.log(`📦 TAGS_FIX: Skipping Amazon tags merge to prevent field status change`);
+                            console.log(`📦 TAGS_FIX: Tags field already evaluated - preserving original state`);
+                            console.log(`📦 TAGS_FIX: Current tags field status:`, existingField.new_data?.status);
+                            console.log(`📦 TAGS_FIX: Amazon tags value (ignored):`, amazonFieldData.new_data.value);
 
-                            // Check if Amazon actually has meaningful tags data
-                            let amazonHasTags = false;
-                            if (typeof amazonFieldData.new_data.value === 'string') {
-                                amazonHasTags = amazonFieldData.new_data.value.trim().length > 0;
-                            } else if (Array.isArray(amazonFieldData.new_data.value)) {
-                                amazonHasTags = amazonFieldData.new_data.value.length > 0;
-                            }
-
-                            if (!amazonHasTags) {
-                                console.log(`📦 TAGS_MERGE: Amazon has no tags data - skipping merge for ${fieldName}`);
-                                return; // Skip processing this field entirely
-                            }
-
-                            console.log(`📦 TAGS_MERGE: Amazon has tags data - proceeding with merge for ${fieldName}`);
-                            console.log(`📦 TAGS_MERGE: Existing value:`, existingField.new_data.value);
-
-                            // Parse existing tags
-                            let existingTags = [];
-                            if (typeof existingField.new_data.value === 'string') {
-                                existingTags = existingField.new_data.value.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
-                            } else if (Array.isArray(existingField.new_data.value)) {
-                                existingTags = existingField.new_data.value;
-                            }
-
-                            // Parse Amazon tags
-                            let amazonTags = [];
-                            if (typeof amazonFieldData.new_data.value === 'string') {
-                                amazonTags = amazonFieldData.new_data.value.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
-                            } else if (Array.isArray(amazonFieldData.new_data.value)) {
-                                amazonTags = amazonFieldData.new_data.value;
-                            }
-
-                            // Merge and deduplicate tags (case-insensitive)
-                            const allTags = [...existingTags, ...amazonTags];
-                            const uniqueTags = [];
-                            const seenTags = new Set();
-
-                            for (const tag of allTags) {
-                                const lowerTag = tag.toLowerCase().trim();
-                                if (!seenTags.has(lowerTag) && lowerTag.length > 0) {
-                                    seenTags.add(lowerTag);
-                                    uniqueTags.push(tag.trim());
-                                }
-                            }
-
-                            console.log(`📦 TAGS_MERGE: Merged result:`, uniqueTags);
-
-                            // Update the field with merged tags
-                            existingField.new_data.value = uniqueTags.join(', ');
-                            existingField.new_data.source = 'google_books + open_library + amazon';
+                            // Do not modify the existing tags field at all
+                            // This preserves the "Database Wrong" status and prevents it from changing to "Update"
+                            return; // Skip processing this field entirely
 
                         } else if (existingField.new_data.status === 'pending_amazon_data') {
                         // CRITICAL FIX: Field was pending Amazon data - replace with actual Amazon data

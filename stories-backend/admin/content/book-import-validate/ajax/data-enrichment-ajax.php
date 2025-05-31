@@ -823,9 +823,11 @@ function handleApplyEnrichment() {
             error_log("SAVE_TEST: 3. SQL WHERE clause is incorrect");
         }
 
-        // CRITICAL: Synchronize age range and reading level after any update
-        synchronizeAgeAndReadingLevel($bookId);
-        error_log("SAVE_TEST: Synchronized age/reading level for book ID: $bookId");
+        // CRITICAL FIX: DO NOT auto-synchronize during manual data enrichment
+        // The user has manually selected specific age range and reading level combinations
+        // Auto-sync would override their manual selections with "standard" mappings
+        // synchronizeAgeAndReadingLevel($bookId); // DISABLED for manual enrichment
+        error_log("SAVE_TEST: Skipped auto-sync to preserve manual age/reading level selections for book ID: $bookId");
 
         // Process additional relationships and complex fields
         $additionalUpdates = [];

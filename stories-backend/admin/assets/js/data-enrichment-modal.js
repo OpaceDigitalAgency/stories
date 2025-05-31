@@ -479,12 +479,18 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             }
         });
 
-        // Fetch Amazon data
-        $.post('book-import-validate/ajax/data-enrichment-ajax.php', {
-            action: 'get_amazon_data',
-            isbn: window.currentBookISBN,
-            book_id: window.currentBookId  // Pass book ID for duplicate prevention
-        }, function(res) {
+        // Fetch Amazon data with extended timeout
+        $.ajax({
+            url: 'book-import-validate/ajax/data-enrichment-ajax.php',
+            type: 'POST',
+            data: {
+                action: 'get_amazon_data',
+                isbn: window.currentBookISBN,
+                book_id: window.currentBookId  // Pass book ID for duplicate prevention
+            },
+            timeout: 60000, // 60 second timeout for Amazon scraping
+            dataType: 'json',
+            success: function(res) {
             console.log('📦 Amazon AJAX response received:', res);
             console.log('📦 URGENT_DEBUG: Response success:', res.success);
             console.log('📦 URGENT_DEBUG: Response data:', res.data);
@@ -522,7 +528,8 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 console.log('📦 URGENT_DEBUG: Format field exists:', !!formatField, formatField);
                 console.log('📦 URGENT_DEBUG: Price range field exists:', !!priceField, priceField);
             }
-        }, 'json').fail(function(xhr, status, error) {
+            },
+            error: function(xhr, status, error) {
             console.error('📦 Amazon AJAX error:', { xhr, status, error });
             console.error('📦 Response text:', xhr.responseText);
 

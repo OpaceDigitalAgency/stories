@@ -610,10 +610,16 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
     $(document).ready(function() {
         // Apply enrichment changes
         $('#apply-enrichment-btn').click(function() {
+            console.log('🔧 APPLY BUTTON CLICKED!');
+            console.log('🔧 Current enrichment data:', window.currentEnrichmentData);
+            console.log('🔧 Current book ID:', window.currentBookId);
+
             const selectedFields = {};
             $('.field-checkbox:checked').each(function() {
                 const fieldName = $(this).val();
                 const fieldData = window.currentEnrichmentData.fields[fieldName];
+
+                console.log(`🔧 Processing field: ${fieldName}`, fieldData);
 
                 // Handle multi-source fields
                 if (fieldData.new_data && fieldData.new_data.options) {
@@ -625,11 +631,15 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
                             source: fieldData.new_data.options[optionIndex].source,
                             confidence: fieldData.new_data.options[optionIndex].confidence
                         };
+                        console.log(`🔧 Multi-source field ${fieldName}:`, selectedFields[fieldName]);
                     }
                 } else if (fieldData.new_data) {
                     selectedFields[fieldName] = fieldData.new_data;
+                    console.log(`🔧 Single-source field ${fieldName}:`, selectedFields[fieldName]);
                 }
             });
+
+            console.log('🔧 Final selected fields to apply:', selectedFields);
 
             if (Object.keys(selectedFields).length === 0) {
                 alert('Please select at least one field to update.');

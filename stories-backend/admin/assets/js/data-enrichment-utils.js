@@ -115,6 +115,10 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
 
                     // DEBUGGING: Temporarily disable redirect to preserve console logs
                     console.log('SAVE_TEST: 🚀 SUCCESS! Redirect disabled for debugging - check console for transaction logs');
+
+                    // Re-enable the button since redirect is disabled for debugging
+                    $('#apply-enrichment-btn').prop('disabled', false).html('<i class="fas fa-save"></i> Apply Selected Changes');
+
                     // setTimeout(() => {
                     //     window.location.href = window.location.href.split('?')[0] + '?_refresh=' + Date.now();
                     // }, 2000);

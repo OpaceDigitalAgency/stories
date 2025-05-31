@@ -550,15 +550,6 @@ function handleGetEnrichmentData() {
 function handleApplyEnrichment() {
     global $db;
 
-    // IMMEDIATE RESPONSE TEST - Send response right away to test AJAX
-    error_log("=== APPLY ENRICHMENT CALLED ===");
-    echo json_encode([
-        'success' => true,
-        'message' => 'AJAX endpoint reached successfully',
-        'debug' => 'This is a test response to verify AJAX is working'
-    ]);
-    return;
-
     $bookId = $_POST['book_id'] ?? '';
     $fieldsJson = $_POST['fields'] ?? '';
 

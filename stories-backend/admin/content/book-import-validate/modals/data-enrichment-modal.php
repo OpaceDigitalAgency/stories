@@ -311,9 +311,11 @@
     padding: 0.75rem !important;
 }
 
-/* CRITICAL FIX: Override Bootstrap's 50% width constraint for better layout */
+/* CRITICAL FIX: Override Bootstrap's 50% width constraint for 3-column layout */
 @media (min-width: 768px) {
-    #enrichment-fields .col-md-6 {
+    #dataEnrichmentModal .col-md-6,
+    #enrichment-fields .col-md-6,
+    .modal-body .col-md-6 {
         -ms-flex: 0 0 33.333333% !important;
         flex: 0 0 33.333333% !important;
         max-width: 33.333333% !important;

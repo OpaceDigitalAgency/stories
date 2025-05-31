@@ -600,6 +600,20 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     existingField: existingField
                 });
 
+                // CRITICAL FIX: Skip re-processing fields that have already been evaluated and displayed
+                // Check if this field has already been processed and the user hasn't selected it
+                const fieldElement = $(`.enrichment-field[data-field="${fieldName}"]`);
+                const fieldCheckbox = $(`#field_${fieldName}`);
+                const hasStatusBadges = fieldElement.find('.badge:contains("Matches Database"), .badge:contains("Database Wrong"), .badge:contains("No new data")').length > 0;
+                const isUserSelected = fieldCheckbox.is(':checked');
+
+                if (hasStatusBadges && !isUserSelected && fieldName === 'tags') {
+                    console.log(`📦 AMAZON_DEBUG: Skipping re-processing of ${fieldName} field - already evaluated and not selected by user`);
+                    console.log(`📦 AMAZON_DEBUG: Field has status badges:`, hasStatusBadges);
+                    console.log(`📦 AMAZON_DEBUG: User selected:`, isUserSelected);
+                    return; // Skip this field entirely
+                }
+
                 // CRITICAL DEBUG: Special logging for format and price_range
                 if (fieldName === 'format' || fieldName === 'price_range') {
                     console.log(`🚨 CRITICAL_DEBUG: Processing ${fieldName} field`);

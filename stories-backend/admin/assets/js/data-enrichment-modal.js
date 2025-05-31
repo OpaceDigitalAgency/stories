@@ -1009,6 +1009,26 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 });
 
                 console.log('📦 Restored all checkbox and option states after Amazon field updates');
+
+                // CRITICAL FIX: Force layout recalculation after Amazon data loads
+                // This ensures all fields have consistent 3-column layout
+                setTimeout(() => {
+                    console.log('🎨 LAYOUT_FIX: Forcing layout recalculation after Amazon data integration');
+
+                    // Force all col-md-6 elements to use 3-column layout
+                    $('#enrichment-fields .col-md-6').each(function() {
+                        $(this).css({
+                            'flex': '0 0 33.333333%',
+                            'max-width': '33.333333%',
+                            'width': '33.333333%'
+                        });
+                    });
+
+                    // Trigger a layout reflow
+                    $('#enrichment-fields')[0].offsetHeight;
+
+                    console.log('🎨 LAYOUT_FIX: Applied 3-column layout to all fields after Amazon data');
+                }, 200);
             }, 150);
 
             console.log('📦 Re-rendered enrichment fields with Amazon data');

@@ -312,13 +312,26 @@
 }
 
 /* CRITICAL FIX: Override Bootstrap's 50% width constraint for 3-column layout */
+/* Use multiple selectors and higher specificity to ensure it applies to dynamically created content */
 @media (min-width: 768px) {
     #dataEnrichmentModal .col-md-6,
     #enrichment-fields .col-md-6,
-    .modal-body .col-md-6 {
+    .modal-body .col-md-6,
+    .modal .col-md-6,
+    div.col-md-6 {
         -ms-flex: 0 0 33.333333% !important;
         flex: 0 0 33.333333% !important;
         max-width: 33.333333% !important;
+        width: 33.333333% !important;
+    }
+}
+
+/* Additional override for any Bootstrap grid system interference */
+@media (min-width: 768px) {
+    .modal-body .row .col-md-6 {
+        flex-basis: 33.333333% !important;
+        max-width: 33.333333% !important;
+        width: 33.333333% !important;
     }
 }
 

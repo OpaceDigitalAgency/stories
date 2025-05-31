@@ -1997,10 +1997,17 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 currentValue: currentValue,
                 actualNewValue: actualNewValue,
                 source: source,
-                isExactMatch: isExactMatch(currentValue, actualNewValue),
                 currentEmpty: isEmpty(currentValue),
                 newEmpty: isEmpty(actualNewValue)
             });
+
+            // CRITICAL DEBUG: Test the exact match function with detailed logging
+            console.log('🛒 PURCHASE_LINKS_DEBUG: About to call isExactMatch...');
+            console.log('🛒 PURCHASE_LINKS_DEBUG: currentValue type:', typeof currentValue);
+            console.log('🛒 PURCHASE_LINKS_DEBUG: actualNewValue type:', typeof actualNewValue);
+
+            const exactMatchResult = isExactMatch(currentValue, actualNewValue);
+            console.log('🛒 PURCHASE_LINKS_DEBUG: isExactMatch result:', exactMatchResult);
         }
 
         // Check if database is empty and we have data from ANY source

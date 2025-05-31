@@ -687,6 +687,13 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                         // Field has new_data from other sources - merge Amazon as additional source
                         console.log(`📦 Merging Amazon data with existing field: ${fieldName}`);
 
+                        // CRITICAL DEBUG: Log the exact path being taken
+                        if (fieldName === 'purchase_links' || fieldName === 'format' || fieldName === 'price_range') {
+                            console.log(`📦 PATH_DEBUG: ${fieldName} - has options:`, !!existingField.new_data.options);
+                            console.log(`📦 PATH_DEBUG: ${fieldName} - status:`, existingField.new_data.status);
+                            console.log(`📦 PATH_DEBUG: ${fieldName} - will take pending_amazon_data path:`, existingField.new_data.status === 'pending_amazon_data');
+                        }
+
                         if (existingField.new_data.options) {
                             // Field already has multiple sources - add Amazon as another option
                             console.log(`📦 Adding Amazon as additional option to multi-source field: ${fieldName}`);

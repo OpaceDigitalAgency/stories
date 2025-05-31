@@ -5,9 +5,15 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
 
     function createMultiSourceField(fieldName, field, label) {
         // CRITICAL FIX: Prevent re-processing of tags field that has already been processed
-        if (fieldName === 'tags' && window.tagsFieldProcessed) {
-            console.log('🏷️ TAGS_FIX: Tags field already processed, skipping re-creation to prevent corruption');
-            return ''; // Return empty to prevent re-processing
+        if (fieldName === 'tags') {
+            console.log('🏷️ TAGS_DEBUG: createMultiSourceField called for tags field');
+            console.log('🏷️ TAGS_DEBUG: window.tagsFieldProcessed =', window.tagsFieldProcessed);
+            console.log('🏷️ TAGS_DEBUG: field data =', field);
+
+            if (window.tagsFieldProcessed) {
+                console.log('🏷️ TAGS_FIX: Tags field already processed, skipping re-creation to prevent corruption');
+                return ''; // Return empty to prevent re-processing
+            }
         }
 
         let optionsHtml = '';
@@ -372,7 +378,10 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
         } else if (fieldName === 'tags') {
             // CRITICAL FIX: Add book ID validation to prevent cross-contamination
             const currentBookId = window.currentBookId;
+            console.log('🏷️ TAGS_DISPLAY: formatFieldValue called for tags field');
+            console.log('🏷️ TAGS_DISPLAY: window.tagsFieldProcessed =', window.tagsFieldProcessed);
             console.log('🏷️ TAGS_DISPLAY: Processing tags field with value:', value);
+            console.log('🏷️ TAGS_DISPLAY: Value type:', typeof value);
             console.log('🏷️ TAGS_DISPLAY: Current book ID:', currentBookId);
 
             // CRITICAL: Only process if we have a valid current book ID and this isn't stale data

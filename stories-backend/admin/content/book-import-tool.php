@@ -2180,11 +2180,38 @@ $(document).ready(function() {
         summaryHtml += '</ul>';
         summaryInfo.innerHTML = summaryHtml;
         
-        // Show all books in table
-        renderDiscoveryTable(discoveryBooks);
+        // Show all books in enhanced table
+        renderDiscoveryEnhancedTable(discoveryBooks);
     }
 
-    function renderDiscoveryTable(books) {
+    function renderDiscoveryEnhancedTable(books) {
+        // Use AJAX to render the enhanced table
+        const formData = new FormData();
+        formData.append('action', 'render_table');
+        formData.append('books', JSON.stringify(books));
+        
+        fetch('book-discovery-ajax.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                document.getElementById('tableContainer').innerHTML = result.table_html;
+            } else {
+                console.error('Failed to render table:', result.error);
+                // Fallback to simple table
+                renderSimpleDiscoveryTable(books);
+            }
+        })
+        .catch(error => {
+            console.error('Error rendering enhanced table:', error);
+            // Fallback to simple table
+            renderSimpleDiscoveryTable(books);
+        });
+    }
+
+    function renderSimpleDiscoveryTable(books) {
         let tableHtml = `
             <div class="table-responsive">
                 <table class="table table-striped table-hover">

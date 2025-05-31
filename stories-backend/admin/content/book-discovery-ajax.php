@@ -25,6 +25,50 @@ require_once '../../admin/includes/db-connect.php';
 require_once 'book-discovery/BookDiscoveryEngine.php';
 require_once 'book-import-validate/functions/data-enrichment-functions.php';
 
+/**
+ * Clean author name by removing "illustrated by" text
+ */
+function cleanAuthorName($author) {
+    if (empty($author)) return '';
+    
+    // Remove "illustrated by" variations
+    $author = preg_replace('/,\s*illustrated\s+by\s+[^,]+/i', '', $author);
+    $author = preg_replace('/,\s*illus\.\s+[^,]+/i', '', $author);
+    $author = preg_replace('/,\s*illustrations\s+by\s+[^,]+/i', '', $author);
+    
+    return trim($author);
+}
+
+/**
+ * Format age range to DB format (e.g., "4-5 years")
+ */
+function formatAgeRange($ageRange) {
+    if (empty($ageRange)) return '';
+    
+    // Convert "4 to 5 years" to "4-5 years"
+    $ageRange = preg_replace('/(\d+)\s+to\s+(\d+)\s+years?/i', '$1-$2 years', $ageRange);
+    
+    // Convert "4-5 year olds" to "4-5 years"
+    $ageRange = preg_replace('/(\d+-\d+)\s+year\s+olds?/i', '$1 years', $ageRange);
+    
+    // Convert "4+ years" to "4-99 years"
+    $ageRange = preg_replace('/(\d+)\+\s+years?/i', '$1-99 years', $ageRange);
+    
+    return trim($ageRange);
+}
+
+/**
+ * Format publication date to DB format (DD/MM/YYYY)
+ */
+function formatPublicationDate($date) {
+    if (empty($date)) return '';
+    
+    $timestamp = strtotime($date);
+    if ($timestamp === false) return '';
+    
+    return date('d/m/Y', $timestamp);
+}
+
 // Set JSON response header and CORS headers
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
@@ -93,9 +137,29 @@ try {
                 error_log("After filtering: " . count($books) . " books");
             }
             
+            // Format books for enhanced table display
+            $formattedBooks = [];
+            foreach ($books as $index => $book) {
+                $formattedBooks[] = [
+                    'id' => $index,
+                    'title' => htmlspecialchars($book['title'] ?? ''),
+                    'author' => htmlspecialchars(cleanAuthorName($book['author'] ?? '')),
+                    'isbn10' => htmlspecialchars($book['isbn'] ?? ''),
+                    'isbn13' => htmlspecialchars($book['isbn13'] ?? ''),
+                    'age' => htmlspecialchars(formatAgeRange($book['age_range'] ?? '')),
+                    'date' => htmlspecialchars($book['formatted_date'] ?? ($book['year'] ? "01/01/{$book['year']}" : '')),
+                    'publisher' => htmlspecialchars($book['publisher'] ?? ''),
+                    'language' => htmlspecialchars($book['language'] ?? ''),
+                    'page_count' => htmlspecialchars($book['page_count'] ?? ''),
+                    'reading_level' => htmlspecialchars($book['reading_level'] ?? ''),
+                    'status' => '<span class="text-info">Ready</span>'
+                ];
+            }
+            
             $response = [
                 'success' => true,
                 'books' => array_values($books),
+                'formatted_books' => $formattedBooks,
                 'total' => count($books)
             ];
             error_log("Sending response: " . json_encode($response));
@@ -131,9 +195,32 @@ try {
                     if (!empty($data['value'])) {
                         // Always add enriched data, don't check if field is empty
                         $bookData[$field] = $data['value'];
+                        
+                        // Also store confidence for publisher matching
+                        if ($field === 'publisher' && isset($data['confidence'])) {
+                            $bookData['publisher_confidence'] = $data['confidence'];
+                        }
+                        
                         error_log("Added enriched field $field: " . $data['value']);
                     }
                 }
+            }
+            
+            // Clean author name - remove "illustrated by" text
+            if (!empty($bookData['author'])) {
+                $bookData['author'] = cleanAuthorName($bookData['author']);
+            }
+            
+            // Format age range to DB format
+            if (!empty($bookData['age_range'])) {
+                $bookData['age_range'] = formatAgeRange($bookData['age_range']);
+            }
+            
+            // Format publication date
+            if (!empty($bookData['publication_date'])) {
+                $bookData['formatted_date'] = formatPublicationDate($bookData['publication_date']);
+            } elseif (!empty($bookData['year'])) {
+                $bookData['formatted_date'] = "01/01/" . $bookData['year'];
             }
             
             error_log("Final book data: " . print_r($bookData, true));
@@ -159,6 +246,90 @@ try {
             // Import book function
             $result = importBook($db, $bookData);
             echo json_encode($result);
+            break;
+            
+        case 'render_table':
+            $booksJson = $_POST['books'] ?? '';
+            if (empty($booksJson)) {
+                throw new Exception('No books data provided');
+            }
+            
+            $books = json_decode($booksJson, true);
+            if (!$books) {
+                throw new Exception('Invalid books data format');
+            }
+            
+            // Format books for enhanced table
+            $tableData = [];
+            foreach ($books as $index => $book) {
+                $status = $book['processing_error'] ?? false ? 'Error' :
+                         ($book['imported'] ?? false ? 'Imported' : 'Ready');
+                $statusClass = $status === 'Error' ? 'text-danger' :
+                              ($status === 'Imported' ? 'text-success' : 'text-info');
+                
+                // Calculate publisher match percentage if available
+                $publisherDisplay = $book['publisher'] ?? '';
+                if (!empty($book['publisher_confidence'])) {
+                    $publisherDisplay .= ' (' . round($book['publisher_confidence']) . '% match)';
+                }
+                
+                $tableData[] = [
+                    'id' => $index,
+                    'title' => $book['title'] ?? '',
+                    'author' => cleanAuthorName($book['author'] ?? ''),
+                    'isbn10' => $book['isbn'] ?? '',
+                    'isbn13' => $book['isbn13'] ?? '',
+                    'age' => formatAgeRange($book['age_range'] ?? ''),
+                    'date' => $book['formatted_date'] ?? ($book['year'] ? "01/01/{$book['year']}" : ''),
+                    'publisher' => $publisherDisplay,
+                    'language' => $book['language'] ?? '',
+                    'page_count' => $book['page_count'] ?? '',
+                    'reading_level' => $book['reading_level'] ?? '',
+                    'status' => '<span class="' . $statusClass . '">' . $status . '</span>'
+                ];
+            }
+            
+            // Define columns for enhanced table
+            $columns = [
+                'title' => 'Title',
+                'author' => 'Author',
+                'isbn10' => 'ISBN-10',
+                'isbn13' => 'ISBN-13',
+                'age' => 'Age Range',
+                'date' => 'Publication Date',
+                'publisher' => 'Publisher',
+                'language' => 'Language',
+                'page_count' => 'Pages',
+                'reading_level' => 'Reading Level',
+                'status' => 'Status'
+            ];
+            
+            // Start output buffering to capture the table HTML
+            ob_start();
+            
+            // Render enhanced table
+            renderEnhancedTable(
+                $tableData,
+                $columns,
+                'book',
+                'discovery-books-table',
+                [
+                    'showCheckboxes' => true,
+                    'showActions' => false,
+                    'bulkActions' => ['import', 'export', 'delete'],
+                    'htmlFields' => ['status'],
+                    'showPagination' => true,
+                    'itemsPerPage' => 25,
+                    'thumbnailField' => false // No thumbnails for book discovery
+                ]
+            );
+            
+            $tableHtml = ob_get_clean();
+            
+            echo json_encode([
+                'success' => true,
+                'table_html' => $tableHtml
+            ]);
             break;
             
         default:

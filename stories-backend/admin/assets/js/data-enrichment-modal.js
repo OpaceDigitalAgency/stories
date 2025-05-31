@@ -113,7 +113,19 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         // CRITICAL FIX: Clear previous book's enrichment data to prevent cross-contamination
         window.currentEnrichmentData = null;
         $('#enrichment-fields').empty(); // Clear any leftover DOM elements
+
+        // CRITICAL: Clear any cached field data that might contain stale tags
+        if (window.cachedFieldData) {
+            delete window.cachedFieldData;
+        }
+
+        // CRITICAL: Clear any global variables that might hold stale data
+        if (window.lastProcessedTags) {
+            delete window.lastProcessedTags;
+        }
+
         console.log('🧹 Cleared previous enrichment data and DOM for new book:', { bookId, title, author });
+        console.log('🧹 Cleared cached field data and global variables to prevent cross-contamination');
 
         // Show modal
         $('#dataEnrichmentModal').modal('show');

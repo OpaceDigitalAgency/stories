@@ -358,8 +358,16 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
         } else if (fieldName === 'preview_link') {
             return `<a href="${value}" target="_blank" class="btn btn-sm btn-outline-primary">View Preview</a>`;
         } else if (fieldName === 'tags') {
-            // CRITICAL FIX: Prevent recursive processing of tags field
+            // CRITICAL FIX: Add book ID validation to prevent cross-contamination
+            const currentBookId = window.currentBookId;
             console.log('🏷️ TAGS_DISPLAY: Processing tags field with value:', value);
+            console.log('🏷️ TAGS_DISPLAY: Current book ID:', currentBookId);
+
+            // CRITICAL: Only process if we have a valid current book ID and this isn't stale data
+            if (!currentBookId) {
+                console.log('🏷️ TAGS_DISPLAY: No current book ID - skipping processing to prevent stale data');
+                return '<span class="text-muted">Loading...</span>';
+            }
 
             // If this is already formatted HTML, return it as-is
             if (typeof value === 'string' && value.includes('<span class="badge')) {
@@ -377,10 +385,11 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
             if (Array.isArray(value)) {
                 // Remove duplicates and create badges
                 const uniqueTags = [...new Set(value.map(tag => tag.trim()).filter(tag => tag.length > 0))];
+                console.log('🏷️ TAGS_DISPLAY: Final processed tags for book', currentBookId, ':', uniqueTags);
                 return uniqueTags.map(item => `<span class="badge badge-success mr-1">${item}</span>`).join('');
             } else if (typeof value === 'string') {
                 // Simple display - no splitting or complex processing
-                console.log('🏷️ TAGS_DISPLAY: Displaying simple string value');
+                console.log('🏷️ TAGS_DISPLAY: Displaying simple string value for book', currentBookId, ':', value);
                 return `<span class="badge badge-success mr-1">${value}</span>`;
             }
             return `<span class="badge badge-success">${value}</span>`;

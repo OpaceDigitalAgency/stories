@@ -110,6 +110,11 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         $('#enrichment-error').hide();
         $('#apply-enrichment-btn').prop('disabled', true);
 
+        // CRITICAL FIX: Clear previous book's enrichment data to prevent cross-contamination
+        window.currentEnrichmentData = null;
+        $('#enrichment-fields').empty(); // Clear any leftover DOM elements
+        console.log('🧹 Cleared previous enrichment data and DOM for new book:', { bookId, title, author });
+
         // Show modal
         $('#dataEnrichmentModal').modal('show');
 

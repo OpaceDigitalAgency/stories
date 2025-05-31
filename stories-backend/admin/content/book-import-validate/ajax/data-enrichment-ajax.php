@@ -498,6 +498,64 @@ function handleGetEnrichmentData() {
         $currentPublisher = $currentBookData['publisher'] ?? null;
         $enrichedData = getEnrichedBookData($title, $author, $currentISBN, $currentPublisher);
 
+        // CRITICAL FIX: Merge Amazon data into main enrichment data
+        if (!empty($currentISBN)) {
+            $cleanISBN = preg_replace('/[^0-9X]/i', '', $currentISBN);
+            $amazonEnrichmentData = getAmazonEnrichmentData($cleanISBN, $currentBookData);
+
+            if (!empty($amazonEnrichmentData['fields'])) {
+                error_log("AMAZON_MERGE: Merging Amazon fields into main enrichment data");
+                error_log("AMAZON_MERGE: Amazon fields: " . implode(', ', array_keys($amazonEnrichmentData['fields'])));
+
+                // Merge Amazon fields into the main enrichment data
+                foreach ($amazonEnrichmentData['fields'] as $fieldName => $amazonFieldData) {
+                    if (isset($enrichedData['fields'][$fieldName])) {
+                        // Field exists from Google Books/OpenLibrary - convert to multi-source
+                        $existingField = $enrichedData['fields'][$fieldName];
+
+                        // Create options array with existing data and Amazon data
+                        $options = [];
+
+                        // Add existing source(s)
+                        if (isset($existingField['options'])) {
+                            $options = $existingField['options'];
+                        } else {
+                            $options[] = [
+                                'value' => $existingField['value'],
+                                'source' => $existingField['source'],
+                                'confidence' => $existingField['confidence'],
+                                'label' => $existingField['label']
+                            ];
+                        }
+
+                        // Add Amazon data as new option
+                        $options[] = [
+                            'value' => $amazonFieldData['new_data']['value'],
+                            'source' => 'amazon',
+                            'confidence' => $amazonFieldData['new_data']['confidence'],
+                            'label' => $amazonFieldData['label']
+                        ];
+
+                        // Update field to multi-source
+                        $enrichedData['fields'][$fieldName] = [
+                            'label' => $amazonFieldData['label'],
+                            'current_value' => $amazonFieldData['current_value'] ?? $existingField['current_value'] ?? null,
+                            'new_data' => [
+                                'options' => $options,
+                                'status' => 'available'
+                            ]
+                        ];
+
+                        error_log("AMAZON_MERGE: Converted $fieldName to multi-source with Amazon data");
+                    } else {
+                        // New field from Amazon only
+                        $enrichedData['fields'][$fieldName] = $amazonFieldData;
+                        error_log("AMAZON_MERGE: Added new Amazon-only field: $fieldName");
+                    }
+                }
+            }
+        }
+
         // Filter and combine with current data
         $enrichedData['fields'] = filterRelevantFields($enrichedData['fields'], $currentBookData);
         $enrichedData['current_data'] = $currentBookData;

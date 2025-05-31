@@ -1,7 +1,16 @@
 <?php
 // Test Amazon scraping for specific ISBN
-require_once '../../../config/db-connect.php';
-require_once 'book-import-validate/functions/data-enrichment-functions.php';
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+try {
+    require_once '../../../config/db-connect.php';
+    require_once 'book-import-validate/functions/data-enrichment-functions.php';
+    echo "<p>✅ Required files loaded successfully</p>";
+} catch (Exception $e) {
+    echo "<p>❌ Error loading files: " . $e->getMessage() . "</p>";
+    exit;
+}
 
 // Test ISBN from the user's example - both versions
 $testISBN = '9781444004786'; // Full ISBN-13
@@ -54,13 +63,19 @@ if (isset($amazonData10['metadata']['reading_age'])) {
 echo "<h3>Amazon Enrichment Data:</h3>";
 $amazonEnrichmentData = getAmazonEnrichmentData($testISBN);
 
+echo "<h4>Complete Amazon Enrichment Data:</h4>";
+echo "<pre>";
+print_r($amazonEnrichmentData);
+echo "</pre>";
+
 if (isset($amazonEnrichmentData['fields']['age_range'])) {
-    echo "<h4>Age Range Field Data:</h4>";
+    echo "<h4>✅ Age Range Field Data Found:</h4>";
     echo "<pre>";
     print_r($amazonEnrichmentData['fields']['age_range']);
     echo "</pre>";
 } else {
     echo "<h4>❌ No age_range field in Amazon enrichment data</h4>";
+    echo "<p>Available fields: " . implode(', ', array_keys($amazonEnrichmentData['fields'] ?? [])) . "</p>";
 }
 
 // Test Chronicles of Narnia too

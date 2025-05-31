@@ -1554,7 +1554,7 @@ function normalizeFormat($format) {
         'hardcover' => 'Hardcover',
         'hardback' => 'Hardcover',
         'gebundene ausgabe' => 'Hardcover',
-        'paperback' => 'Paperback',
+        'paperback' => 'Paperback', 
         'softcover' => 'Paperback',
         'brossura' => 'Paperback',
         'kindle' => 'Kindle',

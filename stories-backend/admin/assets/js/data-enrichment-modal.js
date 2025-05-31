@@ -2019,10 +2019,10 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     console.log('🏷️ TAGS_DEBUG: Split result for new value:', splitTags);
 
                     if (splitTags.length > 1) {
-                        newTags = splitTags.map(tag => tag.toLowerCase().trim()).sort();
+                        newTags = splitTags.map(tag => normalizeTagForComparison(tag.toLowerCase().trim())).filter(tag => tag.length > 0).sort();
                         console.log('🏷️ TAGS_DEBUG: Successfully split concatenated new value:', newTags);
                     } else {
-                        newTags = [actualNewValue.toLowerCase().trim()];
+                        newTags = [normalizeTagForComparison(actualNewValue.toLowerCase().trim())].filter(tag => tag.length > 0);
                         console.log('🏷️ TAGS_DEBUG: Treating new value as single tag:', newTags);
                     }
                 }

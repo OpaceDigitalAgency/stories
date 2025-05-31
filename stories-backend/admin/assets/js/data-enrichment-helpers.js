@@ -358,7 +358,9 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
         } else if (fieldName === 'preview_link') {
             return `<a href="${value}" target="_blank" class="btn btn-sm btn-outline-primary">View Preview</a>`;
         } else if (fieldName === 'tags') {
-            // CRITICAL FIX: Handle tags/genres field properly to prevent duplicate display
+            // CRITICAL FIX: Simplified tags display - no complex processing during initial display
+            console.log('🏷️ TAGS_DISPLAY: Processing tags field with value:', value);
+
             if (Array.isArray(value)) {
                 // Remove duplicates and create badges
                 const uniqueTags = [...new Set(value.map(tag => tag.trim()).filter(tag => tag.length > 0))];
@@ -366,62 +368,14 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
             } else if (typeof value === 'string') {
                 // Check if this is already a formatted string with badges (prevent double processing)
                 if (value.includes('<span class="badge')) {
+                    console.log('🏷️ TAGS_DISPLAY: Already formatted, returning as-is');
                     return value; // Already formatted, return as-is
                 }
 
-                // CRITICAL FIX: Handle the duplicate content issue you mentioned
-                let processedValue = value;
-
-                // Check for duplicate content patterns and clean them up
-                if (value.includes(',') && value.includes('Children\'s Stories')) {
-                    console.log('🏷️ DUPLICATE_FIX: Detected potential duplicate content in tags:', value);
-
-                    // Split by comma and remove duplicates
-                    const tags = value.split(',')
-                        .map(tag => tag.trim())
-                        .filter(tag => tag.length > 0);
-
-                    // Remove duplicates (case-insensitive)
-                    const uniqueTags = [];
-                    const seenTags = new Set();
-
-                    tags.forEach(tag => {
-                        const normalizedTag = tag.toLowerCase().trim();
-                        if (!seenTags.has(normalizedTag)) {
-                            seenTags.add(normalizedTag);
-                            uniqueTags.push(tag);
-                        }
-                    });
-
-                    console.log('🏷️ DUPLICATE_FIX: Original tags:', tags);
-                    console.log('🏷️ DUPLICATE_FIX: Unique tags:', uniqueTags);
-
-                    return uniqueTags.map(item => `<span class="badge badge-success mr-1">${item}</span>`).join('');
-                }
-
-                // Check if it's a comma-separated list
-                if (value.includes(',')) {
-                    const tags = value.split(',').map(item => item.trim()).filter(item => item.length > 0);
-                    // Remove duplicates
-                    const uniqueTags = [...new Set(tags.map(tag => tag.toLowerCase()))].map(tag => {
-                        // Find original case version
-                        return tags.find(originalTag => originalTag.toLowerCase() === tag) || tag;
-                    });
-                    return uniqueTags.map(item => `<span class="badge badge-success mr-1">${item}</span>`).join('');
-                } else {
-                    // This might be a concatenated string - try to split it intelligently
-                    const tags = splitConcatenatedTags(value);
-                    if (tags.length > 1) {
-                        // Remove duplicates
-                        const uniqueTags = [...new Set(tags.map(tag => tag.toLowerCase()))].map(tag => {
-                            return tags.find(originalTag => originalTag.toLowerCase() === tag) || tag;
-                        });
-                        return uniqueTags.map(item => `<span class="badge badge-success mr-1">${item}</span>`).join('');
-                    } else {
-                        // Single tag or unrecognized format
-                        return `<span class="badge badge-success mr-1">${value}</span>`;
-                    }
-                }
+                // SIMPLE APPROACH: Just display the raw value as a single badge
+                // Don't try to split or process it during initial display
+                console.log('🏷️ TAGS_DISPLAY: Displaying raw value as single badge:', value);
+                return `<span class="badge badge-success mr-1">${value}</span>`;
             }
             return `<span class="badge badge-success">${value}</span>`;
         } else if (fieldName === 'publication_date') {

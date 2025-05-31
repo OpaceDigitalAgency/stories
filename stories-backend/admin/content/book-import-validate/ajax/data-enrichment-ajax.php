@@ -836,10 +836,18 @@ function handleApplyEnrichment() {
         // Start new transaction for sync
         $db->beginTransaction();
 
-        // CRITICAL: Synchronize age range and reading level after any update
-        // This ensures data consistency and should work correctly
-        synchronizeAgeAndReadingLevel($bookId);
-        error_log("SAVE_TEST: Synchronized age/reading level for book ID: $bookId");
+        // CRITICAL FIX: Only synchronize if age_range and reading_level were NOT explicitly provided
+        // This prevents overriding user selections from the data enrichment modal
+        $hasExplicitAgeRange = isset($fieldsToUpdate['age_range']);
+        $hasExplicitReadingLevel = isset($fieldsToUpdate['reading_level']);
+
+        if (!$hasExplicitAgeRange && !$hasExplicitReadingLevel) {
+            // Only sync if neither field was explicitly set by user
+            synchronizeAgeAndReadingLevel($bookId);
+            error_log("SAVE_TEST: Synchronized age/reading level for book ID: $bookId (no explicit values provided)");
+        } else {
+            error_log("SAVE_TEST: SKIPPED synchronization for book ID: $bookId (explicit values provided - age_range: " . ($hasExplicitAgeRange ? 'YES' : 'NO') . ", reading_level: " . ($hasExplicitReadingLevel ? 'YES' : 'NO') . ")");
+        }
 
         // Check data after sync
         $postSyncCheck = $db->prepare("SELECT age_range, reading_level FROM books WHERE directory_item_id = ?");

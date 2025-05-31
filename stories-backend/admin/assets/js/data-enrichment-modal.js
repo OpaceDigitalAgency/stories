@@ -1428,6 +1428,19 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 const mappedReadingLevel = ageToReadingMap[ageRangeValue];
                 if (mappedReadingLevel) {
                     console.log('🔄 Mapping age range', ageRangeValue, 'to reading level', mappedReadingLevel);
+
+                    // CRITICAL FIX: Update the actual field data, not just the display
+                    if (window.currentEnrichmentData?.fields?.reading_level) {
+                        // Create or update the reading level field data with the mapped value
+                        if (!window.currentEnrichmentData.fields.reading_level.new_data) {
+                            window.currentEnrichmentData.fields.reading_level.new_data = {};
+                        }
+                        window.currentEnrichmentData.fields.reading_level.new_data.value = mappedReadingLevel;
+                        window.currentEnrichmentData.fields.reading_level.new_data.source = 'age_range_sync';
+                        window.currentEnrichmentData.fields.reading_level.new_data.confidence = 1.0;
+                        console.log('🔄 Updated reading level field data (sync):', window.currentEnrichmentData.fields.reading_level.new_data);
+                    }
+
                     updateFieldDisplay('reading_level', mappedReadingLevel, true);
                 } else {
                     updateFieldDisplay('reading_level', null, true);
@@ -1510,6 +1523,19 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                             const mappedReadingLevel = ageToReadingMap[ageRangeValue];
                             if (mappedReadingLevel) {
                                 console.log('🔄 Radio change: Mapping age range', ageRangeValue, 'to reading level', mappedReadingLevel);
+
+                                // CRITICAL FIX: Update the actual field data, not just the display
+                                if (window.currentEnrichmentData?.fields?.reading_level) {
+                                    // Create or update the reading level field data with the mapped value
+                                    if (!window.currentEnrichmentData.fields.reading_level.new_data) {
+                                        window.currentEnrichmentData.fields.reading_level.new_data = {};
+                                    }
+                                    window.currentEnrichmentData.fields.reading_level.new_data.value = mappedReadingLevel;
+                                    window.currentEnrichmentData.fields.reading_level.new_data.source = 'age_range_sync';
+                                    window.currentEnrichmentData.fields.reading_level.new_data.confidence = 1.0;
+                                    console.log('🔄 Updated reading level field data:', window.currentEnrichmentData.fields.reading_level.new_data);
+                                }
+
                                 updateFieldDisplay('reading_level', mappedReadingLevel, true);
                             } else {
                                 console.log('🔄 Radio change: No mapping found for age range', ageRangeValue);

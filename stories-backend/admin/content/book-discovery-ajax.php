@@ -16,10 +16,10 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 // Include auth check
-require_once '../includes/auth-check.php';
+require_once '../../admin/includes/auth-check.php';
 
 // Include database connection
-require_once '../includes/db-connect.php';
+require_once '../../admin/includes/db-connect.php';
 
 // Include discovery engine and enrichment functions
 require_once 'book-discovery/BookDiscoveryEngine.php';
@@ -38,15 +38,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 try {
+    error_log("AJAX Discovery: Starting request processing");
+    error_log("POST data: " . print_r($_POST, true));
+    
     $action = $_POST['action'] ?? '';
+    error_log("Action: " . $action);
     
     switch ($action) {
         case 'discover_all':
+            error_log("Processing discover_all action");
             $url = filter_var($_POST['url'], FILTER_VALIDATE_URL);
             if (!$url) {
+                error_log("Invalid URL provided: " . ($_POST['url'] ?? 'null'));
                 throw new Exception('Invalid URL provided');
             }
             
+            error_log("Valid URL: " . $url);
+            error_log("Creating BookDiscoveryEngine");
             $discoveryEngine = new BookDiscoveryEngine($db);
             $books = $discoveryEngine->discoverFromURL($url);
             

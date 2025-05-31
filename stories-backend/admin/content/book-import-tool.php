@@ -1882,14 +1882,19 @@ $(document).ready(function() {
                 body: discoverData
             });
             
+            console.log('Response received');
             console.log('Response status:', response.status);
             console.log('Response ok:', response.ok);
+            console.log('Response headers:', response.headers);
             
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                const errorText = await response.text();
+                console.error('HTTP error response body:', errorText);
+                throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
             }
             
             const responseText = await response.text();
+            console.log('Raw response length:', responseText.length);
             console.log('Raw response:', responseText);
             
             let result;

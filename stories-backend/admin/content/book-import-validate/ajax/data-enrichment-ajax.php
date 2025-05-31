@@ -910,9 +910,27 @@ function filterRelevantFields($fields, $currentBookData) {
         // Get current value from database
         $currentValue = null;
         if ($fieldName === 'tags') {
-            // Special handling for tags (displayed as genres)
-            $currentValue = isset($currentBookData['current_tags']) ?
-                array_column($currentBookData['current_tags'], 'name') : [];
+            // Special handling for tags - separate genres from age-related tags
+            if (isset($currentBookData['current_tags'])) {
+                $allTagNames = array_column($currentBookData['current_tags'], 'name');
+
+                // Filter to only include genre tags (exclude age-related tags)
+                $genreTagNames = array_filter($allTagNames, function($tagName) {
+                    $name = strtolower($tagName);
+                    // Apply same filtering logic as getGenreTagsForDirectoryItem
+                    return !(
+                        preg_match('/^\d+-\d+$/', $name) ||
+                        preg_match('/^\d+\+$/', $name) ||
+                        strpos($name, 'years') !== false ||
+                        strpos($name, 'age') !== false ||
+                        in_array($name, ['teen', 'young adult', 'adult', 'coming of age', '12+', '13+', '14+', '16+'])
+                    );
+                });
+
+                $currentValue = array_values($genreTagNames); // Reset array keys
+            } else {
+                $currentValue = [];
+            }
         } else {
             $currentValue = $currentBookData[$fieldName] ?? null;
         }

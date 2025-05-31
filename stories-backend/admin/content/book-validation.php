@@ -189,21 +189,46 @@ require_once '../includes/header.php';
                                 $statusIcon = $validation['icon'];
                                 $statusMessage = $validation['message'];
 
-                                // Get genre tags
+                                // Get ALL tags (consistent with data enrichment modal)
+                                $stmt = $db->prepare("
+                                    SELECT t.id, t.name
+                                    FROM tags t
+                                    JOIN directory_item_tags dit ON t.id = dit.tag_id
+                                    WHERE dit.directory_item_id = ?
+                                    ORDER BY t.name ASC
+                                ");
+                                $stmt->execute([$book['id']]);
+                                $allTags = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                                // Separate genre tags and age range tags for display
                                 $genreTags = getGenreTagsForDirectoryItem($db, $book['id']);
-                                $genreDisplay = !empty($genreTags) ?
-                                    htmlspecialchars(formatTagsForDisplay($genreTags)) :
-                                    '<span class="text-muted">No genres</span>';
+                                $ageRangeTags = getAgeRangeTagsForDirectoryItem($db, $book['id']);
+
+                                // Create comprehensive tag display
+                                $tagDisplayParts = [];
+                                if (!empty($genreTags)) {
+                                    $tagDisplayParts[] = '<strong>Genres:</strong> ' . htmlspecialchars(formatTagsForDisplay($genreTags));
+                                }
+                                if (!empty($ageRangeTags)) {
+                                    $tagDisplayParts[] = '<strong>Age:</strong> ' . htmlspecialchars(formatTagsForDisplay($ageRangeTags));
+                                }
+
+                                $genreDisplay = !empty($tagDisplayParts) ?
+                                    implode('<br>', $tagDisplayParts) :
+                                    '<span class="text-muted">No tags</span>';
 
                                 // Use the proper getMissingFields function from search-functions.php
                                 require_once 'book-import-validate/functions/search-functions.php';
                                 $missingFields = getMissingFields($book);
 
-                                // Add additional fields that are specific to the admin interface (tags-based)
-                                if (empty($genreTags)) $missingFields[] = 'Genre';
-
-                                $ageRangeTags = getAgeRangeTagsForDirectoryItem($db, $book['id']);
-                                if (empty($ageRangeTags)) $missingFields[] = 'Age Range Tags';
+                                // FIXED: Check for ANY tags, not just genre tags (consistent with data enrichment)
+                                if (empty($allTags)) {
+                                    $missingFields[] = 'Tags';
+                                } else {
+                                    // Optional: Still check for specific tag types if needed
+                                    if (empty($genreTags)) $missingFields[] = 'Genre Tags';
+                                    if (empty($ageRangeTags)) $missingFields[] = 'Age Range Tags';
+                                }
 
                                 $missingDataDisplay = !empty($missingFields) ?
                                     '<span class="badge badge-warning" title="' . htmlspecialchars(implode(', ', $missingFields)) . '">' .

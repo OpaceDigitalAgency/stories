@@ -586,6 +586,11 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             console.log('📦 Stored checkbox states:', checkboxStates);
             console.log('📦 Stored option states:', optionStates);
 
+            console.log('🚨 CRITICAL_DEBUG: Amazon data keys being processed:', Object.keys(amazonData));
+            console.log('🚨 CRITICAL_DEBUG: Looking for format and price_range in Amazon data...');
+            console.log('🚨 CRITICAL_DEBUG: amazonData.format exists:', !!amazonData.format);
+            console.log('🚨 CRITICAL_DEBUG: amazonData.price_range exists:', !!amazonData.price_range);
+
             Object.keys(amazonData).forEach(fieldName => {
                 const amazonFieldData = amazonData[fieldName];
                 const existingField = window.currentEnrichmentData.fields[fieldName];
@@ -594,6 +599,13 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     amazonData: amazonFieldData,
                     existingField: existingField
                 });
+
+                // CRITICAL DEBUG: Special logging for format and price_range
+                if (fieldName === 'format' || fieldName === 'price_range') {
+                    console.log(`🚨 CRITICAL_DEBUG: Processing ${fieldName} field`);
+                    console.log(`🚨 CRITICAL_DEBUG: ${fieldName} amazonFieldData:`, amazonFieldData);
+                    console.log(`🚨 CRITICAL_DEBUG: ${fieldName} existingField:`, existingField);
+                }
 
                 // URGENT DEBUG: Check field status before and after update
                 console.log(`📦 URGENT_DEBUG: ${fieldName} field status BEFORE update:`, existingField?.new_data?.status);

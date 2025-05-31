@@ -782,6 +782,14 @@ function handleApplyEnrichment() {
         error_log("SAVE_TEST: Final SQL: $sql");
         error_log("SAVE_TEST: Final params: " . json_encode($params));
 
+        // EMERGENCY FIX: Force immediate transaction commit
+        try {
+            $db->commit();
+            error_log("SAVE_TEST: 🚀 EMERGENCY COMMIT SUCCESSFUL - Data should now persist!");
+        } catch (Exception $commitError) {
+            error_log("SAVE_TEST: ❌ EMERGENCY COMMIT FAILED: " . $commitError->getMessage());
+        }
+
         // CRITICAL DEBUG: Check if rows were actually updated
         if ($affectedRows === 0) {
             error_log("SAVE_TEST: WARNING - No rows were updated! This means either:");

@@ -939,18 +939,27 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     if (fieldContainer.length) {
                         console.log(`📦 TAGS_FIX: Updating individual field display for ${fieldName} (has Amazon data)`);
 
-                        // Remove the old field and recreate it
-                        fieldContainer.remove();
+                        // CRITICAL FIX: Update field in place to preserve order
+                        console.log(`📦 ORDER_FIX: Updating ${fieldName} in place to preserve field order`);
+
+                        // Store the current position
+                        const fieldPosition = fieldContainer.index();
+                        const parentContainer = fieldContainer.parent();
+
+                        // Create new field content
                         const label = field.label || fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                         const isUnknown = field.new_data.status === 'unknown';
                         const isPendingAmazon = field.new_data.status === 'pending_amazon_data';
 
-                        // Determine if this is a multi-source field or single-source field
+                        let newFieldHtml;
                         if (field.new_data.options) {
-                            $('#enrichment-fields').append(createMultiSourceField(fieldName, field, label));
+                            newFieldHtml = createMultiSourceField(fieldName, field, label);
                         } else {
-                            $('#enrichment-fields').append(createSingleSourceField(fieldName, field, label, isUnknown, isPendingAmazon));
+                            newFieldHtml = createSingleSourceField(fieldName, field, label, isUnknown, isPendingAmazon);
                         }
+
+                        // Replace content while preserving position
+                        fieldContainer.replaceWith(newFieldHtml);
                     }
                 }
             });
@@ -1615,38 +1624,57 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         // CRITICAL FIX: Always compare against the ORIGINAL database value, not processed display value
         // This prevents the logic flip when Amazon data loads
         const actualCurrentValue = fieldData.current_value;
-        const actualNewValue = displayValue;
 
         console.log('🎯 CRITICAL_FIX: Database state comparison:', {
             fieldName: fieldName,
             actualCurrentValue: actualCurrentValue,
-            actualNewValue: actualNewValue,
+            displayValue: displayValue,
             currentType: typeof actualCurrentValue,
-            newType: typeof actualNewValue,
             currentIsEmpty: isEmpty(actualCurrentValue),
-            newIsEmpty: isEmpty(actualNewValue)
+            hasMultipleOptions: fieldData.new_data?.options?.length > 0
         });
 
-        // CRITICAL FIX: Proper database state logic
-        if (isEmpty(actualCurrentValue) && !isEmpty(actualNewValue)) {
-            databaseState = 'database_empty';
-            console.log('🎯 Database is empty, new data available → database_empty');
-        } else if (!isEmpty(actualCurrentValue) && !isEmpty(actualNewValue)) {
-            // Both have values - check if they match
-            const valuesMatch = isExactMatch(actualCurrentValue, actualNewValue);
-            if (valuesMatch) {
+        // CRITICAL FIX: For multi-source fields, check if ANY option matches current value
+        if (fieldData.new_data?.options?.length > 0) {
+            // Multi-source field - check if any option matches current database value
+            const hasMatchingOption = fieldData.new_data.options.some(option =>
+                isExactMatch(actualCurrentValue, option.value)
+            );
+
+            if (isEmpty(actualCurrentValue)) {
+                databaseState = 'database_empty';
+                console.log('🎯 Multi-source: Database is empty → database_empty');
+            } else if (hasMatchingOption) {
                 databaseState = 'matches_database';
-                console.log('🎯 Values match exactly → matches_database');
+                console.log('🎯 Multi-source: One option matches database → matches_database');
             } else {
                 databaseState = 'database_wrong';
-                console.log('🎯 Values differ → database_wrong');
+                console.log('🎯 Multi-source: No options match database → database_wrong');
             }
-        } else if (!isEmpty(actualCurrentValue) && isEmpty(actualNewValue)) {
-            databaseState = 'matches_database'; // No new data to compare
-            console.log('🎯 No new data to compare → matches_database');
         } else {
-            databaseState = 'matches_database'; // Both empty
-            console.log('🎯 Both values empty → matches_database');
+            // Single-source field - use original logic
+            const actualNewValue = displayValue;
+
+            if (isEmpty(actualCurrentValue) && !isEmpty(actualNewValue)) {
+                databaseState = 'database_empty';
+                console.log('🎯 Single-source: Database is empty, new data available → database_empty');
+            } else if (!isEmpty(actualCurrentValue) && !isEmpty(actualNewValue)) {
+                // Both have values - check if they match
+                const valuesMatch = isExactMatch(actualCurrentValue, actualNewValue);
+                if (valuesMatch) {
+                    databaseState = 'matches_database';
+                    console.log('🎯 Single-source: Values match exactly → matches_database');
+                } else {
+                    databaseState = 'database_wrong';
+                    console.log('🎯 Single-source: Values differ → database_wrong');
+                }
+            } else if (!isEmpty(actualCurrentValue) && isEmpty(actualNewValue)) {
+                databaseState = 'matches_database'; // No new data to compare
+                console.log('🎯 Single-source: No new data to compare → matches_database');
+            } else {
+                databaseState = 'matches_database'; // Both empty
+                console.log('🎯 Single-source: Both values empty → matches_database');
+            }
         }
 
         console.log('🎨 Database state logic:', {
@@ -2064,11 +2092,11 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     displayValue: actualDisplayValue
                 });
             } else {
-                // Only removals, no additions
-                hasExactMatch = true;
-                databaseState = 'matches_database';
-                actualDisplayValue = '<span class="text-muted">No new data - some tags would be removed</span>';
-                console.log('🏷️ UX_FIX: Only tag removals detected - showing "No new data"');
+                // Only removals, no additions - this means new data is DIFFERENT (has fewer tags)
+                hasExactMatch = false;
+                databaseState = 'database_wrong';
+                actualDisplayValue = '<span class="text-muted">New data has fewer tags - some would be removed</span>';
+                console.log('🏷️ LOGIC_FIX: Tag removals detected - this is a difference, not a match');
             }
         } else {
             // Non-tags field - use original logic

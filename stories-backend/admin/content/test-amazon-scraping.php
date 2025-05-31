@@ -9,7 +9,9 @@ try {
         '../../../config/db-connect.php',
         '../../config/db-connect.php',
         '../../../db-connect.php',
-        '../../db-connect.php'
+        '../../db-connect.php',
+        '../../../includes/db_connect.php',  // Correct path
+        '../../includes/db_connect.php'
     ];
 
     $dbConnected = false;
@@ -23,7 +25,7 @@ try {
     }
 
     if (!$dbConnected) {
-        throw new Exception("Could not find db-connect.php in any expected location");
+        throw new Exception("Could not find db-connect.php in any expected location. Tried: " . implode(', ', $dbPaths));
     }
 
     require_once 'book-import-validate/functions/data-enrichment-functions.php';

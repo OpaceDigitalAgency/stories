@@ -873,9 +873,9 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             console.log('📦 CRITICAL_FIX: Format field after update:', window.currentEnrichmentData.fields.format);
             console.log('📦 CRITICAL_FIX: Price range field after update:', window.currentEnrichmentData.fields.price_range);
 
-            // CRITICAL FIX: Force re-evaluation of database states for Amazon-derived fields
+            // CRITICAL FIX: Force re-evaluation of database states for ALL Amazon-derived fields
             console.log('📦 CRITICAL_FIX: Re-evaluating database states after Amazon integration');
-            ['purchase_links', 'format', 'price_range'].forEach(fieldName => {
+            Object.keys(amazonData).forEach(fieldName => {
                 const field = window.currentEnrichmentData.fields[fieldName];
                 if (field && field.new_data && field.new_data.source === 'amazon_derived' && field.new_data.status === 'ready') {
                     console.log(`📦 CRITICAL_FIX: Re-evaluating database state for ${fieldName}`);
@@ -894,7 +894,13 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             // CRITICAL FIX: Only re-render Amazon-derived fields, not ALL fields
             // This prevents the tags field from being re-processed and changing status
             console.log('📦 TAGS_FIX: Only updating Amazon-derived fields to prevent tags status change');
-            ['purchase_links', 'format', 'price_range'].forEach(fieldName => {
+            Object.keys(amazonData).forEach(fieldName => {
+                // CRITICAL: Never update tags field even if it somehow gets Amazon data
+                if (fieldName === 'tags') {
+                    console.log('📦 TAGS_FIX: Skipping tags field update to prevent corruption');
+                    return;
+                }
+
                 const field = window.currentEnrichmentData.fields[fieldName];
                 if (field && field.new_data && field.new_data.source === 'amazon_derived') {
                     // Update only this specific field in the DOM
@@ -1565,20 +1571,25 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             console.log('🎨 Updated new value badge to:', displayValue);
         }
 
-        // Determine database state based on whether checkbox is checked and values
+        // CRITICAL FIX: Determine database state based on actual data comparison, not checkbox state
+        // The checkbox state should not affect what the database state message shows
         let databaseState = null;
 
-        if (isChecked) {
-            // Field is checked - compare display value with current value
-            if (valuesDiffer) {
-                databaseState = isEmpty(currentValue) ? 'database_empty' : 'database_wrong';
-            } else {
-                databaseState = 'matches_database';
-            }
+        // Always compare the new data with current database value, regardless of checkbox state
+        if (valuesDiffer) {
+            databaseState = isEmpty(currentValue) ? 'database_empty' : 'database_wrong';
         } else {
-            // Field is unchecked - always matches database (showing current value)
             databaseState = 'matches_database';
         }
+
+        console.log('🎨 Database state logic:', {
+            currentValue: currentValue,
+            displayValue: displayValue,
+            valuesDiffer: valuesDiffer,
+            isEmpty: isEmpty(currentValue),
+            databaseState: databaseState,
+            isChecked: isChecked
+        });
 
         console.log('🎨 Database state:', databaseState, 'isChecked:', isChecked, 'valuesDiffer:', valuesDiffer);
 
@@ -1623,13 +1634,17 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
 
         if (confidenceBadge.length) {
             if (databaseState === 'matches_database') {
-                confidenceBadge.removeClass('badge-info badge-warning badge-danger').addClass('badge-success').text('(100%)');
+                // Keep original confidence but change color to indicate match
+                confidenceBadge.removeClass('badge-info badge-warning badge-danger').addClass('badge-success');
+                console.log('🎨 Database match - keeping original confidence but changing to success color');
             } else if (databaseState === 'database_wrong') {
-                confidenceBadge.removeClass('badge-info badge-success badge-danger').addClass('badge-warning').text('(Wrong)');
+                confidenceBadge.removeClass('badge-info badge-success badge-danger').addClass('badge-warning');
+                console.log('🎨 Database differs - changing to warning color');
             } else if (databaseState === 'database_empty') {
-                confidenceBadge.removeClass('badge-info badge-warning badge-danger').addClass('badge-success').text('(New)');
+                confidenceBadge.removeClass('badge-info badge-warning badge-danger').addClass('badge-success');
+                console.log('🎨 Database empty - changing to success color');
             }
-            console.log('🎨 Updated confidence badge for database state:', databaseState);
+            console.log('🎨 Updated confidence badge styling for database state:', databaseState);
         }
 
         // Update the database state message box
@@ -1654,12 +1669,12 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         switch (databaseState) {
             case 'matches_database':
                 stateHtml = `
-                    <div class="mt-2 p-2 bg-light border border-info rounded">
-                        <div class="text-info">
-                            <i class="fas fa-check-double"></i> <strong>Matches Database</strong>
-                            <span class="badge badge-info ml-1">100%</span>
+                    <div class="mt-2 p-2 bg-light border border-success rounded">
+                        <div class="text-success">
+                            <i class="fas fa-check-circle"></i> <strong>No Update Needed</strong>
+                            <span class="badge badge-success ml-1">Match</span>
                         </div>
-                        <small class="text-muted">Current value exactly matches the new data</small>
+                        <small class="text-muted">New data matches current database value - no change needed</small>
                     </div>
                 `;
                 break;
@@ -1667,10 +1682,10 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 stateHtml = `
                     <div class="mt-2 p-2 bg-light border border-warning rounded">
                         <div class="text-warning">
-                            <i class="fas fa-exclamation-triangle"></i> <strong>Database Wrong</strong>
-                            <span class="badge badge-warning ml-1">Update</span>
+                            <i class="fas fa-exclamation-triangle"></i> <strong>Update Recommended</strong>
+                            <span class="badge badge-warning ml-1">Different</span>
                         </div>
-                        <small class="text-muted">New value differs from database - update recommended</small>
+                        <small class="text-muted">Sources suggest different value - consider updating database</small>
                     </div>
                 `;
                 break;
@@ -2022,14 +2037,14 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
 
         switch (databaseState) {
             case 'matches_database':
-                displayConfidence = 100; // Override confidence for exact matches
+                // Don't override confidence - show original API confidence
                 databaseStateHtml = `
-                    <div class="mt-2 p-2 bg-light border border-info rounded">
-                        <div class="text-info">
-                            <i class="fas fa-check-double"></i> <strong>Matches Database</strong>
-                            <span class="badge badge-info ml-1">100%</span>
+                    <div class="mt-2 p-2 bg-light border border-success rounded">
+                        <div class="text-success">
+                            <i class="fas fa-check-circle"></i> <strong>No Update Needed</strong>
+                            <span class="badge badge-success ml-1">Match</span>
                         </div>
-                        <small class="text-muted">Current value exactly matches the new data</small>
+                        <small class="text-muted">New data matches current database value - no change needed</small>
                     </div>
                 `;
                 break;
@@ -2037,10 +2052,10 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 databaseStateHtml = `
                     <div class="mt-2 p-2 bg-light border border-warning rounded">
                         <div class="text-warning">
-                            <i class="fas fa-exclamation-triangle"></i> <strong>Database Wrong</strong>
+                            <i class="fas fa-exclamation-triangle"></i> <strong>Update Recommended</strong>
                             <span class="badge badge-warning ml-1">${confidence}%</span>
                         </div>
-                        <small class="text-muted">Both sources agree - database value appears incorrect</small>
+                        <small class="text-muted">Sources suggest different value - consider updating database</small>
                     </div>
                 `;
                 break;

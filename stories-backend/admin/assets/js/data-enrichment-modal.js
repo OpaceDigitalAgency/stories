@@ -1622,22 +1622,31 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             actualCurrentValue: actualCurrentValue,
             actualNewValue: actualNewValue,
             currentType: typeof actualCurrentValue,
-            newType: typeof actualNewValue
+            newType: typeof actualNewValue,
+            currentIsEmpty: isEmpty(actualCurrentValue),
+            newIsEmpty: isEmpty(actualNewValue)
         });
 
-        // Use the determineDatabaseState function for consistent logic
-        databaseState = determineDatabaseState(actualCurrentValue, actualNewValue,
-                                             fieldData.new_data?.source || 'unknown',
-                                             fieldData.new_data, fieldName);
-
-        // Fallback if determineDatabaseState returns null
-        if (!databaseState) {
-            const actualValuesDiffer = !isExactMatch(actualCurrentValue, actualNewValue);
-            if (actualValuesDiffer) {
-                databaseState = isEmpty(actualCurrentValue) ? 'database_empty' : 'database_wrong';
-            } else {
+        // CRITICAL FIX: Proper database state logic
+        if (isEmpty(actualCurrentValue) && !isEmpty(actualNewValue)) {
+            databaseState = 'database_empty';
+            console.log('🎯 Database is empty, new data available → database_empty');
+        } else if (!isEmpty(actualCurrentValue) && !isEmpty(actualNewValue)) {
+            // Both have values - check if they match
+            const valuesMatch = isExactMatch(actualCurrentValue, actualNewValue);
+            if (valuesMatch) {
                 databaseState = 'matches_database';
+                console.log('🎯 Values match exactly → matches_database');
+            } else {
+                databaseState = 'database_wrong';
+                console.log('🎯 Values differ → database_wrong');
             }
+        } else if (!isEmpty(actualCurrentValue) && isEmpty(actualNewValue)) {
+            databaseState = 'matches_database'; // No new data to compare
+            console.log('🎯 No new data to compare → matches_database');
+        } else {
+            databaseState = 'matches_database'; // Both empty
+            console.log('🎯 Both values empty → matches_database');
         }
 
         console.log('🎨 Database state logic:', {
@@ -1936,6 +1945,12 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                              source === 'database_recommendation' ? 'Database Match' :
                              source.replace('_', ' ');
 
+        // Create confidence tooltip explanation
+        const confidenceTooltip = confidence >= 80 ? 'High confidence - API is very sure about this data' :
+                                confidence >= 60 ? 'Medium confidence - API is moderately sure about this data' :
+                                confidence >= 30 ? 'Low confidence - API has some uncertainty about this data' :
+                                'Very low confidence - API is uncertain about this data';
+
         // CRITICAL FIX: For tags field, perform intelligent comparison and deduplication
         let actualDisplayValue = displayValue;
         let hasExactMatch = false;
@@ -2066,6 +2081,19 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             databaseState = determineDatabaseState(field.current_value, newData.value, source, newData, fieldName);
         }
 
+        // CRITICAL FIX: Ensure all fields have a database state
+        if (!databaseState) {
+            if (isEmpty(field.current_value) && !isEmpty(newData.value)) {
+                databaseState = 'database_empty';
+            } else if (!isEmpty(field.current_value) && !isEmpty(newData.value)) {
+                const valuesMatch = isExactMatch(field.current_value, newData.value);
+                databaseState = valuesMatch ? 'matches_database' : 'database_wrong';
+            } else {
+                databaseState = 'matches_database'; // Default fallback
+            }
+            console.log(`🔧 FALLBACK: Set database state for ${fieldName} to:`, databaseState);
+        }
+
         // Apply exact match styling if found
         const exactMatchClass = hasExactMatch ? ' exact-match' : '';
 
@@ -2162,7 +2190,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                         <label class="form-check-label font-weight-bold${labelClass}" for="field_${fieldName}">
                             ${label}
                             <span class="badge badge-${sourceClass} ml-2">${displaySource}${isPendingAmazon ? ' (Loading...)' : ''}</span>
-                            ${!isUnknown && !isPendingAmazon ? `<span class="badge badge-${confidenceClass} ml-1">(${displayConfidence}%)</span>` : ''}
+                            ${!isUnknown && !isPendingAmazon ? `<span class="badge badge-${confidenceClass} ml-1" title="${confidenceTooltip}">(${displayConfidence}%)</span>` : ''}
                             ${getBenefitIndicator(benefitLevel)}
                         </label>
                     </div>

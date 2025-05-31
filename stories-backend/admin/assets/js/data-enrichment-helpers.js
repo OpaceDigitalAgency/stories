@@ -52,6 +52,8 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
 
         if (validOptions.length === 0) {
             console.log(`📦 No valid options for ${fieldName} - all were unknown/empty`);
+            console.log(`📦 Original options for ${fieldName}:`, options);
+            console.log(`📦 Filtered out options:`, options.map(opt => ({ value: opt.value, reason: 'unknown/empty' })));
             return '';
         }
 

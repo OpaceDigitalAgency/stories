@@ -860,35 +860,49 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 }
             });
 
-            // CRITICAL FIX: Only re-render Amazon-derived fields, not ALL fields
-            // This prevents the tags field from being re-processed and changing status
-            console.log('📦 TAGS_FIX: Only updating Amazon-derived fields to prevent tags status change');
-            ['purchase_links', 'format', 'price_range'].forEach(fieldName => {
+            // CRITICAL FIX: Store tags field HTML before any updates to prevent corruption
+            const tagsField = $(`.enrichment-field[data-field="tags"]`);
+            const tagsFieldHtml = tagsField.length ? tagsField[0].outerHTML : null;
+            console.log('📦 TAGS_FIX: Stored tags field HTML for protection:', !!tagsFieldHtml);
+
+            // CRITICAL FIX: Update ALL Amazon fields, not just Amazon-derived ones
+            // This includes publisher, page_count, and other fields that Amazon provides data for
+            console.log('📦 AMAZON_FIX: Updating all Amazon fields to show Amazon data');
+            Object.keys(amazonData).forEach(fieldName => {
+                // Skip tags field completely - never update it
+                if (fieldName === 'tags') {
+                    console.log(`📦 TAGS_FIX: Skipping tags field update completely`);
+                    return;
+                }
+
                 const field = window.currentEnrichmentData.fields[fieldName];
-                if (field && field.new_data && field.new_data.source === 'amazon_derived') {
-                    // Update only this specific field in the DOM
+                if (field && field.new_data) {
+                    // Update this specific field in the DOM
                     const fieldContainer = $(`.enrichment-field[data-field="${fieldName}"]`);
                     if (fieldContainer.length) {
-                        console.log(`📦 TAGS_FIX: Updating individual field display for ${fieldName}`);
-                        // Store the current tags field HTML to prevent corruption
-                        const tagsField = $(`.enrichment-field[data-field="tags"]`);
-                        const tagsFieldHtml = tagsField.length ? tagsField[0].outerHTML : null;
+                        console.log(`📦 AMAZON_FIX: Updating field display for ${fieldName}`);
 
                         // Remove the old field and recreate it
                         fieldContainer.remove();
                         const label = field.label || fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                         const isUnknown = field.new_data.status === 'unknown';
                         const isPendingAmazon = field.new_data.status === 'pending_amazon_data';
-                        $('#enrichment-fields').append(createSingleSourceField(fieldName, field, label, isUnknown, isPendingAmazon));
 
-                        // CRITICAL FIX: Restore tags field if it was accidentally removed
-                        if (tagsFieldHtml && !$(`.enrichment-field[data-field="tags"]`).length) {
-                            console.log('📦 TAGS_FIX: Restoring tags field that was accidentally removed');
-                            $('#enrichment-fields').append(tagsFieldHtml);
+                        // Create appropriate field type based on data structure
+                        if (field.new_data.options) {
+                            $('#enrichment-fields').append(createMultiSourceField(fieldName, field, label));
+                        } else {
+                            $('#enrichment-fields').append(createSingleSourceField(fieldName, field, label, isUnknown, isPendingAmazon));
                         }
                     }
                 }
             });
+
+            // CRITICAL FIX: Restore tags field if it was accidentally removed or corrupted
+            if (tagsFieldHtml && !$(`.enrichment-field[data-field="tags"]`).length) {
+                console.log('📦 TAGS_FIX: Restoring tags field that was accidentally removed');
+                $('#enrichment-fields').append(tagsFieldHtml);
+            }
 
             // CRITICAL FIX: Update Amazon status badge to show completion
             $('#amazon-status-badge')
@@ -1827,23 +1841,26 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
 
         // CRITICAL FIX: Prevent re-processing of tags field that has already been evaluated
         if (fieldName === 'tags') {
-            // Check if this field has already been processed and user has made a decision
-            const fieldContainer = $(`#field-container-${fieldName}`);
-            const hasBeenProcessed = fieldContainer.find('.badge-success, .badge-warning, .badge-secondary').length > 0;
-            const isChecked = $(`#field_${fieldName}`).prop('checked');
+            // Check if this field has already been processed by looking for the enrichment field container
+            const fieldContainer = $(`.enrichment-field[data-field="tags"]`);
+            const hasBeenProcessed = fieldContainer.length > 0 && fieldContainer.find('.badge').length > 0;
+
+            // Also check if we're in the middle of Amazon data loading (which should never touch tags)
+            const isAmazonDataLoading = newData && newData.source && newData.source.includes('amazon');
 
             console.log('🏷️ REPROCESS_DEBUG: Tags field re-processing check:', {
                 fieldName: fieldName,
                 hasBeenProcessed: hasBeenProcessed,
-                isChecked: isChecked,
-                newDataSource: newData.source,
-                shouldSkipReprocessing: hasBeenProcessed && !isChecked
+                isAmazonDataLoading: isAmazonDataLoading,
+                newDataSource: newData?.source,
+                fieldContainerExists: fieldContainer.length > 0,
+                badgeCount: fieldContainer.find('.badge').length
             });
 
             // CRITICAL FIX: Always skip re-processing of tags field after initial display
             // This prevents the tags field from being corrupted when Amazon data loads
-            if (hasBeenProcessed) {
-                console.log('🏷️ REPROCESS_DEBUG: Skipping re-processing of tags field - already evaluated, preserving original display');
+            if (hasBeenProcessed || isAmazonDataLoading) {
+                console.log('🏷️ REPROCESS_DEBUG: Skipping re-processing of tags field - already evaluated or Amazon data loading, preserving original display');
                 return displayValue; // Return original display value without re-processing
             }
         }

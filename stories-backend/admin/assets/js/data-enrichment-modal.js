@@ -671,23 +671,23 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                         console.log(`📦 Merging Amazon data with existing field: ${fieldName}`);
 
                         if (existingField.new_data.options) {
-                        // Field already has multiple sources - add Amazon as another option
-                        console.log(`📦 Adding Amazon as additional option to multi-source field: ${fieldName}`);
-                        existingField.new_data.options.push({
-                            value: amazonFieldData.new_data.value,
-                            source: amazonFieldData.new_data.source,
-                            confidence: amazonFieldData.new_data.confidence,
-                            label: amazonFieldData.label || existingField.label,
-                            original_value: amazonFieldData.new_data.original_value,
-                            status: 'ready' // CRITICAL FIX: Set status to ready for Amazon options
-                        });
+                            // Field already has multiple sources - add Amazon as another option
+                            console.log(`📦 Adding Amazon as additional option to multi-source field: ${fieldName}`);
+                            existingField.new_data.options.push({
+                                value: amazonFieldData.new_data.value,
+                                source: amazonFieldData.new_data.source,
+                                confidence: amazonFieldData.new_data.confidence,
+                                label: amazonFieldData.label || existingField.label,
+                                original_value: amazonFieldData.new_data.original_value,
+                                status: 'ready' // CRITICAL FIX: Set status to ready for Amazon options
+                            });
 
-                        // Update source to include Amazon
-                        const currentSources = existingField.new_data.source || '';
-                        if (!currentSources.includes('amazon')) {
-                            existingField.new_data.source = currentSources + ' + amazon';
-                        }
-                    } else if (existingField.new_data.status === 'pending_amazon_data') {
+                            // Update source to include Amazon
+                            const currentSources = existingField.new_data.source || '';
+                            if (!currentSources.includes('amazon')) {
+                                existingField.new_data.source = currentSources + ' + amazon';
+                            }
+                        } else if (existingField.new_data.status === 'pending_amazon_data') {
                         // CRITICAL FIX: Field was pending Amazon data - replace with actual Amazon data
                         console.log(`📦 URGENT_FIX: Field ${fieldName} was pending Amazon data - replacing with Amazon data`);
                         console.log(`📦 URGENT_FIX: Before replacement - status:`, existingField.new_data.status);
@@ -1957,6 +1957,10 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             if (!isExactMatch(currentValue, actualNewValue)) {
                 console.log('🔍 DATABASE_WRONG_DEBUG: Database wrong detected for source', source, ':', currentValue, '!==', actualNewValue);
                 return 'database_wrong';
+            } else {
+                // Values match exactly - return matches_database
+                console.log('🔍 DATABASE_MATCH_DEBUG: Values match exactly for source', source);
+                return 'matches_database';
             }
         }
 

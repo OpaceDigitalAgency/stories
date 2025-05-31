@@ -1792,6 +1792,21 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
     }
 
     function createSingleSourceField(fieldName, field, label, isUnknown, isPendingAmazon) {
+        // CRITICAL DEBUG: Track tags field processing in createSingleSourceField
+        if (fieldName === 'tags') {
+            console.log('🏷️ TAGS_DEBUG: createSingleSourceField called for tags field');
+            console.log('🏷️ TAGS_DEBUG: window.tagsFieldProcessed =', window.tagsFieldProcessed);
+            console.log('🏷️ TAGS_DEBUG: field data =', field);
+            console.log('🏷️ TAGS_DEBUG: isUnknown =', isUnknown);
+            console.log('🏷️ TAGS_DEBUG: isPendingAmazon =', isPendingAmazon);
+
+            // CRITICAL FIX: Prevent re-processing of tags field that has already been processed
+            if (window.tagsFieldProcessed) {
+                console.log('🏷️ TAGS_FIX: Tags field already processed in createSingleSourceField, skipping re-creation to prevent corruption');
+                return ''; // Return empty to prevent re-processing
+            }
+        }
+
         const newData = field.new_data || {};
         const confidence = newData.confidence || 0;
         const source = newData.source || 'unknown';
@@ -2030,6 +2045,12 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     </small>
                 </div>
             `;
+        }
+
+        // CRITICAL FIX: Mark tags field as processed to prevent re-processing
+        if (fieldName === 'tags') {
+            window.tagsFieldProcessed = true;
+            console.log('🏷️ TAGS_FIX: Marked tags field as processed in createSingleSourceField to prevent future corruption');
         }
 
         return `

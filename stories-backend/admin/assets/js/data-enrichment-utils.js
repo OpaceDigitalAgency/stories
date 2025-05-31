@@ -85,6 +85,15 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
                     debugMessage += 'Additional Updates: ' + JSON.stringify(response.additional_updates) + '\n';
                 }
 
+                if (response.debug) {
+                    debugMessage += 'CRITICAL DEBUG INFO:\n';
+                    debugMessage += 'Affected Rows: ' + response.debug.affected_rows + '\n';
+                    debugMessage += 'Book ID: ' + response.debug.book_id + '\n';
+                    debugMessage += 'SQL: ' + response.debug.sql + '\n';
+                    debugMessage += 'Params: ' + JSON.stringify(response.debug.params) + '\n';
+                    debugMessage += 'Existing Book Data: ' + JSON.stringify(response.debug.existing_book_data) + '\n';
+                }
+
                 console.log(debugMessage);
 
                 if (response.success) {

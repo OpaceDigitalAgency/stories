@@ -734,16 +734,33 @@ function handleApplyEnrichment() {
     error_log("Final SQL: $sql");
     error_log("Final params: " . json_encode($params));
 
+    // CRITICAL DEBUG: Verify book exists before update
+    $checkStmt = $db->prepare("SELECT id, directory_item_id, page_count, age_range FROM books WHERE directory_item_id = ?");
+    $checkStmt->execute([$bookId]);
+    $existingBook = $checkStmt->fetch(PDO::FETCH_ASSOC);
+    error_log("SAVE_TEST: Book exists check - Book ID: $bookId");
+    error_log("SAVE_TEST: Existing book data: " . json_encode($existingBook));
+
     // Execute the update
     $stmt = $db->prepare($sql);
     if ($stmt->execute($params)) {
-        error_log("SQL execution successful");
+        $affectedRows = $stmt->rowCount();
+        error_log("SAVE_TEST: SQL execution successful");
+        error_log("SAVE_TEST: Affected rows: $affectedRows");
+        error_log("SAVE_TEST: Final SQL: $sql");
+        error_log("SAVE_TEST: Final params: " . json_encode($params));
+
+        // CRITICAL DEBUG: Check if rows were actually updated
+        if ($affectedRows === 0) {
+            error_log("SAVE_TEST: WARNING - No rows were updated! This means either:");
+            error_log("SAVE_TEST: 1. No book found with directory_item_id = $bookId");
+            error_log("SAVE_TEST: 2. Values are already the same (no change needed)");
+            error_log("SAVE_TEST: 3. SQL WHERE clause is incorrect");
+        }
 
         // CRITICAL: Synchronize age range and reading level after any update
         synchronizeAgeAndReadingLevel($bookId);
-        error_log("Synchronized age/reading level for book ID: $bookId");
-        $affectedRows = $stmt->rowCount();
-        error_log("Affected rows: $affectedRows");
+        error_log("SAVE_TEST: Synchronized age/reading level for book ID: $bookId");
         // Process additional relationships and complex fields
         $additionalUpdates = [];
 
@@ -776,7 +793,14 @@ function handleApplyEnrichment() {
             'success' => true,
             'message' => 'Book data updated successfully',
             'updated_fields' => array_keys($fields),
-            'additional_updates' => $additionalUpdates
+            'additional_updates' => $additionalUpdates,
+            'debug' => [
+                'affected_rows' => $affectedRows,
+                'book_id' => $bookId,
+                'sql' => $sql,
+                'params' => $params,
+                'existing_book_data' => $existingBook
+            ]
         ]);
     } else {
         $errorInfo = $stmt->errorInfo();

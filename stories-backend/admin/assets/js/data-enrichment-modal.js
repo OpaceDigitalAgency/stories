@@ -757,29 +757,6 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             console.log('📦 CRITICAL_FIX: Re-rendering fields after Amazon data integration');
             displayEnrichmentFields(window.currentEnrichmentData.fields);
 
-            // CRITICAL FIX: Force update of specific Amazon fields that were pending
-            Object.keys(amazonData).forEach(fieldName => {
-                const fieldContainer = $(`.enrichment-field[data-field="${fieldName}"]`);
-                if (fieldContainer.length > 0) {
-                    console.log(`📦 CRITICAL_FIX: Force updating UI for field ${fieldName}`);
-                    const fieldData = window.currentEnrichmentData.fields[fieldName];
-                    if (fieldData && fieldData.new_data && fieldData.new_data.status === 'ready') {
-                        // Remove the pending Amazon styling and update content
-                        fieldContainer.removeClass('disabled-field border-warning');
-                        fieldContainer.find('.badge-warning').removeClass('badge-warning').addClass('badge-info');
-                        fieldContainer.find('.text-info').text(fieldData.new_data.value || 'No data');
-
-                        // Update the badge text to remove "Loading..."
-                        const badge = fieldContainer.find('.badge');
-                        if (badge.text().includes('Loading')) {
-                            badge.text(badge.text().replace(' (Loading...)', ''));
-                        }
-
-                        console.log(`📦 CRITICAL_FIX: Updated UI for ${fieldName} with value:`, fieldData.new_data.value);
-                    }
-                }
-            });
-
             // CRITICAL FIX: Update Amazon status badge to show completion
             $('#amazon-status-badge')
                 .removeClass('badge-info badge-warning badge-danger')

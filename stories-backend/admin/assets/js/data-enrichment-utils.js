@@ -642,4 +642,7 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
     window.getBenefitColorClass = getBenefitColorClass;
     window.getBenefitBorderClass = getBenefitBorderClass;
     window.getBenefitIndicator = getBenefitIndicator;
+    window.parsePurchaseLinksDisplay = parsePurchaseLinksDisplay;
+    window.normalizePurchaseLinks = normalizePurchaseLinks;
+    window.comparePurchaseLinksObjects = comparePurchaseLinksObjects;
 }

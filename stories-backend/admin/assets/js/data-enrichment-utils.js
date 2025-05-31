@@ -208,13 +208,22 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
             return JSON.stringify(currentValue) === JSON.stringify(newValue);
         }
 
-        // For JSON strings, parse and compare
+        // For JSON strings, parse and compare (FIXED: order-independent comparison)
         if (typeof currentValue === 'string' && typeof newValue === 'string') {
             // Try to parse as JSON first
             try {
                 const currentParsed = JSON.parse(currentValue);
                 const newParsed = JSON.parse(newValue);
-                return JSON.stringify(currentParsed) === JSON.stringify(newParsed);
+
+                // CRITICAL FIX: Use order-independent comparison for purchase links
+                if (isPurchaseLinksObject(currentParsed) && isPurchaseLinksObject(newParsed)) {
+                    console.log('🛒 PURCHASE_LINKS_FIX: Using order-independent comparison');
+                    return comparePurchaseLinksObjects(currentParsed, newParsed);
+                }
+
+                // For other JSON objects, use normalized comparison
+                return JSON.stringify(normalizeObjectForComparison(currentParsed)) ===
+                       JSON.stringify(normalizeObjectForComparison(newParsed));
             } catch (e) {
                 // Not JSON, continue with string comparison
             }
@@ -318,6 +327,46 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
 
         console.log('🛒 Purchase links objects are identical');
         return true;
+    }
+
+    /**
+     * Check if an object looks like a purchase links object
+     */
+    function isPurchaseLinksObject(obj) {
+        if (!obj || typeof obj !== 'object') return false;
+
+        // Check if it has the structure of purchase links (format names as keys with price/url/is_selected)
+        const keys = Object.keys(obj);
+        if (keys.length === 0) return false;
+
+        // Check if at least one key has the expected structure
+        return keys.some(key => {
+            const item = obj[key];
+            return item && typeof item === 'object' &&
+                   (item.hasOwnProperty('price') || item.hasOwnProperty('url') || item.hasOwnProperty('is_selected'));
+        });
+    }
+
+    /**
+     * Normalize any object for comparison (sorts keys recursively)
+     */
+    function normalizeObjectForComparison(obj) {
+        if (obj === null || typeof obj !== 'object') {
+            return obj;
+        }
+
+        if (Array.isArray(obj)) {
+            return obj.map(normalizeObjectForComparison);
+        }
+
+        const normalized = {};
+        const sortedKeys = Object.keys(obj).sort();
+
+        for (const key of sortedKeys) {
+            normalized[key] = normalizeObjectForComparison(obj[key]);
+        }
+
+        return normalized;
     }
 
     /**
@@ -648,4 +697,6 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
     window.parsePurchaseLinksDisplay = parsePurchaseLinksDisplay;
     window.normalizePurchaseLinks = normalizePurchaseLinks;
     window.comparePurchaseLinksObjects = comparePurchaseLinksObjects;
+    window.isPurchaseLinksObject = isPurchaseLinksObject;
+    window.normalizeObjectForComparison = normalizeObjectForComparison;
 }

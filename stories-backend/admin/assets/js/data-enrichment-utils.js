@@ -51,10 +51,10 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
         $('#apply-enrichment-btn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Applying...');
 
         // Add debugging display
-        console.log('🔧 APPLY ENRICHMENT DEBUG:');
-        console.log('Book ID:', bookId);
-        console.log('Selected Fields:', selectedFields);
-        console.log('Fields JSON:', JSON.stringify(selectedFields));
+        console.log('SAVE_TEST: Starting AJAX request to apply enrichment');
+        console.log('SAVE_TEST: Book ID:', bookId);
+        console.log('SAVE_TEST: Selected Fields:', selectedFields);
+        console.log('SAVE_TEST: Fields JSON:', JSON.stringify(selectedFields));
 
         $.ajax({
             url: 'book-import-validate/ajax/data-enrichment-ajax.php',
@@ -66,10 +66,10 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
             },
             dataType: 'json',
             success: function(response) {
-                console.log('🔧 Apply enrichment response:', response);
+                console.log('SAVE_TEST: Server response received:', response);
 
                 // Show detailed debugging information on screen
-                let debugMessage = '🔧 ENRICHMENT DEBUG RESPONSE:\n\n';
+                let debugMessage = 'SAVE_TEST: SERVER RESPONSE DETAILS:\n\n';
                 debugMessage += 'Success: ' + response.success + '\n';
                 debugMessage += 'Message: ' + (response.message || 'No message') + '\n';
 
@@ -92,7 +92,7 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
 
                     // Show success message with debug info
                     showNotification(`✅ SUCCESS! Updated ${Object.keys(selectedFields).length} field(s)!`, 'success', 3000);
-                    console.log('✅ SUCCESS DEBUG:', debugMessage);
+                    console.log('SAVE_TEST: SUCCESS - Fields updated successfully:', debugMessage);
 
                     // Force page refresh with cache busting
                     setTimeout(() => {
@@ -117,16 +117,16 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
                 }
             },
             error: function(xhr, status, error) {
-                console.error('🔧 AJAX error:', error);
-                console.error('🔧 XHR response:', xhr.responseText);
+                console.error('SAVE_TEST: AJAX error occurred:', error);
+                console.error('SAVE_TEST: XHR response:', xhr.responseText);
 
-                let errorMessage = '🔧 AJAX ERROR DEBUG:\n\n';
+                let errorMessage = 'SAVE_TEST: AJAX ERROR DETAILS:\n\n';
                 errorMessage += 'Status: ' + status + '\n';
                 errorMessage += 'Error: ' + error + '\n';
                 errorMessage += 'Response Text: ' + xhr.responseText + '\n';
 
                 showNotification(`❌ AJAX ERROR! ${error}`, 'danger', 8000);
-                console.log('❌ AJAX ERROR DEBUG:', errorMessage);
+                console.log('SAVE_TEST: AJAX ERROR FULL DEBUG:', errorMessage);
                 $('#apply-enrichment-btn').prop('disabled', false).html('<i class="fas fa-save"></i> Apply Selected Changes');
             }
         });
@@ -610,16 +610,16 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
     $(document).ready(function() {
         // Apply enrichment changes
         $('#apply-enrichment-btn').click(function() {
-            console.log('🔧 APPLY BUTTON CLICKED!');
-            console.log('🔧 Current enrichment data:', window.currentEnrichmentData);
-            console.log('🔧 Current book ID:', window.currentBookId);
+            console.log('SAVE_TEST: Apply button clicked!');
+            console.log('SAVE_TEST: Current enrichment data:', window.currentEnrichmentData);
+            console.log('SAVE_TEST: Current book ID:', window.currentBookId);
 
             const selectedFields = {};
             $('.field-checkbox:checked').each(function() {
                 const fieldName = $(this).val();
                 const fieldData = window.currentEnrichmentData.fields[fieldName];
 
-                console.log(`🔧 Processing field: ${fieldName}`, fieldData);
+                console.log(`SAVE_TEST: Processing field: ${fieldName}`, fieldData);
 
                 // Handle multi-source fields
                 if (fieldData.new_data && fieldData.new_data.options) {
@@ -631,15 +631,15 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
                             source: fieldData.new_data.options[optionIndex].source,
                             confidence: fieldData.new_data.options[optionIndex].confidence
                         };
-                        console.log(`🔧 Multi-source field ${fieldName}:`, selectedFields[fieldName]);
+                        console.log(`SAVE_TEST: Multi-source field ${fieldName}:`, selectedFields[fieldName]);
                     }
                 } else if (fieldData.new_data) {
                     selectedFields[fieldName] = fieldData.new_data;
-                    console.log(`🔧 Single-source field ${fieldName}:`, selectedFields[fieldName]);
+                    console.log(`SAVE_TEST: Single-source field ${fieldName}:`, selectedFields[fieldName]);
                 }
             });
 
-            console.log('🔧 Final selected fields to apply:', selectedFields);
+            console.log('SAVE_TEST: Final selected fields to apply:', selectedFields);
 
             if (Object.keys(selectedFields).length === 0) {
                 alert('Please select at least one field to update.');

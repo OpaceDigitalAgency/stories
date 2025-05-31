@@ -690,10 +690,16 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     } else if (existingField.new_data.status === 'pending_amazon_data') {
                         // CRITICAL FIX: Field was pending Amazon data - replace with actual Amazon data
                         console.log(`📦 URGENT_FIX: Field ${fieldName} was pending Amazon data - replacing with Amazon data`);
+                        console.log(`📦 URGENT_FIX: Before replacement - status:`, existingField.new_data.status);
+                        console.log(`📦 URGENT_FIX: Amazon data to replace with:`, amazonFieldData.new_data);
+
                         existingField.new_data = {
                             ...amazonFieldData.new_data,
                             status: 'ready' // CRITICAL FIX: Set status to ready when Amazon data arrives
                         };
+
+                        console.log(`📦 URGENT_FIX: After replacement - status:`, existingField.new_data.status);
+                        console.log(`📦 URGENT_FIX: After replacement - full new_data:`, existingField.new_data);
                     } else {
                         // Field has single source - convert to multi-source with Amazon
                         console.log(`📦 Converting single-source field to multi-source: ${fieldName}`);

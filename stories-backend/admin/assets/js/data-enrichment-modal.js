@@ -544,6 +544,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     $badge.removeClass('badge-info').addClass('badge-danger').text('Amazon (Error)');
                 }
             });
+            }
         });
     }
 

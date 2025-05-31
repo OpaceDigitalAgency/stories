@@ -4,7 +4,28 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 try {
-    require_once '../../../config/db-connect.php';
+    // Try different possible paths for db-connect.php
+    $dbPaths = [
+        '../../../config/db-connect.php',
+        '../../config/db-connect.php',
+        '../../../db-connect.php',
+        '../../db-connect.php'
+    ];
+
+    $dbConnected = false;
+    foreach ($dbPaths as $path) {
+        if (file_exists($path)) {
+            require_once $path;
+            $dbConnected = true;
+            echo "<p>✅ Database connected using: $path</p>";
+            break;
+        }
+    }
+
+    if (!$dbConnected) {
+        throw new Exception("Could not find db-connect.php in any expected location");
+    }
+
     require_once 'book-import-validate/functions/data-enrichment-functions.php';
     echo "<p>✅ Required files loaded successfully</p>";
 } catch (Exception $e) {
@@ -61,6 +82,10 @@ if (isset($amazonData10['metadata']['reading_age'])) {
 
 // Test the Amazon enrichment data function
 echo "<h3>Amazon Enrichment Data:</h3>";
+
+// Enable Amazon debugging
+define('AMAZON_DEBUG', true);
+
 $amazonEnrichmentData = getAmazonEnrichmentData($testISBN);
 
 echo "<h4>Complete Amazon Enrichment Data:</h4>";
@@ -76,6 +101,23 @@ if (isset($amazonEnrichmentData['fields']['age_range'])) {
 } else {
     echo "<h4>❌ No age_range field in Amazon enrichment data</h4>";
     echo "<p>Available fields: " . implode(', ', array_keys($amazonEnrichmentData['fields'] ?? [])) . "</p>";
+}
+
+// Test raw Amazon scraping to see what metadata is actually returned
+echo "<h3>Raw Amazon Scraping Test:</h3>";
+$rawAmazonData = scrapeAmazonBuyingOptions($testISBN);
+echo "<h4>Raw Amazon Data:</h4>";
+echo "<pre>";
+print_r($rawAmazonData);
+echo "</pre>";
+
+if (isset($rawAmazonData['metadata'])) {
+    echo "<h4>Amazon Metadata Found:</h4>";
+    foreach ($rawAmazonData['metadata'] as $key => $value) {
+        echo "<p><strong>$key:</strong> $value</p>";
+    }
+} else {
+    echo "<h4>❌ No metadata found in raw Amazon data</h4>";
 }
 
 // Test Chronicles of Narnia too

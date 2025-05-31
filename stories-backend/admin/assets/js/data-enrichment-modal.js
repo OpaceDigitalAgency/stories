@@ -888,7 +888,25 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 }
             });
 
-            displayEnrichmentFields(window.currentEnrichmentData.fields);
+            // CRITICAL FIX: Only re-render Amazon-derived fields, not ALL fields
+            // This prevents the tags field from being re-processed and changing status
+            console.log('📦 TAGS_FIX: Only updating Amazon-derived fields to prevent tags status change');
+            ['purchase_links', 'format', 'price_range'].forEach(fieldName => {
+                const field = window.currentEnrichmentData.fields[fieldName];
+                if (field && field.new_data && field.new_data.source === 'amazon_derived') {
+                    // Update only this specific field in the DOM
+                    const fieldContainer = $(`.enrichment-field[data-field="${fieldName}"]`);
+                    if (fieldContainer.length) {
+                        console.log(`📦 TAGS_FIX: Updating individual field display for ${fieldName}`);
+                        // Remove the old field and recreate it
+                        fieldContainer.remove();
+                        const label = field.label || fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                        const isUnknown = field.new_data.status === 'unknown';
+                        const isPendingAmazon = field.new_data.status === 'pending_amazon_data';
+                        $('#enrichment-fields').append(createSingleSourceField(fieldName, field, label, isUnknown, isPendingAmazon));
+                    }
+                }
+            });
 
             // CRITICAL FIX: Update Amazon status badge to show completion
             $('#amazon-status-badge')
@@ -898,7 +916,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 .show();
             console.log('✅ Updated Amazon status to success');
 
-            // Restore checkbox states after re-rendering
+            // Restore checkbox states after individual field updates
             setTimeout(() => {
                 Object.keys(checkboxStates).forEach(fieldName => {
                     if (checkboxStates[fieldName]) {
@@ -914,8 +932,22 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     console.log(`📦 Restored option state for ${fieldName}: option ${optionValue}`);
                 });
 
-                console.log('📦 Restored all checkbox and option states after Amazon data integration');
-            }, 100);
+                // Re-add event handlers for the updated fields
+                $('.field-checkbox').change(function() {
+                    const fieldDiv = $(this).closest('.enrichment-field');
+                    if ($(this).is(':checked')) {
+                        fieldDiv.addClass('selected');
+                    } else {
+                        fieldDiv.removeClass('selected');
+                    }
+
+                    // Enable/disable apply button
+                    const hasSelected = $('.field-checkbox:checked').length > 0;
+                    $('#apply-enrichment-btn').prop('disabled', !hasSelected);
+                });
+
+                console.log('📦 Restored all checkbox and option states after Amazon field updates');
+            }, 150);
 
             console.log('📦 Re-rendered enrichment fields with Amazon data');
         } else {

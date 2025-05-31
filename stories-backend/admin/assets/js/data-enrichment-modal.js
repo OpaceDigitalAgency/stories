@@ -1942,11 +1942,14 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             // CRITICAL FIX: Process current value (database value)
             console.log('🏷️ TAGS_DEBUG: Processing current value (database)...');
             if (Array.isArray(currentValue)) {
-                currentTags = currentValue
+                const normalizedTags = currentValue
                     .map(tag => normalizeTagForComparison(tag.toLowerCase().trim()))
-                    .filter(tag => tag.length > 0)
-                    .sort();
-                console.log('🏷️ TAGS_DEBUG: Current value is array:', currentTags);
+                    .filter(tag => tag.length > 0);
+
+                // CRITICAL FIX: Remove duplicates after normalization
+                currentTags = [...new Set(normalizedTags)].sort();
+                console.log('🏷️ TAGS_DEBUG: Current value is array (before dedup):', normalizedTags);
+                console.log('🏷️ TAGS_DEBUG: Current value is array (after dedup):', currentTags);
             } else if (typeof currentValue === 'string') {
                 console.log('🏷️ TAGS_DEBUG: Current value is string, checking format...');
 
@@ -1984,11 +1987,14 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             // CRITICAL FIX: Process new value (API response)
             console.log('🏷️ TAGS_DEBUG: Processing new value (API response)...');
             if (Array.isArray(actualNewValue)) {
-                newTags = actualNewValue
+                const normalizedTags = actualNewValue
                     .map(tag => normalizeTagForComparison(tag.toLowerCase().trim()))
-                    .filter(tag => tag.length > 0)
-                    .sort();
-                console.log('🏷️ TAGS_DEBUG: New value is array:', newTags);
+                    .filter(tag => tag.length > 0);
+
+                // CRITICAL FIX: Remove duplicates after normalization
+                newTags = [...new Set(normalizedTags)].sort();
+                console.log('🏷️ TAGS_DEBUG: New value is array (before dedup):', normalizedTags);
+                console.log('🏷️ TAGS_DEBUG: New value is array (after dedup):', newTags);
             } else if (typeof actualNewValue === 'string') {
                 console.log('🏷️ TAGS_DEBUG: New value is string, checking format...');
 
@@ -2007,11 +2013,14 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     console.log('🏷️ TAGS_DEBUG: After deduplication:', newTags);
 
                 } else if (actualNewValue.includes(',')) {
-                    newTags = actualNewValue.split(',')
+                    const splitTags = actualNewValue.split(',')
                         .map(tag => normalizeTagForComparison(tag.toLowerCase().trim()))
-                        .filter(tag => tag.length > 0)
-                        .sort();
-                    console.log('🏷️ TAGS_DEBUG: Split comma-separated new value:', newTags);
+                        .filter(tag => tag.length > 0);
+
+                    // CRITICAL FIX: Remove duplicates after normalization
+                    newTags = [...new Set(splitTags)].sort();
+                    console.log('🏷️ TAGS_DEBUG: Split comma-separated new value (before dedup):', splitTags);
+                    console.log('🏷️ TAGS_DEBUG: Split comma-separated new value (after dedup):', newTags);
                 } else {
                     // Single tag or concatenated string
                     console.log('🏷️ TAGS_DEBUG: Attempting to split concatenated new value:', actualNewValue);
@@ -2019,8 +2028,11 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     console.log('🏷️ TAGS_DEBUG: Split result for new value:', splitTags);
 
                     if (splitTags.length > 1) {
-                        newTags = splitTags.map(tag => normalizeTagForComparison(tag.toLowerCase().trim())).filter(tag => tag.length > 0).sort();
-                        console.log('🏷️ TAGS_DEBUG: Successfully split concatenated new value:', newTags);
+                        const normalizedTags = splitTags.map(tag => normalizeTagForComparison(tag.toLowerCase().trim())).filter(tag => tag.length > 0);
+                        // CRITICAL FIX: Remove duplicates after normalization
+                        newTags = [...new Set(normalizedTags)].sort();
+                        console.log('🏷️ TAGS_DEBUG: Successfully split concatenated new value (before dedup):', normalizedTags);
+                        console.log('🏷️ TAGS_DEBUG: Successfully split concatenated new value (after dedup):', newTags);
                     } else {
                         newTags = [normalizeTagForComparison(actualNewValue.toLowerCase().trim())].filter(tag => tag.length > 0);
                         console.log('🏷️ TAGS_DEBUG: Treating new value as single tag:', newTags);

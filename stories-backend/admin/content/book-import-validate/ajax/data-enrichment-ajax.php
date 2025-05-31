@@ -56,6 +56,14 @@ try {
             handleApplyEnrichment();
             break;
 
+        case 'get_book_data':
+            handleGetBookData();
+            break;
+
+        case 'get_reading_level_for_age_range':
+            handleGetReadingLevelForAgeRange();
+            break;
+
         case 'check_goodreads_isbn':
             handleCheckGoodreadsISBN();
             break;
@@ -1208,9 +1216,9 @@ function mapMaturityToAgeRangeFromTable($maturityRating) {
             return mapMaturityToAgeRange($maturityRating);
         }
 
-        // Map maturity rating to standardized age group names from standard_reading_levels
+        // FIXED: Map maturity rating to appropriate age groups (NOT_MATURE should never map to 18+)
         $mappings = [
-            'NOT_MATURE' => ['8-9 years', '9-10 years', '10-11 years', '11-14 years', '7-8 years', '5-6 years', '6-7 years'],
+            'NOT_MATURE' => ['8-9 years', '7-8 years', '9-10 years', '6-7 years', '5-6 years', '10-11 years'],
             'MATURE' => ['18+ years', '16-18 years', '14-16 years']
         ];
 
@@ -3044,4 +3052,82 @@ function convertISBN13to10($isbn13) {
     }
 
     return $isbn10_base . $checkDigit;
+}
+
+/**
+ * Handle getting fresh book data from database for modal refresh
+ */
+function handleGetBookData() {
+    global $db;
+
+    $bookId = $_POST['book_id'] ?? '';
+
+    if (empty($bookId)) {
+        echo json_encode(['success' => false, 'message' => 'Book ID is required']);
+        return;
+    }
+
+    try {
+        // Get fresh book data from database
+        $stmt = $db->prepare("
+            SELECT directory_item_id, isbn, isbn_13, age_range, reading_level,
+                   page_count, language, publisher, publication_date, tags, purchase_links
+            FROM books
+            WHERE directory_item_id = ?
+        ");
+        $stmt->execute([$bookId]);
+        $bookData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($bookData) {
+            echo json_encode([
+                'success' => true,
+                'book_data' => $bookData
+            ]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Book not found']);
+        }
+
+    } catch (Exception $e) {
+        error_log("Error getting book data: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Database error']);
+    }
+}
+
+/**
+ * Handle getting reading level for age range using database mapping
+ */
+function handleGetReadingLevelForAgeRange() {
+    global $db;
+
+    $ageRange = $_POST['age_range'] ?? '';
+
+    if (empty($ageRange)) {
+        echo json_encode(['success' => false, 'message' => 'Age range is required']);
+        return;
+    }
+
+    try {
+        // Get reading level from standard_reading_levels table
+        $stmt = $db->prepare("
+            SELECT reading_stage
+            FROM standard_reading_levels
+            WHERE age_group = ?
+            LIMIT 1
+        ");
+        $stmt->execute([$ageRange]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($result) {
+            echo json_encode([
+                'success' => true,
+                'reading_level' => $result['reading_stage']
+            ]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'No mapping found']);
+        }
+
+    } catch (Exception $e) {
+        error_log("Error getting reading level mapping: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Database error']);
+    }
 }

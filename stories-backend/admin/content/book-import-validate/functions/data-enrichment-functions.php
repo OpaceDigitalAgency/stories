@@ -1576,14 +1576,111 @@ function normalizeFormat($format) {
 /**
  * Convert Lexile reading level to standardized reading level format
  */
+/**
+ * Get age range to reading level mapping from database
+ * @return array Associative array mapping age_group to reading_stage
+ */
+function getAgeToReadingMapping() {
+    global $db;
+    static $mapping = null;
+
+    if ($mapping === null) {
+        try {
+            $stmt = $db->query("SELECT age_group, reading_stage FROM standard_reading_levels ORDER BY sort_order ASC");
+            $mapping = [];
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $mapping[$row['age_group']] = $row['reading_stage'];
+            }
+            error_log("DATABASE_MAPPING: Loaded " . count($mapping) . " age-to-reading mappings from database");
+        } catch (Exception $e) {
+            error_log("DATABASE_MAPPING: Error loading mappings: " . $e->getMessage());
+            $mapping = []; // Fallback to empty array
+        }
+    }
+
+    return $mapping;
+}
+
+/**
+ * Get reading level to age range mapping from database
+ * @return array Associative array mapping reading_stage to age_group
+ */
+function getReadingToAgeMapping() {
+    global $db;
+    static $mapping = null;
+
+    if ($mapping === null) {
+        try {
+            $stmt = $db->query("SELECT age_group, reading_stage FROM standard_reading_levels ORDER BY sort_order ASC");
+            $mapping = [];
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $mapping[$row['reading_stage']] = $row['age_group'];
+            }
+            error_log("DATABASE_MAPPING: Loaded " . count($mapping) . " reading-to-age mappings from database");
+        } catch (Exception $e) {
+            error_log("DATABASE_MAPPING: Error loading mappings: " . $e->getMessage());
+            $mapping = []; // Fallback to empty array
+        }
+    }
+
+    return $mapping;
+}
+
+/**
+ * Convert Lexile score to reading level using database mappings
+ * @param string $lexileValue The Lexile score (e.g., "750L")
+ * @return string|null The corresponding reading stage or null if not found
+ */
 function convertLexileToReadingLevel($lexileValue) {
+    global $db;
+
     if (!is_numeric($lexileValue)) {
         return $lexileValue . 'L';
     }
 
     $lexile = (int) $lexileValue;
 
-    // Convert Lexile to standardized reading level categories
+    try {
+        // Query database for the appropriate reading level based on Lexile range
+        $stmt = $db->query("
+            SELECT reading_stage, lexile_range
+            FROM standard_reading_levels
+            WHERE lexile_range IS NOT NULL
+            AND lexile_range != ''
+            ORDER BY sort_order ASC
+        ");
+
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $lexileRange = $row['lexile_range'];
+
+            // Parse lexile range (e.g., "620L-820L" or "BR-120L")
+            if (preg_match('/(\d+)L?-(\d+)L?/', $lexileRange, $matches)) {
+                $minLexile = (int)$matches[1];
+                $maxLexile = (int)$matches[2];
+
+                if ($lexile >= $minLexile && $lexile <= $maxLexile) {
+                    error_log("DATABASE_MAPPING: Lexile $lexile mapped to {$row['reading_stage']} (range: $lexileRange)");
+                    return $row['reading_stage'];
+                }
+            } elseif (strpos($lexileRange, 'BR') === 0) {
+                // Beginning Reader range (e.g., "BR-120L")
+                if (preg_match('/BR-(\d+)L?/', $lexileRange, $matches)) {
+                    $maxLexile = (int)$matches[1];
+                    if ($lexile <= $maxLexile) {
+                        error_log("DATABASE_MAPPING: Lexile $lexile mapped to {$row['reading_stage']} (BR range: $lexileRange)");
+                        return $row['reading_stage'];
+                    }
+                }
+            }
+        }
+
+        error_log("DATABASE_MAPPING: No database match for Lexile $lexile, using fallback logic");
+
+    } catch (Exception $e) {
+        error_log("DATABASE_MAPPING: Error querying Lexile ranges: " . $e->getMessage());
+    }
+
+    // Fallback to hardcoded logic if database query fails
     if ($lexile < 200) {
         return 'Beginning Reader';
     } elseif ($lexile < 400) {

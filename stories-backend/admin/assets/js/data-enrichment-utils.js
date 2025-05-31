@@ -119,6 +119,10 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
                     // Re-enable the button since redirect is disabled for debugging
                     $('#apply-enrichment-btn').prop('disabled', false).html('<i class="fas fa-save"></i> Apply Selected Changes');
 
+                    // CRITICAL FIX: Refresh modal data to show updated values
+                    console.log('SAVE_TEST: 🔄 Refreshing modal data to reflect database changes...');
+                    refreshModalData(bookId);
+
                     // setTimeout(() => {
                     //     window.location.href = window.location.href.split('?')[0] + '?_refresh=' + Date.now();
                     // }, 2000);
@@ -819,4 +823,160 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
     window.comparePurchaseLinksObjects = comparePurchaseLinksObjects;
     window.isPurchaseLinksObject = isPurchaseLinksObject;
     window.normalizeObjectForComparison = normalizeObjectForComparison;
+
+    /**
+     * Refresh modal data after successful save to show updated database values
+     */
+    function refreshModalData(bookId) {
+        console.log('SAVE_TEST: 🔄 Starting modal data refresh for book ID:', bookId);
+
+        // Make AJAX call to get fresh data from database
+        $.ajax({
+            url: 'book-import-validate/ajax/data-enrichment-ajax.php',
+            method: 'POST',
+            data: {
+                action: 'get_book_data',
+                book_id: bookId
+            },
+            dataType: 'json',
+            success: function(response) {
+                if (response.success && response.book_data) {
+                    console.log('SAVE_TEST: 🔄 Fresh book data received:', response.book_data);
+
+                    // Update modal fields with fresh database values
+                    updateModalFieldsWithFreshData(response.book_data);
+
+                    // Re-run age range to reading level synchronization
+                    syncAgeRangeToReadingLevel();
+
+                    console.log('SAVE_TEST: ✅ Modal refresh completed');
+                } else {
+                    console.log('SAVE_TEST: ❌ Failed to refresh modal data:', response.message);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.log('SAVE_TEST: ❌ AJAX error during modal refresh:', error);
+            }
+        });
+    }
+
+    /**
+     * Update modal fields with fresh database data
+     */
+    function updateModalFieldsWithFreshData(bookData) {
+        // Update current values in modal to reflect database state
+        const fieldMappings = {
+            'isbn': 'isbn',
+            'isbn_13': 'isbn_13',
+            'age_range': 'age_range',
+            'reading_level': 'reading_level',
+            'page_count': 'page_count',
+            'language': 'language',
+            'publisher': 'publisher',
+            'publication_date': 'publication_date',
+            'tags': 'tags',
+            'purchase_links': 'purchase_links'
+        };
+
+        for (const [modalField, dbField] of Object.entries(fieldMappings)) {
+            const $fieldContainer = $(`[data-field="${modalField}"]`);
+            if ($fieldContainer.length && bookData.hasOwnProperty(dbField)) {
+                const $currentValue = $fieldContainer.find('.current-value');
+                if ($currentValue.length) {
+                    $currentValue.text(bookData[dbField] || 'None');
+                    console.log(`SAVE_TEST: 🔄 Updated ${modalField} current value to:`, bookData[dbField]);
+                }
+            }
+        }
+    }
+
+    /**
+     * Synchronize Age Range and Reading Level fields based on database mappings
+     */
+    function syncAgeRangeToReadingLevel() {
+        console.log('SAVE_TEST: 🔗 Starting age range to reading level synchronization');
+
+        const $ageRangeCheckbox = $('[data-field="age_range"] input[type="checkbox"]');
+        const $readingLevelCheckbox = $('[data-field="reading_level"] input[type="checkbox"]');
+        const $ageRangeNewValue = $('[data-field="age_range"] .new-value');
+        const $readingLevelNewValue = $('[data-field="reading_level"] .new-value');
+
+        // If age range is unchecked, uncheck and disable reading level
+        if (!$ageRangeCheckbox.is(':checked')) {
+            $readingLevelCheckbox.prop('checked', false).prop('disabled', true);
+            console.log('SAVE_TEST: 🔗 Age range unchecked - disabled reading level');
+            return;
+        }
+
+        // If age range is checked, enable reading level and sync the value
+        $readingLevelCheckbox.prop('disabled', false);
+
+        const ageRangeValue = $ageRangeNewValue.text().trim();
+        if (ageRangeValue && ageRangeValue !== 'None') {
+            // Get corresponding reading level from database mapping
+            getReadingLevelForAgeRange(ageRangeValue, function(readingLevel) {
+                if (readingLevel) {
+                    $readingLevelNewValue.text(readingLevel);
+                    $readingLevelCheckbox.prop('checked', true);
+                    console.log(`SAVE_TEST: 🔗 Synced "${ageRangeValue}" to "${readingLevel}"`);
+                }
+            });
+        }
+    }
+
+    /**
+     * Get reading level for age range using database mapping
+     */
+    function getReadingLevelForAgeRange(ageRange, callback) {
+        $.ajax({
+            url: 'book-import-validate/ajax/data-enrichment-ajax.php',
+            method: 'POST',
+            data: {
+                action: 'get_reading_level_for_age_range',
+                age_range: ageRange
+            },
+            dataType: 'json',
+            success: function(response) {
+                if (response.success && response.reading_level) {
+                    callback(response.reading_level);
+                } else {
+                    console.log('SAVE_TEST: 🔗 No reading level mapping found for:', ageRange);
+                    callback(null);
+                }
+            },
+            error: function() {
+                console.log('SAVE_TEST: 🔗 Error getting reading level mapping for:', ageRange);
+                callback(null);
+            }
+        });
+    }
+
+    /**
+     * Initialize age range to reading level synchronization event listeners
+     */
+    function initializeAgeRangeSynchronization() {
+        // Add event listener for age range checkbox changes
+        $(document).on('change', '[data-field="age_range"] input[type="checkbox"]', function() {
+            console.log('SAVE_TEST: 🔗 Age range checkbox changed, triggering sync');
+            syncAgeRangeToReadingLevel();
+        });
+
+        // Add event listener for age range source dropdown changes
+        $(document).on('change', '[data-field="age_range"] select', function() {
+            console.log('SAVE_TEST: 🔗 Age range source changed, triggering sync');
+            setTimeout(syncAgeRangeToReadingLevel, 100); // Small delay to let UI update
+        });
+
+        console.log('SAVE_TEST: 🔗 Age range synchronization event listeners initialized');
+    }
+
+    // Initialize synchronization when document is ready
+    $(document).ready(function() {
+        initializeAgeRangeSynchronization();
+    });
+
+    // Export new functions
+    window.refreshModalData = refreshModalData;
+    window.syncAgeRangeToReadingLevel = syncAgeRangeToReadingLevel;
+    window.initializeAgeRangeSynchronization = initializeAgeRangeSynchronization;
 }

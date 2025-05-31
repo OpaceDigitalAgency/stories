@@ -88,6 +88,9 @@ try {
                 }
                 error_log("Amazon ISBN conversion: $isbn -> $isbn10");
 
+                // CRITICAL FIX: Set execution time limit to prevent timeout during Amazon scraping
+                set_time_limit(60); // Allow 60 seconds for Amazon scraping
+
                 // Ensure AMAZON_DEBUG is defined for this context
                 if (!defined('AMAZON_DEBUG')) {
                     define('AMAZON_DEBUG', false); // Disable debug for production
@@ -550,6 +553,9 @@ function handleGetEnrichmentData() {
 function handleApplyEnrichment() {
     global $db;
 
+    // CRITICAL FIX: Set execution time limit to prevent timeout during database operations
+    set_time_limit(120); // Allow 2 minutes for the entire operation
+
     $bookId = $_POST['book_id'] ?? '';
     $fieldsJson = $_POST['fields'] ?? '';
 
@@ -564,6 +570,13 @@ function handleApplyEnrichment() {
         $testQuery = $db->query("SELECT 1 as test");
         $testResult = $testQuery->fetch();
         error_log("SAVE_TEST: Database connection test - SUCCESS: " . json_encode($testResult));
+
+        // CRITICAL: Also test if we can access the books table
+        $bookTestQuery = $db->prepare("SELECT COUNT(*) as book_count FROM books LIMIT 1");
+        $bookTestQuery->execute();
+        $bookTestResult = $bookTestQuery->fetch();
+        error_log("SAVE_TEST: Books table access test successful: " . json_encode($bookTestResult));
+
     } catch (Exception $e) {
         error_log("SAVE_TEST: Database connection test - FAILED: " . $e->getMessage());
         echo json_encode(['success' => false, 'message' => 'Database connection failed: ' . $e->getMessage()]);
@@ -842,9 +855,21 @@ function handleApplyEnrichment() {
         // Log the enrichment
         logEnrichmentActivity($bookId, array_keys($fields));
 
+        // CRITICAL DEBUG: Verify the update actually happened before committing
+        $verifyStmt = $db->prepare("SELECT directory_item_id, page_count, age_range, reading_level FROM books WHERE directory_item_id = ?");
+        $verifyStmt->execute([$bookId]);
+        $updatedBook = $verifyStmt->fetch(PDO::FETCH_ASSOC);
+        error_log("SAVE_TEST: Book data AFTER update (before commit): " . json_encode($updatedBook));
+
         // CRITICAL FIX: Commit the transaction to ensure data persistence
         $db->commit();
         error_log("SAVE_TEST: Database transaction committed successfully");
+
+        // CRITICAL DEBUG: Verify the data persisted after commit
+        $finalVerifyStmt = $db->prepare("SELECT directory_item_id, page_count, age_range, reading_level FROM books WHERE directory_item_id = ?");
+        $finalVerifyStmt->execute([$bookId]);
+        $finalBook = $finalVerifyStmt->fetch(PDO::FETCH_ASSOC);
+        error_log("SAVE_TEST: Book data AFTER commit: " . json_encode($finalBook));
 
             echo json_encode([
                 'success' => true,
@@ -856,7 +881,9 @@ function handleApplyEnrichment() {
                     'book_id' => $bookId,
                     'sql' => $sql,
                     'params' => $params,
-                    'existing_book_data' => $existingBook
+                    'existing_book_data' => $existingBook,
+                    'updated_book_data' => $updatedBook,
+                    'final_book_data' => $finalBook
                 ]
             ]);
         } else {

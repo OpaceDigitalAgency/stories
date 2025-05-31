@@ -785,14 +785,6 @@ function handleApplyEnrichment() {
         error_log("SAVE_TEST: Final SQL: $sql");
         error_log("SAVE_TEST: Final params: " . json_encode($params));
 
-        // EMERGENCY FIX: Force immediate transaction commit
-        try {
-            $db->commit();
-            error_log("SAVE_TEST: 🚀 EMERGENCY COMMIT SUCCESSFUL - Data should now persist!");
-        } catch (Exception $commitError) {
-            error_log("SAVE_TEST: ❌ EMERGENCY COMMIT FAILED: " . $commitError->getMessage());
-        }
-
         // CRITICAL DEBUG: Check if rows were actually updated
         if ($affectedRows === 0) {
             error_log("SAVE_TEST: WARNING - No rows were updated! This means either:");
@@ -804,6 +796,7 @@ function handleApplyEnrichment() {
         // CRITICAL: Synchronize age range and reading level after any update
         synchronizeAgeAndReadingLevel($bookId);
         error_log("SAVE_TEST: Synchronized age/reading level for book ID: $bookId");
+
         // Process additional relationships and complex fields
         $additionalUpdates = [];
 
@@ -829,12 +822,12 @@ function handleApplyEnrichment() {
             }
         }
 
-            // Log the enrichment
-            logEnrichmentActivity($bookId, array_keys($fields));
+        // Log the enrichment
+        logEnrichmentActivity($bookId, array_keys($fields));
 
-            // CRITICAL FIX: Commit the transaction to ensure data persistence
-            $db->commit();
-            error_log("SAVE_TEST: Database transaction committed successfully");
+        // CRITICAL FIX: Commit the transaction to ensure data persistence
+        $db->commit();
+        error_log("SAVE_TEST: Database transaction committed successfully");
 
             echo json_encode([
                 'success' => true,

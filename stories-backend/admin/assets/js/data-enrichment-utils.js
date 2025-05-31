@@ -218,7 +218,11 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
                 // CRITICAL FIX: Use order-independent comparison for purchase links
                 if (isPurchaseLinksObject(currentParsed) && isPurchaseLinksObject(newParsed)) {
                     console.log('🛒 PURCHASE_LINKS_FIX: Using order-independent comparison');
-                    return comparePurchaseLinksObjects(currentParsed, newParsed);
+                    console.log('🛒 PURCHASE_LINKS_FIX: currentParsed:', currentParsed);
+                    console.log('🛒 PURCHASE_LINKS_FIX: newParsed:', newParsed);
+                    const result = comparePurchaseLinksObjects(currentParsed, newParsed);
+                    console.log('🛒 PURCHASE_LINKS_FIX: comparison result:', result);
+                    return result;
                 }
 
                 // For other JSON objects, use normalized comparison
@@ -333,18 +337,29 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
      * Check if an object looks like a purchase links object
      */
     function isPurchaseLinksObject(obj) {
-        if (!obj || typeof obj !== 'object') return false;
+        if (!obj || typeof obj !== 'object') {
+            console.log('🛒 isPurchaseLinksObject: Not an object:', obj);
+            return false;
+        }
 
         // Check if it has the structure of purchase links (format names as keys with price/url/is_selected)
         const keys = Object.keys(obj);
-        if (keys.length === 0) return false;
+        if (keys.length === 0) {
+            console.log('🛒 isPurchaseLinksObject: Empty object');
+            return false;
+        }
 
         // Check if at least one key has the expected structure
-        return keys.some(key => {
+        const result = keys.some(key => {
             const item = obj[key];
-            return item && typeof item === 'object' &&
+            const hasExpectedStructure = item && typeof item === 'object' &&
                    (item.hasOwnProperty('price') || item.hasOwnProperty('url') || item.hasOwnProperty('is_selected'));
+            console.log(`🛒 isPurchaseLinksObject: Key '${key}' has expected structure:`, hasExpectedStructure, item);
+            return hasExpectedStructure;
         });
+
+        console.log('🛒 isPurchaseLinksObject: Final result:', result);
+        return result;
     }
 
     /**

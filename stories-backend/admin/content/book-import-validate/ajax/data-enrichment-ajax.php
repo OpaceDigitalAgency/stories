@@ -7,6 +7,12 @@
 // Set JSON header first
 header('Content-Type: application/json');
 
+// FORCE CLEAR PHP CACHE - CRITICAL FOR DEBUGGING
+if (function_exists('opcache_reset')) {
+    opcache_reset();
+}
+error_log("SAVE_TEST: PHP file loaded at " . date('Y-m-d H:i:s') . " - Version with transaction fixes");
+
 // Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
     session_start();

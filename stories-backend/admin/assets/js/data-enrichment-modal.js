@@ -701,9 +701,12 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                         console.log(`📦 AMAZON_VALIDATION: Processing ${fieldName} field - always add Amazon as validation source`);
                         // Continue processing - don't skip even if values match
                     } else {
-                        // For non-ISBN fields, skip if Amazon value is the same as current value
-                        if (existingField.current_value === amazonFieldData.new_data.value) {
-                            console.log(`📦 Skipping Amazon field ${fieldName} - same as current value`);
+                        // For non-ISBN fields, check if this is a pending Amazon field that needs updating
+                        if (existingField.new_data && existingField.new_data.status === 'pending_amazon_data') {
+                            console.log(`📦 CRITICAL_FIX: Field ${fieldName} is pending Amazon data - will update regardless of value match`);
+                            // Don't skip - we need to update the status even if values match
+                        } else if (existingField.current_value === amazonFieldData.new_data.value) {
+                            console.log(`📦 Skipping Amazon field ${fieldName} - same as current value and not pending Amazon data`);
                             return;
                         }
                     }

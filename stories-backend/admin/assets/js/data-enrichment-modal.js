@@ -1442,6 +1442,13 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
     function updateFieldDisplay(fieldName, overrideValue = null, autoCheck = false) {
         console.log('🎨 Updating field display for:', fieldName, 'override:', overrideValue, 'autoCheck:', autoCheck);
 
+        // CRITICAL FIX: Prevent updateFieldDisplay from corrupting tags field
+        if (fieldName === 'tags') {
+            console.log('🏷️ TAGS_FIX: Blocking updateFieldDisplay for tags field to prevent corruption');
+            console.log('🏷️ TAGS_FIX: Tags field should not be updated via updateFieldDisplay - it has its own processing logic');
+            return; // Exit early to prevent any DOM manipulation of tags field
+        }
+
         const fieldContainer = $(`.enrichment-field[data-field="${fieldName}"]`);
         if (!fieldContainer.length) {
             console.log('🎨 Field container not found for:', fieldName);

@@ -24,6 +24,7 @@ require_once '../../admin/includes/db-connect.php';
 // Include discovery engine and enrichment functions
 require_once 'book-discovery/BookDiscoveryEngine.php';
 require_once 'book-import-validate/functions/data-enrichment-functions.php';
+require_once '../../admin/includes/enhanced-table-component.php';
 
 /**
  * Clean author name by removing "illustrated by" text

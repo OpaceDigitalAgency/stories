@@ -2603,7 +2603,8 @@ function getAmazonEnrichmentData($isbn, $currentBookData = null) {
                     $fieldKey = 'isbn13';
                 }
 
-                // CRITICAL FIX: Skip ISBN fields if they match current book data
+                // FIXED: Allow ISBN fields to appear in enrichment modal for validation purposes
+                // Even if they match current values, users should be able to see and validate them
                 if (($fieldKey === 'isbn' || $fieldKey === 'isbn13') && $currentBookData) {
                     $currentValue = null;
                     if ($fieldKey === 'isbn' && isset($currentBookData['isbn'])) {
@@ -2617,11 +2618,11 @@ function getAmazonEnrichmentData($isbn, $currentBookData = null) {
                     $normalizedAmazon = preg_replace('/[^0-9X]/i', '', $value);
 
                     if ($normalizedCurrent === $normalizedAmazon) {
-                        error_log("DUPLICATE_FIX: Skipping Amazon $fieldKey field - matches current value exactly ($normalizedCurrent)");
-                        continue; // Skip this field to prevent duplicates
+                        error_log("ISBN_VALIDATION: Amazon $fieldKey field matches current value ($normalizedCurrent) - showing for validation");
+                        // Don't skip - show for validation purposes with 100% confidence
+                    } else {
+                        error_log("ISBN_VALIDATION: Amazon $fieldKey field differs from current - current: '$normalizedCurrent', amazon: '$normalizedAmazon'");
                     }
-
-                    error_log("DUPLICATE_FIX: Amazon $fieldKey field differs from current - current: '$normalizedCurrent', amazon: '$normalizedAmazon'");
                 }
 
                 $enrichmentFields[$fieldKey] = [

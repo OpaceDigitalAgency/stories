@@ -586,6 +586,15 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 console.log(`📦 URGENT_DEBUG: ${fieldName} field status BEFORE update:`, existingField?.new_data?.status);
                 console.log(`📦 URGENT_DEBUG: ${fieldName} Amazon data status:`, amazonFieldData?.new_data?.status);
 
+                // CRITICAL DEBUG: Check if this is a pending Amazon field
+                if (fieldName === 'purchase_links' || fieldName === 'format' || fieldName === 'price_range') {
+                    console.log(`📦 AMAZON_FIELD_DEBUG: ${fieldName} - existingField exists:`, !!existingField);
+                    console.log(`📦 AMAZON_FIELD_DEBUG: ${fieldName} - has new_data:`, !!existingField?.new_data);
+                    console.log(`📦 AMAZON_FIELD_DEBUG: ${fieldName} - current status:`, existingField?.new_data?.status);
+                    console.log(`📦 AMAZON_FIELD_DEBUG: ${fieldName} - is pending Amazon:`, existingField?.new_data?.status === 'pending_amazon_data');
+                    console.log(`📦 AMAZON_FIELD_DEBUG: ${fieldName} - Amazon data value:`, amazonFieldData?.new_data?.value);
+                }
+
                 // Skip Amazon data with "unknown" values or "12+" values - don't process these at all
                 if (amazonFieldData.new_data.value === 'Unknown' ||
                     amazonFieldData.new_data.value === 'unknown' ||

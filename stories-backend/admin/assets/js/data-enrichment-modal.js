@@ -1777,7 +1777,16 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         } else if (isUnknown) {
             displayValue = '<span class="text-muted">Unknown</span>';
         } else {
+            // CRITICAL DEBUG: Log the raw value before formatting
+            if (fieldName === 'tags') {
+                console.log('🏷️ DISPLAY_DEBUG: Raw newData.value before formatting:', newData.value);
+                console.log('🏷️ DISPLAY_DEBUG: Type of newData.value:', typeof newData.value);
+            }
             displayValue = formatFieldValue(fieldName, newData.value);
+            // CRITICAL DEBUG: Log the formatted value
+            if (fieldName === 'tags') {
+                console.log('🏷️ DISPLAY_DEBUG: Formatted displayValue:', displayValue);
+            }
         }
 
         const confidenceClass = confidence >= 80 ? 'success' : confidence >= 60 ? 'warning' : confidence >= 30 ? 'info' : 'secondary';

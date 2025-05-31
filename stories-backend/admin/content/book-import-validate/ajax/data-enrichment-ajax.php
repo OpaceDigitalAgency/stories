@@ -688,17 +688,21 @@ function handleApplyEnrichment() {
             default:
                 // Standard string fields - only update if the field exists in the books table
                 $columnExistsResult = columnExists('books', $fieldName);
-                error_log("Column '$fieldName' exists in books table: " . ($columnExistsResult ? 'YES' : 'NO'));
+                error_log("SAVE_TEST: Processing field '$fieldName':");
+                error_log("SAVE_TEST:   - Value: " . json_encode($value));
+                error_log("SAVE_TEST:   - Value type: " . gettype($value));
+                error_log("SAVE_TEST:   - Empty check: " . (empty($value) ? 'TRUE (empty)' : 'FALSE (not empty)'));
+                error_log("SAVE_TEST:   - Column exists: " . ($columnExistsResult ? 'YES' : 'NO'));
 
                 if (!empty($value) && $columnExistsResult) {
                     $updateFields[] = "$fieldName = ?";
                     $params[] = $value;
-                    error_log("Added $fieldName to update: $value");
+                    error_log("SAVE_TEST: ✅ Added $fieldName to update: $value");
                 } else {
                     if (empty($value)) {
-                        error_log("Skipping $fieldName - empty value");
+                        error_log("SAVE_TEST: ❌ Skipping $fieldName - empty value (value: " . json_encode($value) . ")");
                     } else {
-                        error_log("Skipping $fieldName - column does not exist in books table");
+                        error_log("SAVE_TEST: ❌ Skipping $fieldName - column does not exist in books table");
                     }
                 }
                 break;

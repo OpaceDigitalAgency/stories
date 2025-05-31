@@ -1877,7 +1877,7 @@ $(document).ready(function() {
             console.log('Making AJAX request to book-discovery-ajax.php');
             console.log('URL:', formData.get('discovery_url'));
             
-            const response = await fetch('book-discovery-ajax.php', {
+            const response = await fetch('simple-ajax-test.php', {
                 method: 'POST',
                 body: discoverData
             });

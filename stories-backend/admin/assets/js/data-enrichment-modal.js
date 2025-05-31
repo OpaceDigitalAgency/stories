@@ -1978,7 +1978,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                         <div class="mb-2">
                             <strong>Current Value:</strong> ${formatCurrentValue(fieldName, field.current_value)}
                         </div>
-                        <strong>New Value:</strong> ${displayValue}
+                        <strong>New Value:</strong> ${actualDisplayValue}
                     </div>
                     ${databaseStateHtml}
                 </div>

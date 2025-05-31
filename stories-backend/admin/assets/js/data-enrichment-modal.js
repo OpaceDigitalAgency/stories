@@ -1888,6 +1888,23 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
     }
 
     /**
+     * Normalize tag for comparison - handles common variations
+     * @param {string} tag - Tag to normalize
+     * @returns {string} - Normalized tag
+     */
+    function normalizeTagForComparison(tag) {
+        if (!tag || typeof tag !== 'string') return tag;
+
+        return tag
+            // Fix common spacing issues
+            .replace(/\s{2,}/g, ' ')  // Multiple spaces to single space
+            .replace(/people\s+places/gi, 'people & places')  // "people  places" → "people & places"
+            .replace(/people\s*&\s*places/gi, 'people & places')  // Normalize "people&places" variations
+            // Add other common normalizations as needed
+            .trim();
+    }
+
+    /**
      * Determine the database state for a field
      * @param {*} currentValue - Current value in database
      * @param {*} newValue - New value from API
@@ -1925,14 +1942,20 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             // CRITICAL FIX: Process current value (database value)
             console.log('🏷️ TAGS_DEBUG: Processing current value (database)...');
             if (Array.isArray(currentValue)) {
-                currentTags = currentValue.map(tag => tag.toLowerCase().trim()).sort();
+                currentTags = currentValue
+                    .map(tag => normalizeTagForComparison(tag.toLowerCase().trim()))
+                    .filter(tag => tag.length > 0)
+                    .sort();
                 console.log('🏷️ TAGS_DEBUG: Current value is array:', currentTags);
             } else if (typeof currentValue === 'string') {
                 console.log('🏷️ TAGS_DEBUG: Current value is string, checking format...');
 
                 // Check if it's a comma-separated list
                 if (currentValue.includes(',')) {
-                    currentTags = currentValue.split(',').map(tag => tag.toLowerCase().trim()).sort();
+                    currentTags = currentValue.split(',')
+                        .map(tag => normalizeTagForComparison(tag.toLowerCase().trim()))
+                        .filter(tag => tag.length > 0)
+                        .sort();
                     console.log('🏷️ TAGS_DEBUG: Split comma-separated current value:', currentTags);
                 } else {
                     // CRITICAL FIX: Use intelligent splitting for concatenated strings
@@ -1941,7 +1964,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     console.log('🏷️ TAGS_DEBUG: Split result:', splitTags);
 
                     if (splitTags.length > 1) {
-                        currentTags = splitTags.map(tag => tag.toLowerCase().trim()).sort();
+                        currentTags = splitTags.map(tag => normalizeTagForComparison(tag.toLowerCase().trim())).filter(tag => tag.length > 0).sort();
                         console.log('🏷️ TAGS_DEBUG: Successfully split concatenated current value:', {
                             original: currentValue,
                             split: splitTags,
@@ -1949,7 +1972,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                         });
                     } else {
                         // Single tag or unrecognized format
-                        currentTags = [currentValue.toLowerCase().trim()];
+                        currentTags = [normalizeTagForComparison(currentValue.toLowerCase().trim())].filter(tag => tag.length > 0);
                         console.log('🏷️ TAGS_DEBUG: Treating as single tag:', currentTags);
                     }
                 }
@@ -1961,7 +1984,10 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             // CRITICAL FIX: Process new value (API response)
             console.log('🏷️ TAGS_DEBUG: Processing new value (API response)...');
             if (Array.isArray(actualNewValue)) {
-                newTags = actualNewValue.map(tag => tag.toLowerCase().trim()).sort();
+                newTags = actualNewValue
+                    .map(tag => normalizeTagForComparison(tag.toLowerCase().trim()))
+                    .filter(tag => tag.length > 0)
+                    .sort();
                 console.log('🏷️ TAGS_DEBUG: New value is array:', newTags);
             } else if (typeof actualNewValue === 'string') {
                 console.log('🏷️ TAGS_DEBUG: New value is string, checking format...');
@@ -1976,12 +2002,15 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     console.log('🏷️ TAGS_DEBUG: After comma split:', commaSplit);
 
                     // Remove duplicates and normalize
-                    const uniqueTags = [...new Set(commaSplit.map(tag => tag.toLowerCase().trim()))];
-                    newTags = uniqueTags.sort();
+                    const uniqueTags = [...new Set(commaSplit.map(tag => normalizeTagForComparison(tag.toLowerCase().trim())))];
+                    newTags = uniqueTags.filter(tag => tag.length > 0).sort();
                     console.log('🏷️ TAGS_DEBUG: After deduplication:', newTags);
 
                 } else if (actualNewValue.includes(',')) {
-                    newTags = actualNewValue.split(',').map(tag => tag.toLowerCase().trim()).sort();
+                    newTags = actualNewValue.split(',')
+                        .map(tag => normalizeTagForComparison(tag.toLowerCase().trim()))
+                        .filter(tag => tag.length > 0)
+                        .sort();
                     console.log('🏷️ TAGS_DEBUG: Split comma-separated new value:', newTags);
                 } else {
                     // Single tag or concatenated string

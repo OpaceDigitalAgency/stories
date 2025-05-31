@@ -1289,7 +1289,10 @@ function mapMaturityToAgeRangeFromTable($maturityRating) {
             'MATURE' => ['18+ years', '16-18 years', '14-16 years']
         ];
 
-        $searchTerms = $mappings[strtoupper($maturityRating)] ?? [];
+        $maturityUpper = strtoupper($maturityRating);
+        $searchTerms = $mappings[$maturityUpper] ?? [];
+
+        error_log("AGE_TEST: MATURITY_MAPPING: Processing '$maturityUpper', search terms: " . json_encode($searchTerms));
 
         foreach ($searchTerms as $term) {
             $stmt = $db->prepare("SELECT age_group FROM standard_reading_levels WHERE age_group = ? LIMIT 1");
@@ -1297,22 +1300,30 @@ function mapMaturityToAgeRangeFromTable($maturityRating) {
             $result = $stmt->fetch();
 
             if ($result) {
+                error_log("AGE_TEST: MATURITY_MAPPING: Found match for '$term': '{$result['age_group']}'");
                 return $result['age_group'];
+            } else {
+                error_log("AGE_TEST: MATURITY_MAPPING: No match found for '$term'");
             }
         }
 
         // If no exact match found, return a suitable default for the category
+        error_log("AGE_TEST: MATURITY_MAPPING: No exact matches found, using fallback for '$maturityUpper'");
         if (strtoupper($maturityRating) === 'NOT_MATURE') {
             // For children's books, default to a middle-range age group
             $stmt = $db->prepare("SELECT age_group FROM standard_reading_levels WHERE age_group IN ('7-8 years', '8-9 years', '9-10 years') ORDER BY sort_order ASC LIMIT 1");
+            error_log("AGE_TEST: MATURITY_MAPPING: Using NOT_MATURE fallback query");
         } else {
             // For mature content, default to adult age group
             $stmt = $db->prepare("SELECT age_group FROM standard_reading_levels WHERE age_group = '18+ years' LIMIT 1");
+            error_log("AGE_TEST: MATURITY_MAPPING: Using MATURE fallback query");
         }
 
         $stmt->execute();
         $result = $stmt->fetch();
-        return $result ? $result['age_group'] : null;
+        $finalResult = $result ? $result['age_group'] : null;
+        error_log("AGE_TEST: MATURITY_MAPPING: Fallback result: " . ($finalResult ?? 'null'));
+        return $finalResult;
 
     } catch (Exception $e) {
         error_log("Error mapping maturity rating: " . $e->getMessage());

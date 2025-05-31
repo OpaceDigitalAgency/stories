@@ -3,6 +3,9 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
+// Include auth check first
+require_once '../includes/auth-check.php';
+
 try {
     // Try different possible paths for db-connect.php
     $dbPaths = [

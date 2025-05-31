@@ -823,11 +823,29 @@ function handleApplyEnrichment() {
             error_log("SAVE_TEST: 3. SQL WHERE clause is incorrect");
         }
 
-        // CRITICAL FIX: DO NOT auto-synchronize during manual data enrichment
-        // The user has manually selected specific age range and reading level combinations
-        // Auto-sync would override their manual selections with "standard" mappings
-        // synchronizeAgeAndReadingLevel($bookId); // DISABLED for manual enrichment
-        error_log("SAVE_TEST: Skipped auto-sync to preserve manual age/reading level selections for book ID: $bookId");
+        // CRITICAL DATABASE DEBUGGING: Check data immediately after SQL execution
+        $immediateCheck = $db->prepare("SELECT age_range, reading_level FROM books WHERE directory_item_id = ?");
+        $immediateCheck->execute([$bookId]);
+        $immediateData = $immediateCheck->fetch(PDO::FETCH_ASSOC);
+        error_log("SAVE_TEST: IMMEDIATE POST-SQL CHECK: " . json_encode($immediateData));
+
+        // Force database commit before sync
+        $db->commit();
+        error_log("SAVE_TEST: Forced database commit completed");
+
+        // Start new transaction for sync
+        $db->beginTransaction();
+
+        // CRITICAL: Synchronize age range and reading level after any update
+        // This ensures data consistency and should work correctly
+        synchronizeAgeAndReadingLevel($bookId);
+        error_log("SAVE_TEST: Synchronized age/reading level for book ID: $bookId");
+
+        // Check data after sync
+        $postSyncCheck = $db->prepare("SELECT age_range, reading_level FROM books WHERE directory_item_id = ?");
+        $postSyncCheck->execute([$bookId]);
+        $postSyncData = $postSyncCheck->fetch(PDO::FETCH_ASSOC);
+        error_log("SAVE_TEST: POST-SYNC CHECK: " . json_encode($postSyncData));
 
         // Process additional relationships and complex fields
         $additionalUpdates = [];
@@ -2624,12 +2642,14 @@ function synchronizeAgeAndReadingLevel($bookId) {
         $book = $stmt->fetch();
 
         if (!$book) {
-            error_log("Book not found for synchronization: $bookId");
+            error_log("SYNC_DEBUG: Book not found for synchronization: $bookId");
             return false;
         }
 
         $currentAge = $book['age_range'];
         $currentReading = $book['reading_level'];
+
+        error_log("SYNC_DEBUG: Starting sync for book $bookId - Current Age: '$currentAge', Current Reading: '$currentReading'");
 
         // Age range to reading level mapping - UPDATED to match user requirements
         $ageToReadingMap = [
@@ -2696,14 +2716,23 @@ function synchronizeAgeAndReadingLevel($bookId) {
         if (!empty($updateFields)) {
             $params[] = $bookId;
             $sql = "UPDATE books SET " . implode(', ', $updateFields) . " WHERE directory_item_id = ?";
+
+            error_log("SYNC_DEBUG: About to execute sync SQL: $sql");
+            error_log("SYNC_DEBUG: Sync parameters: " . json_encode($params));
+
             $stmt = $db->prepare($sql);
             $result = $stmt->execute($params);
+            $affectedRows = $stmt->rowCount();
+
+            error_log("SYNC_DEBUG: Sync SQL result: " . ($result ? 'SUCCESS' : 'FAILED'));
+            error_log("SYNC_DEBUG: Sync affected rows: $affectedRows");
 
             if ($result) {
-                error_log("Successfully synchronized age/reading level for book $bookId");
+                error_log("SYNC_DEBUG: Successfully synchronized age/reading level for book $bookId");
                 return true;
             } else {
-                error_log("Failed to synchronize age/reading level for book $bookId");
+                $errorInfo = $stmt->errorInfo();
+                error_log("SYNC_DEBUG: Failed to synchronize age/reading level for book $bookId. Error: " . json_encode($errorInfo));
                 return false;
             }
         }

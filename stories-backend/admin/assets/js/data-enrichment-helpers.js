@@ -4,6 +4,12 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
     window.dataEnrichmentHelpersLoaded = true;
 
     function createMultiSourceField(fieldName, field, label) {
+        // CRITICAL FIX: Prevent re-processing of tags field that has already been processed
+        if (fieldName === 'tags' && window.tagsFieldProcessed) {
+            console.log('🏷️ TAGS_FIX: Tags field already processed, skipping re-creation to prevent corruption');
+            return ''; // Return empty to prevent re-processing
+        }
+
         let optionsHtml = '';
         const options = field.new_data.options || [];
 
@@ -176,6 +182,12 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
         const headerText = sourceDisplayNames.length > 1 ?
             `${label} (${sourceDisplayNames.join(' + ')})` :
             `${label} (${sourceDisplayNames[0]})`;
+
+        // CRITICAL FIX: Mark tags field as processed to prevent re-processing
+        if (fieldName === 'tags') {
+            window.tagsFieldProcessed = true;
+            console.log('🏷️ TAGS_FIX: Marked tags field as processed to prevent future corruption');
+        }
 
         return `
             <div class="col-md-6 mb-3">

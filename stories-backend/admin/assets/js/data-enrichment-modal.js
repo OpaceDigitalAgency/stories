@@ -87,6 +87,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
     window.currentEnrichmentData = null;
     window.currentBookId = null;
     window.currentBookISBN = null;
+    window.tagsFieldProcessed = false; // Track if tags field has been processed to prevent corruption
 
     function openDataEnrichmentModal(bookId, title, author, currentISBN = '') {
         console.log('🚀 openDataEnrichmentModal called with:', { bookId, title, author, currentISBN, type: typeof currentISBN });
@@ -112,6 +113,7 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
 
         // CRITICAL FIX: Clear previous book's enrichment data to prevent cross-contamination
         window.currentEnrichmentData = null;
+        window.tagsFieldProcessed = false; // Reset tags processing flag for new book
         $('#enrichment-fields').empty(); // Clear any leftover DOM elements
 
         // CRITICAL: Clear any cached field data that might contain stale tags
@@ -865,35 +867,23 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             const tagsFieldHtml = tagsField.length ? tagsField[0].outerHTML : null;
             console.log('📦 TAGS_FIX: Stored tags field HTML for protection:', !!tagsFieldHtml);
 
-            // CRITICAL FIX: Update ALL Amazon fields, not just Amazon-derived ones
-            // This includes publisher, page_count, and other fields that Amazon provides data for
-            console.log('📦 AMAZON_FIX: Updating all Amazon fields to show Amazon data');
-            Object.keys(amazonData).forEach(fieldName => {
-                // Skip tags field completely - never update it
-                if (fieldName === 'tags') {
-                    console.log(`📦 TAGS_FIX: Skipping tags field update completely`);
-                    return;
-                }
-
+            // CRITICAL FIX: Only re-render Amazon-derived fields, not ALL fields
+            // This prevents the tags field from being re-processed and changing status
+            console.log('📦 TAGS_FIX: Only updating Amazon-derived fields to prevent tags status change');
+            ['purchase_links', 'format', 'price_range'].forEach(fieldName => {
                 const field = window.currentEnrichmentData.fields[fieldName];
-                if (field && field.new_data) {
-                    // Update this specific field in the DOM
+                if (field && field.new_data && field.new_data.source === 'amazon_derived') {
+                    // Update only this specific field in the DOM
                     const fieldContainer = $(`.enrichment-field[data-field="${fieldName}"]`);
                     if (fieldContainer.length) {
-                        console.log(`📦 AMAZON_FIX: Updating field display for ${fieldName}`);
+                        console.log(`📦 TAGS_FIX: Updating individual field display for ${fieldName}`);
 
                         // Remove the old field and recreate it
                         fieldContainer.remove();
                         const label = field.label || fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                         const isUnknown = field.new_data.status === 'unknown';
                         const isPendingAmazon = field.new_data.status === 'pending_amazon_data';
-
-                        // Create appropriate field type based on data structure
-                        if (field.new_data.options) {
-                            $('#enrichment-fields').append(createMultiSourceField(fieldName, field, label));
-                        } else {
-                            $('#enrichment-fields').append(createSingleSourceField(fieldName, field, label, isUnknown, isPendingAmazon));
-                        }
+                        $('#enrichment-fields').append(createSingleSourceField(fieldName, field, label, isUnknown, isPendingAmazon));
                     }
                 }
             });

@@ -158,6 +158,15 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
         $googleValue = extractFieldValue($googleMatch, $fieldName, $currentISBN);
         $openLibraryValue = extractFieldValue($openLibraryMatch, $fieldName, $currentISBN);
 
+        // CRITICAL DEBUG: Log author field processing
+        if ($fieldName === 'author') {
+            error_log("AUTHOR_DEBUG: Processing author field");
+            error_log("AUTHOR_DEBUG: Google match data: " . json_encode($googleMatch));
+            error_log("AUTHOR_DEBUG: OpenLibrary match data: " . json_encode($openLibraryMatch));
+            error_log("AUTHOR_DEBUG: Google value extracted: " . json_encode($googleValue));
+            error_log("AUTHOR_DEBUG: OpenLibrary value extracted: " . json_encode($openLibraryValue));
+        }
+
         // Check if we have data from either source OR if this is an Amazon-derived field
         if (!empty($googleValue) || !empty($openLibraryValue) || in_array($fieldName, ['purchase_links', 'format', 'price_range'])) {
             // Special handling for tags - always merge them
@@ -285,6 +294,14 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
             }
         } elseif (!in_array($fieldName, ['purchase_links', 'format', 'price_range'])) {
             // No data from either source - show as unknown (but don't override Amazon fields)
+
+            // CRITICAL DEBUG: Log when fields are marked as unknown
+            if ($fieldName === 'author') {
+                error_log("AUTHOR_DEBUG: Author field marked as unknown - no data from either source");
+                error_log("AUTHOR_DEBUG: googleValue empty: " . (empty($googleValue) ? 'YES' : 'NO'));
+                error_log("AUTHOR_DEBUG: openLibraryValue empty: " . (empty($openLibraryValue) ? 'YES' : 'NO'));
+            }
+
             $combinedFields[$fieldName] = [
                 'value' => null,
                 'source' => 'unknown',

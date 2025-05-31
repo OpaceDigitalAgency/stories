@@ -229,30 +229,7 @@
     color: #6c757d !important;
 }
 
-.enrichment-field.exact-match::before {
-    content: "✓ Matches Database";
-    position: absolute;
-    top: 5px;
-    right: 10px;
-    font-size: 0.75rem;
-    color: #28a745;
-    font-weight: bold;
-    background: white;
-    padding: 2px 6px;
-    border-radius: 3px;
-    border: 1px solid #28a745;
-    z-index: 10;
-    max-width: 120px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* Ensure enrichment fields have enough padding to avoid overlap */
-.enrichment-field.exact-match {
-    padding-top: 25px !important; /* Extra space for the label */
-    padding-right: 140px !important; /* Space for the label on the right */
-}
+/* Removed the "✓ Matches Database" badge as requested */
 
 /* Styling for disabled fields to make them obviously non-interactive */
 .enrichment-field.disabled-field {

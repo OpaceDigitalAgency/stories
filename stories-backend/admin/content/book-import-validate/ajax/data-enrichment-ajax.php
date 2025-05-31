@@ -751,7 +751,7 @@ function handleApplyEnrichment() {
     error_log("Final params: " . json_encode($params));
 
     // CRITICAL DEBUG: Verify book exists before update
-    $checkStmt = $db->prepare("SELECT id, directory_item_id, page_count, age_range FROM books WHERE directory_item_id = ?");
+    $checkStmt = $db->prepare("SELECT directory_item_id, page_count, age_range, reading_level FROM books WHERE directory_item_id = ?");
     $checkStmt->execute([$bookId]);
     $existingBook = $checkStmt->fetch(PDO::FETCH_ASSOC);
     error_log("SAVE_TEST: Book exists check - Book ID: $bookId");

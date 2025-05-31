@@ -387,6 +387,16 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 $('#enrichment-loading').hide();
                 if (response.success) {
                     window.currentEnrichmentData = response.data;
+
+                    // CRITICAL DEBUG: Display debug information in console
+                    if (response.debug) {
+                        console.log('🔍 ENRICHMENT_DEBUG: Full debug data:', response.debug);
+                        console.log('🔍 AUTHOR_DEBUG: Author field data:', response.debug.author_field_debug);
+                        console.log('🔍 FIELDS_FOUND:', response.debug.fields_found);
+                        console.log('🔍 GOOGLE_RAW:', response.debug.google_books_raw);
+                        console.log('🔍 OPENLIBRARY_RAW:', response.debug.openlibrary_raw);
+                    }
+
                     displayEnrichmentResults(response.data, response.debug);
                 } else {
                     showEnrichmentError(response.message || 'Unknown error occurred');

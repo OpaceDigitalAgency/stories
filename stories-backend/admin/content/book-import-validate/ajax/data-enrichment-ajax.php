@@ -475,6 +475,15 @@ function handleGetEnrichmentData() {
         // Get raw data before filtering for debugging
         $rawEnrichedData = getEnrichedBookData($title, $author, $currentISBN);
 
+        // Capture any error logs for debugging
+        $debugLogs = [];
+        if (function_exists('error_get_last')) {
+            $lastError = error_get_last();
+            if ($lastError) {
+                $debugLogs[] = $lastError;
+            }
+        }
+
         echo json_encode([
             'success' => true,
             'data' => $enrichedData,
@@ -493,7 +502,9 @@ function handleGetEnrichmentData() {
                 'raw_tags_before_filter' => $rawEnrichedData['fields']['tags'] ?? 'NOT_FOUND',
                 'filtered_tags_after_filter' => $enrichedData['fields']['tags'] ?? 'NOT_FOUND',
                 'google_books_raw' => $rawEnrichedData['google_match'] ?? 'NOT_FOUND',
-                'openlibrary_raw' => $rawEnrichedData['openlibrary_match'] ?? 'NOT_FOUND'
+                'openlibrary_raw' => $rawEnrichedData['openlibrary_match'] ?? 'NOT_FOUND',
+                'author_field_debug' => $enrichedData['fields']['author'] ?? 'AUTHOR_FIELD_NOT_FOUND',
+                'debug_logs' => $debugLogs
             ]
         ]);
     } catch (Exception $e) {

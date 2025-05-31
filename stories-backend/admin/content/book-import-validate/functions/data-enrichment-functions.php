@@ -1485,15 +1485,23 @@ function mapCategoryToReadingLevel($category) {
 
 /**
  * Map Google Books maturity rating to age range
+ * CRITICAL FIX: NOT_MATURE should NEVER map to 18+ years
  */
 function mapMaturityRatingToAgeRange($maturityRating) {
+    error_log("AGE_TEST: mapMaturityRatingToAgeRange called with: '$maturityRating'");
+
     switch (strtoupper($maturityRating)) {
         case 'NOT_MATURE':
             // FIXED: Return a reasonable children's age range instead of "All Ages" which gets mapped to 18+
-            return '7-8 years';
+            $result = '8-9 years';
+            error_log("AGE_TEST: NOT_MATURE mapped to: '$result'");
+            return $result;
         case 'MATURE':
-            return '18+ years';
+            $result = '18+ years';
+            error_log("AGE_TEST: MATURE mapped to: '$result'");
+            return $result;
         default:
+            error_log("AGE_TEST: Unknown maturity rating '$maturityRating', returning as-is");
             return $maturityRating;
     }
 }

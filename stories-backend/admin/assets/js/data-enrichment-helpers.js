@@ -230,11 +230,23 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
         } else if (fieldName === 'preview_link') {
             return `<a href="${value}" target="_blank" class="btn btn-sm btn-outline-secondary">Current Preview</a>`;
         } else if (fieldName === 'tags') {
-            // Handle array values for tags (displayed as genres)
+            // CRITICAL FIX: Handle tags/genres field properly for current values
             if (Array.isArray(value)) {
                 return value.map(item => `<span class="badge badge-primary mr-1">${item}</span>`).join('');
-            } else if (typeof value === 'string' && value.includes(',')) {
-                return value.split(',').map(item => `<span class="badge badge-primary mr-1">${item.trim()}</span>`).join('');
+            } else if (typeof value === 'string') {
+                // Check if it's a comma-separated list
+                if (value.includes(',')) {
+                    return value.split(',').map(item => `<span class="badge badge-primary mr-1">${item.trim()}</span>`).join('');
+                } else {
+                    // This might be a concatenated string - try to split it intelligently
+                    const tags = splitConcatenatedTags(value);
+                    if (tags.length > 1) {
+                        return tags.map(item => `<span class="badge badge-primary mr-1">${item}</span>`).join('');
+                    } else {
+                        // Single tag or unrecognized format
+                        return `<span class="badge badge-primary mr-1">${value}</span>`;
+                    }
+                }
             }
             return `<span class="badge badge-primary">${value}</span>`;
         } else if (fieldName === 'publication_date') {
@@ -305,6 +317,37 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
         return String(value).toLowerCase().trim();
     }
 
+    /**
+     * Split concatenated tag strings intelligently
+     * Handles cases like "AfricaAlgeriaBerbersChildren's Fiction..."
+     */
+    function splitConcatenatedTags(str) {
+        if (!str || typeof str !== 'string') return [];
+
+        // First, handle common patterns in concatenated genre strings
+        let processed = str
+            // Add spaces before capital letters (camelCase)
+            .replace(/([a-z])([A-Z])/g, '$1|$2')
+            // Handle specific patterns like "People & Places"
+            .replace(/&/g, ' and ')
+            // Handle apostrophes in "Children's Fiction"
+            .replace(/'/g, ' ')
+            // Split on the pipe separators we added
+            .split('|')
+            // Clean each tag
+            .map(tag => tag.trim())
+            .filter(tag => tag.length > 0);
+
+        // Further clean up and filter
+        return processed
+            .map(tag => {
+                // Capitalize first letter of each word
+                return tag.replace(/\b\w/g, l => l.toUpperCase());
+            })
+            .filter(tag => tag.length > 2) // Remove very short tags
+            .filter((tag, index, arr) => arr.indexOf(tag) === index); // Remove duplicates
+    }
+
     function formatFieldValue(fieldName, value) {
         if (!value || value === null || value === 'null' || value === 'Unknown') {
             return '<span class="text-muted">Unknown</span>';
@@ -315,11 +358,28 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
         } else if (fieldName === 'preview_link') {
             return `<a href="${value}" target="_blank" class="btn btn-sm btn-outline-primary">View Preview</a>`;
         } else if (fieldName === 'tags') {
-            // Handle array values for tags (displayed as genres)
+            // CRITICAL FIX: Handle tags/genres field properly to prevent duplicate display
             if (Array.isArray(value)) {
                 return value.map(item => `<span class="badge badge-success mr-1">${item}</span>`).join('');
-            } else if (typeof value === 'string' && value.includes(',')) {
-                return value.split(',').map(item => `<span class="badge badge-success mr-1">${item.trim()}</span>`).join('');
+            } else if (typeof value === 'string') {
+                // Check if this is already a formatted string with badges (prevent double processing)
+                if (value.includes('<span class="badge')) {
+                    return value; // Already formatted, return as-is
+                }
+
+                // Check if it's a comma-separated list
+                if (value.includes(',')) {
+                    return value.split(',').map(item => `<span class="badge badge-success mr-1">${item.trim()}</span>`).join('');
+                } else {
+                    // This might be a concatenated string - try to split it intelligently
+                    const tags = splitConcatenatedTags(value);
+                    if (tags.length > 1) {
+                        return tags.map(item => `<span class="badge badge-success mr-1">${item}</span>`).join('');
+                    } else {
+                        // Single tag or unrecognized format
+                        return `<span class="badge badge-success mr-1">${value}</span>`;
+                    }
+                }
             }
             return `<span class="badge badge-success">${value}</span>`;
         } else if (fieldName === 'publication_date') {

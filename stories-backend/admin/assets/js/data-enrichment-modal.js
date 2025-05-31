@@ -1887,9 +1887,19 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 if (currentValue.includes(',')) {
                     currentTags = currentValue.split(',').map(tag => tag.toLowerCase().trim()).sort();
                 } else {
-                    // This might be a concatenated string - try to split it intelligently
-                    // For now, treat it as a single tag for comparison
-                    currentTags = [currentValue.toLowerCase().trim()];
+                    // CRITICAL FIX: Use the same intelligent splitting function
+                    const splitTags = splitConcatenatedTags(currentValue);
+                    if (splitTags.length > 1) {
+                        currentTags = splitTags.map(tag => tag.toLowerCase().trim()).sort();
+                        console.log('🏷️ TAG_DEBUG: Split concatenated current value:', {
+                            original: currentValue,
+                            split: splitTags,
+                            normalized: currentTags
+                        });
+                    } else {
+                        // Single tag or unrecognized format
+                        currentTags = [currentValue.toLowerCase().trim()];
+                    }
                 }
             }
 
@@ -2204,6 +2214,37 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         }
     }
 
+    /**
+     * Split concatenated tag strings intelligently
+     * Handles cases like "AfricaAlgeriaBerbersChildren's Fiction..."
+     */
+    function splitConcatenatedTags(str) {
+        if (!str || typeof str !== 'string') return [];
+
+        // First, handle common patterns in concatenated genre strings
+        let processed = str
+            // Add spaces before capital letters (camelCase)
+            .replace(/([a-z])([A-Z])/g, '$1|$2')
+            // Handle specific patterns like "People & Places"
+            .replace(/&/g, ' and ')
+            // Handle apostrophes in "Children's Fiction"
+            .replace(/'/g, ' ')
+            // Split on the pipe separators we added
+            .split('|')
+            // Clean each tag
+            .map(tag => tag.trim())
+            .filter(tag => tag.length > 0);
+
+        // Further clean up and filter
+        return processed
+            .map(tag => {
+                // Capitalize first letter of each word
+                return tag.replace(/\b\w/g, l => l.toUpperCase());
+            })
+            .filter(tag => tag.length > 2) // Remove very short tags
+            .filter((tag, index, arr) => arr.indexOf(tag) === index); // Remove duplicates
+    }
+
     // Make functions globally available
     window.openDataEnrichmentModal = openDataEnrichmentModal;
     window.fetchEnrichmentData = fetchEnrichmentData;
@@ -2216,4 +2257,5 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
     window.updateStatusBadges = updateStatusBadges;
     window.autoSelectBeneficialFields = autoSelectBeneficialFields;
     window.fetchBookISBNsFromDatabase = fetchBookISBNsFromDatabase;
+    window.splitConcatenatedTags = splitConcatenatedTags;
 }

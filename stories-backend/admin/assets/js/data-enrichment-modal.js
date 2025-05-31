@@ -753,8 +753,32 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 console.log(`📦 URGENT_DEBUG: ${fieldName} field status AFTER update:`, window.currentEnrichmentData.fields[fieldName]?.new_data?.status);
             });
 
-            // Re-render the enrichment fields to include the new Amazon data
+            // CRITICAL FIX: Re-render the enrichment fields to include the new Amazon data
+            console.log('📦 CRITICAL_FIX: Re-rendering fields after Amazon data integration');
             displayEnrichmentFields(window.currentEnrichmentData.fields);
+
+            // CRITICAL FIX: Force update of specific Amazon fields that were pending
+            Object.keys(amazonData).forEach(fieldName => {
+                const fieldContainer = $(`.enrichment-field[data-field="${fieldName}"]`);
+                if (fieldContainer.length > 0) {
+                    console.log(`📦 CRITICAL_FIX: Force updating UI for field ${fieldName}`);
+                    const fieldData = window.currentEnrichmentData.fields[fieldName];
+                    if (fieldData && fieldData.new_data && fieldData.new_data.status === 'ready') {
+                        // Remove the pending Amazon styling and update content
+                        fieldContainer.removeClass('disabled-field border-warning');
+                        fieldContainer.find('.badge-warning').removeClass('badge-warning').addClass('badge-info');
+                        fieldContainer.find('.text-info').text(fieldData.new_data.value || 'No data');
+
+                        // Update the badge text to remove "Loading..."
+                        const badge = fieldContainer.find('.badge');
+                        if (badge.text().includes('Loading')) {
+                            badge.text(badge.text().replace(' (Loading...)', ''));
+                        }
+
+                        console.log(`📦 CRITICAL_FIX: Updated UI for ${fieldName} with value:`, fieldData.new_data.value);
+                    }
+                }
+            });
 
             // CRITICAL FIX: Update Amazon status badge to show completion
             $('#amazon-status-badge')
@@ -1933,15 +1957,28 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             return 'matches_database';
         }
 
+        // CRITICAL DEBUG: Special logging for purchase_links field
+        if (fieldName === 'purchase_links') {
+            console.log('🛒 PURCHASE_LINKS_DEBUG: Database state check for purchase_links:', {
+                fieldName: fieldName,
+                currentValue: currentValue,
+                actualNewValue: actualNewValue,
+                source: source,
+                isExactMatch: isExactMatch(currentValue, actualNewValue),
+                currentEmpty: isEmpty(currentValue),
+                newEmpty: isEmpty(actualNewValue)
+            });
+        }
+
         // Check if database is empty and we have data from ANY source
         if (isEmpty(currentValue) && !isEmpty(actualNewValue)) {
             return 'database_empty';
         }
 
-        // Check if both sources agree but differ from database
-        if (source === 'google_books + open_library' && !isEmpty(currentValue) && !isEmpty(actualNewValue)) {
+        // Check if sources differ from database (including Amazon)
+        if ((source === 'google_books + open_library' || source === 'amazon_derived') && !isEmpty(currentValue) && !isEmpty(actualNewValue)) {
             if (!isExactMatch(currentValue, actualNewValue)) {
-                console.log('🔍 DATABASE_WRONG_DEBUG: Database wrong detected:', currentValue, '!==', actualNewValue);
+                console.log('🔍 DATABASE_WRONG_DEBUG: Database wrong detected for source', source, ':', currentValue, '!==', actualNewValue);
                 return 'database_wrong';
             }
         }

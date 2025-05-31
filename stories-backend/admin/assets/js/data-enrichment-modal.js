@@ -870,12 +870,22 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     const fieldContainer = $(`.enrichment-field[data-field="${fieldName}"]`);
                     if (fieldContainer.length) {
                         console.log(`📦 TAGS_FIX: Updating individual field display for ${fieldName}`);
+                        // Store the current tags field HTML to prevent corruption
+                        const tagsField = $(`.enrichment-field[data-field="tags"]`);
+                        const tagsFieldHtml = tagsField.length ? tagsField[0].outerHTML : null;
+
                         // Remove the old field and recreate it
                         fieldContainer.remove();
                         const label = field.label || fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                         const isUnknown = field.new_data.status === 'unknown';
                         const isPendingAmazon = field.new_data.status === 'pending_amazon_data';
                         $('#enrichment-fields').append(createSingleSourceField(fieldName, field, label, isUnknown, isPendingAmazon));
+
+                        // CRITICAL FIX: Restore tags field if it was accidentally removed
+                        if (tagsFieldHtml && !$(`.enrichment-field[data-field="tags"]`).length) {
+                            console.log('📦 TAGS_FIX: Restoring tags field that was accidentally removed');
+                            $('#enrichment-fields').append(tagsFieldHtml);
+                        }
                     }
                 }
             });
@@ -1830,9 +1840,10 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 shouldSkipReprocessing: hasBeenProcessed && !isChecked
             });
 
-            // Skip re-processing if field has been processed and user hasn't selected it
-            if (hasBeenProcessed && !isChecked) {
-                console.log('🏷️ REPROCESS_DEBUG: Skipping re-processing of tags field - already evaluated and not selected');
+            // CRITICAL FIX: Always skip re-processing of tags field after initial display
+            // This prevents the tags field from being corrupted when Amazon data loads
+            if (hasBeenProcessed) {
+                console.log('🏷️ REPROCESS_DEBUG: Skipping re-processing of tags field - already evaluated, preserving original display');
                 return displayValue; // Return original display value without re-processing
             }
         }

@@ -877,6 +877,18 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                             status: 'ready' // CRITICAL FIX: Set status to ready when Amazon data arrives
                         };
                     }
+
+                    // CRITICAL FIX: Auto-select first radio button for multi-source fields
+                    if (existingField.new_data && existingField.new_data.options) {
+                        console.log(`📦 Auto-selecting first radio button for multi-source field: ${fieldName}`);
+                        setTimeout(() => {
+                            const firstRadio = $(`input[name="field_${fieldName}_option"][value="0"]`);
+                            if (firstRadio.length > 0 && !$(`input[name="field_${fieldName}_option"]:checked`).length) {
+                                firstRadio.prop('checked', true);
+                                console.log(`📦 Auto-selected first radio option for ${fieldName}`);
+                            }
+                        }, 100);
+                    }
                 } else {
                     // Field doesn't exist or has no data - add Amazon data as new field
                     console.log(`📦 Adding new Amazon field: ${fieldName}`);
@@ -889,6 +901,15 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                             status: 'ready' // CRITICAL FIX: Set status to ready when Amazon data arrives
                         }
                     };
+
+                    // CRITICAL FIX: Auto-select first radio button for new Amazon fields if they become multi-source
+                    setTimeout(() => {
+                        const firstRadio = $(`input[name="field_${fieldName}_option"][value="0"]`);
+                        if (firstRadio.length > 0 && !$(`input[name="field_${fieldName}_option"]:checked`).length) {
+                            firstRadio.prop('checked', true);
+                            console.log(`📦 Auto-selected first radio option for new Amazon field: ${fieldName}`);
+                        }
+                    }, 200);
                 }
 
                 console.log(`📦 Final field structure for ${fieldName}:`, window.currentEnrichmentData.fields[fieldName]);

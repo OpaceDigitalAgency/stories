@@ -1799,22 +1799,97 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                              source === 'database_recommendation' ? 'Database Match' :
                              source.replace('_', ' ');
 
-        // Check if new value exactly matches current value
-        const hasExactMatch = !isUnknown && !isPendingAmazon &&
-                             normalizeValue(field.current_value) === normalizeValue(newData.value) &&
-                             normalizeValue(field.current_value) !== '' &&
-                             normalizeValue(field.current_value) !== null;
+        // CRITICAL FIX: For tags field, perform intelligent comparison and deduplication
+        let actualDisplayValue = displayValue;
+        let hasExactMatch = false;
+        let databaseState = null;
+
+        if (fieldName === 'tags' && !isUnknown && !isPendingAmazon) {
+            console.log('🏷️ UX_FIX: Processing tags field for intelligent comparison');
+
+            // Get current tags as array
+            let currentTags = [];
+            if (Array.isArray(field.current_value)) {
+                currentTags = field.current_value.map(tag => tag.toLowerCase().trim()).filter(tag => tag.length > 0);
+            } else if (typeof field.current_value === 'string' && field.current_value.includes(',')) {
+                currentTags = field.current_value.split(',').map(tag => tag.toLowerCase().trim()).filter(tag => tag.length > 0);
+            }
+
+            // Get new tags as array
+            let newTags = [];
+            if (typeof newData.value === 'string' && newData.value.includes(',')) {
+                newTags = newData.value.split(',').map(tag => tag.toLowerCase().trim()).filter(tag => tag.length > 0);
+            }
+
+            // Remove duplicates from both arrays
+            currentTags = [...new Set(currentTags)].sort();
+            newTags = [...new Set(newTags)].sort();
+
+            console.log('🏷️ UX_FIX: Normalized tags comparison:', {
+                currentTags: currentTags,
+                newTags: newTags,
+                currentCount: currentTags.length,
+                newCount: newTags.length
+            });
+
+            // Find tags that are only in new data (not in current)
+            const onlyInNew = newTags.filter(tag => !currentTags.includes(tag));
+            const onlyInCurrent = currentTags.filter(tag => !newTags.includes(tag));
+
+            console.log('🏷️ UX_FIX: Tag differences:', {
+                onlyInNew: onlyInNew,
+                onlyInCurrent: onlyInCurrent,
+                hasNewTags: onlyInNew.length > 0,
+                hasRemovedTags: onlyInCurrent.length > 0
+            });
+
+            if (onlyInNew.length === 0 && onlyInCurrent.length === 0) {
+                // Perfect match - show "No new data"
+                hasExactMatch = true;
+                databaseState = 'matches_database';
+                actualDisplayValue = '<span class="text-muted">No new data - matches database</span>';
+                console.log('🏷️ UX_FIX: Perfect match detected - showing "No new data"');
+            } else if (onlyInNew.length > 0) {
+                // Show only the new tags with proper percentage
+                const totalTags = Math.max(currentTags.length, newTags.length);
+                const matchingTags = currentTags.filter(tag => newTags.includes(tag)).length;
+                const matchPercentage = totalTags > 0 ? Math.round((matchingTags / totalTags) * 100) : 0;
+
+                actualDisplayValue = onlyInNew.map(tag => `<span class="badge badge-success mr-1">${tag}</span>`).join('');
+                databaseState = 'database_wrong';
+
+                console.log('🏷️ UX_FIX: New tags detected:', {
+                    newTagsOnly: onlyInNew,
+                    matchPercentage: matchPercentage,
+                    displayValue: actualDisplayValue
+                });
+            } else {
+                // Only removals, no additions
+                hasExactMatch = true;
+                databaseState = 'matches_database';
+                actualDisplayValue = '<span class="text-muted">No new data - some tags would be removed</span>';
+                console.log('🏷️ UX_FIX: Only tag removals detected - showing "No new data"');
+            }
+        } else {
+            // Non-tags field - use original logic
+            hasExactMatch = !isUnknown && !isPendingAmazon &&
+                           normalizeValue(field.current_value) === normalizeValue(newData.value) &&
+                           normalizeValue(field.current_value) !== '' &&
+                           normalizeValue(field.current_value) !== null;
+
+            // Determine database state first
+            databaseState = determineDatabaseState(field.current_value, newData.value, source, newData, fieldName);
+        }
 
         // Apply exact match styling if found
         const exactMatchClass = hasExactMatch ? ' exact-match' : '';
 
         // Determine benefit level for color coding
-        const benefitLevel = isPendingAmazon ? 'questionable' : determineBenefitLevel(field.current_value, newData.value, isUnknown);
+        const benefitLevel = isPendingAmazon ? 'questionable' :
+                           hasExactMatch ? 'exact_match' :
+                           determineBenefitLevel(field.current_value, newData.value, isUnknown);
         const benefitClass = getBenefitColorClass(benefitLevel);
         const benefitBorder = getBenefitBorderClass(benefitLevel);
-
-        // Determine database state first
-        const databaseState = determineDatabaseState(field.current_value, newData.value, source, newData, fieldName);
 
         // Add disabled styling classes - exact matches should be disabled
         const shouldDisable = isUnknown || isPendingAmazon || benefitLevel === 'not_beneficial' || benefitLevel === 'exact_match' || databaseState === 'matches_database';

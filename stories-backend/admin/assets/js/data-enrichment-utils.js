@@ -639,7 +639,19 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
             console.log('SAVE_TEST: Current book ID:', window.currentBookId);
 
             const selectedFields = {};
-            $('.field-checkbox:checked').each(function() {
+
+            // CRITICAL DEBUG: Log all checked checkboxes
+            const checkedBoxes = $('.field-checkbox:checked');
+            console.log(`SAVE_TEST: Found ${checkedBoxes.length} checked checkboxes:`, checkedBoxes.map(function() {
+                return {
+                    id: $(this).attr('id'),
+                    value: $(this).val(),
+                    checked: $(this).is(':checked'),
+                    disabled: $(this).is(':disabled')
+                };
+            }).get());
+
+            checkedBoxes.each(function() {
                 const fieldName = $(this).val();
                 const fieldData = window.currentEnrichmentData.fields[fieldName];
 
@@ -649,6 +661,17 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
                 if (fieldData.new_data && fieldData.new_data.options) {
                     const selectedOption = $(`input[name="field_${fieldName}_option"]:checked`);
                     console.log(`SAVE_TEST: Multi-source field ${fieldName} - found ${selectedOption.length} selected radio buttons`);
+
+                    // CRITICAL DEBUG: Log all radio buttons for this field
+                    const allRadios = $(`input[name="field_${fieldName}_option"]`);
+                    console.log(`SAVE_TEST: All radio buttons for ${fieldName}:`, allRadios.map(function() {
+                        return {
+                            name: $(this).attr('name'),
+                            value: $(this).val(),
+                            checked: $(this).is(':checked'),
+                            id: $(this).attr('id')
+                        };
+                    }).get());
 
                     if (selectedOption.length > 0) {
                         const optionIndex = parseInt(selectedOption.val());
@@ -678,6 +701,17 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
                         console.log(`SAVE_TEST: No radio button selected for multi-source field ${fieldName}`);
                     }
                 } else if (fieldData.new_data) {
+                    // CRITICAL DEBUG: Log all field processing attempts
+                    console.log(`SAVE_TEST: Processing single-source field ${fieldName}:`, {
+                        fieldData: fieldData,
+                        newData: fieldData.new_data,
+                        value: fieldData.new_data.value,
+                        source: fieldData.new_data.source,
+                        isNull: fieldData.new_data.value === null,
+                        isUndefined: fieldData.new_data.value === undefined,
+                        isUnknown: fieldData.new_data.source === 'unknown'
+                    });
+
                     // CRITICAL FIX: Don't include fields with null/unknown values
                     if (fieldData.new_data.value === null || fieldData.new_data.value === undefined ||
                         fieldData.new_data.source === 'unknown') {
@@ -733,6 +767,17 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
 
             // Build the selected fields object with proper structure
             const selectedFields = {};
+
+            // CRITICAL DEBUG: Check what checkboxes are actually checked
+            const allCheckboxes = $('.field-checkbox');
+            const checkedCheckboxes = $('.field-checkbox:checked');
+            console.log(`SAVE_TEST: Total checkboxes found: ${allCheckboxes.length}`);
+            console.log(`SAVE_TEST: Checked checkboxes found: ${checkedCheckboxes.length}`);
+
+            allCheckboxes.each(function() {
+                console.log(`SAVE_TEST: Checkbox ${$(this).attr('id')}: checked=${$(this).is(':checked')}, disabled=${$(this).is(':disabled')}, value=${$(this).val()}`);
+            });
+
             $('.field-checkbox:checked').each(function() {
                 const fieldName = $(this).val();
                 const fieldData = window.currentEnrichmentData.fields[fieldName];

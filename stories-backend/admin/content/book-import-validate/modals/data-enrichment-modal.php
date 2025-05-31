@@ -161,6 +161,8 @@
     padding: 1rem;
     margin-bottom: 1rem;
     background-color: #f8f9fa;
+    min-height: 200px; /* Ensure consistent height */
+    word-wrap: break-word; /* Handle long text */
 }
 
 .enrichment-field.selected {
@@ -282,6 +284,56 @@
 
 .enrichment-field.disabled-field:hover {
     box-shadow: none !important;
+}
+
+/* CRITICAL CSS FIXES for width and text wrapping issues */
+.enrichment-field .form-check-label {
+    white-space: normal !important; /* Allow text wrapping */
+    word-break: break-word; /* Break long words */
+    line-height: 1.4; /* Better line spacing */
+    max-width: 100%; /* Prevent overflow */
+}
+
+.enrichment-field .current-value,
+.enrichment-field .new-value {
+    white-space: normal !important;
+    word-break: break-word;
+    max-width: 100%;
+    overflow-wrap: break-word;
+}
+
+/* Ensure proper spacing for field content */
+.enrichment-field .mt-2 {
+    margin-top: 0.75rem !important;
+}
+
+.enrichment-field .p-2 {
+    padding: 0.75rem !important;
+}
+
+/* Better responsive behavior for 3-column layout */
+@media (min-width: 992px) {
+    .col-lg-4 {
+        flex: 0 0 33.333333%;
+        max-width: 33.333333%;
+    }
+}
+
+@media (max-width: 991px) {
+    .enrichment-field {
+        min-height: 150px; /* Smaller height on mobile */
+    }
+}
+
+/* Fix for source labels and confidence badges */
+.enrichment-field .badge {
+    white-space: nowrap; /* Keep badges on one line */
+    margin: 0.125rem;
+}
+
+.enrichment-field .source-badge {
+    display: inline-block;
+    margin-bottom: 0.25rem;
 }
 </style>
 

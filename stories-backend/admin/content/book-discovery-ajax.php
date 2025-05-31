@@ -94,6 +94,8 @@ try {
                 throw new Exception('Invalid book data format');
             }
             
+            error_log("Enriching book: " . ($bookData['title'] ?? 'Unknown'));
+            
             // Get enriched data from APIs
             $enrichedData = getEnrichedBookData(
                 $bookData['title'] ?? '',
@@ -101,14 +103,20 @@ try {
                 $bookData['isbn'] ?? $bookData['isbn13'] ?? ''
             );
             
+            error_log("Enriched data received: " . print_r($enrichedData, true));
+            
             // Merge enriched data with original book data
             if (!empty($enrichedData['fields'])) {
                 foreach ($enrichedData['fields'] as $field => $data) {
-                    if (!empty($data['new_data']['value']) && empty($bookData[$field])) {
+                    if (!empty($data['new_data']['value'])) {
+                        // Always add enriched data, don't check if field is empty
                         $bookData[$field] = $data['new_data']['value'];
+                        error_log("Added enriched field $field: " . $data['new_data']['value']);
                     }
                 }
             }
+            
+            error_log("Final book data: " . print_r($bookData, true));
             
             echo json_encode([
                 'success' => true,

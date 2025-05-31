@@ -1979,9 +1979,14 @@ $(document).ready(function() {
                     });
                     
                     const enrichResult = await enrichResponse.json();
+                    console.log('Enrichment result for', book.title, ':', enrichResult);
                     
                     if (enrichResult.success) {
+                        console.log('Before enrichment:', discoveryBooks[i]);
                         discoveryBooks[i] = enrichResult.book;
+                        console.log('After enrichment:', discoveryBooks[i]);
+                    } else {
+                        console.error('Enrichment failed for', book.title, ':', enrichResult.error);
                     }
                 }
                 

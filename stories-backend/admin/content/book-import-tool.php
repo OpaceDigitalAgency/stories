@@ -1849,8 +1849,18 @@ $(document).ready(function() {
                 return;
             }
             
+            console.log('Showing progress section');
             progressSection.style.display = 'block';
-            document.getElementById('resultsSection').style.display = 'none';
+            progressSection.style.visibility = 'visible';
+            progressSection.style.opacity = '1';
+            
+            const resultsSection = document.getElementById('resultsSection');
+            if (resultsSection) {
+                resultsSection.style.display = 'none';
+            }
+            
+            // Force scroll to progress section
+            progressSection.scrollIntoView({ behavior: 'smooth' });
             
             // Reset counters
             discoveryCurrentIndex = 0;
@@ -2086,8 +2096,22 @@ $(document).ready(function() {
     }
 
     function showDiscoveryResults() {
+        console.log('showDiscoveryResults() called');
+        
         // Show results section
-        document.getElementById('resultsSection').style.display = 'block';
+        const resultsSection = document.getElementById('resultsSection');
+        if (!resultsSection) {
+            console.error('Results section not found');
+            return;
+        }
+        
+        console.log('Showing results section');
+        resultsSection.style.display = 'block';
+        resultsSection.style.visibility = 'visible';
+        resultsSection.style.opacity = '1';
+        
+        // Force scroll to results
+        resultsSection.scrollIntoView({ behavior: 'smooth' });
         
         // Update summary
         const summaryInfo = document.getElementById('summaryInfo');

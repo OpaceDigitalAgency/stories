@@ -1470,6 +1470,18 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
 
         console.log('🎨 Database state:', databaseState, 'isChecked:', isChecked, 'valuesDiffer:', valuesDiffer);
 
+        // CRITICAL FIX: Auto-uncheck checkbox if values match database (should be disabled)
+        if (databaseState === 'matches_database' && isChecked) {
+            console.log('🎨 CRITICAL_FIX: Values match database - unchecking and disabling field');
+            fieldCheckbox.prop('checked', false);
+            fieldCheckbox.prop('disabled', true);
+            isChecked = false; // Update the local variable
+        } else if (databaseState !== 'matches_database' && fieldCheckbox.prop('disabled')) {
+            // Re-enable checkbox if it was previously disabled but now has different values
+            console.log('🎨 CRITICAL_FIX: Values differ from database - re-enabling field');
+            fieldCheckbox.prop('disabled', false);
+        }
+
         // Remove existing state classes
         fieldContainer.removeClass('disabled-field matches-database database-wrong database-empty');
 

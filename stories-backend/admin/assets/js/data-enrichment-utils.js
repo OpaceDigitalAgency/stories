@@ -94,6 +94,14 @@ if (typeof window.dataEnrichmentUtilsLoaded === 'undefined') {
                     debugMessage += 'Existing Book Data: ' + JSON.stringify(response.debug.existing_book_data) + '\n';
                 }
 
+                if (response.debug_error) {
+                    debugMessage += 'EXCEPTION ERROR INFO:\n';
+                    debugMessage += 'Error Message: ' + response.debug_error.message + '\n';
+                    debugMessage += 'Error File: ' + response.debug_error.file + '\n';
+                    debugMessage += 'Error Line: ' + response.debug_error.line + '\n';
+                    debugMessage += 'Action: ' + response.debug_error.action + '\n';
+                }
+
                 console.log(debugMessage);
 
                 if (response.success) {

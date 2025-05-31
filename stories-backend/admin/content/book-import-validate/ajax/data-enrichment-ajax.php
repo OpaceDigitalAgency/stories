@@ -303,8 +303,21 @@ try {
             break;
     }
 } catch (Exception $e) {
-    error_log("Data enrichment error: " . $e->getMessage());
-    echo json_encode(['success' => false, 'message' => 'Server error occurred']);
+    error_log("SAVE_TEST: CRITICAL EXCEPTION CAUGHT!");
+    error_log("SAVE_TEST: Exception message: " . $e->getMessage());
+    error_log("SAVE_TEST: Exception file: " . $e->getFile());
+    error_log("SAVE_TEST: Exception line: " . $e->getLine());
+    error_log("SAVE_TEST: Exception trace: " . $e->getTraceAsString());
+    echo json_encode([
+        'success' => false,
+        'message' => 'Server error occurred',
+        'debug_error' => [
+            'message' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'action' => $action ?? 'unknown'
+        ]
+    ]);
 }
 
 // Exit to prevent any further output

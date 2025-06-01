@@ -189,13 +189,17 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $amazonData
         $amazonValue = extractAmazonFieldValue($amazonData, $fieldName, $currentISBN);
 
         // CRITICAL DEBUG: Log Amazon field extraction for age_range and reading_level
-        if ($fieldName === 'age_range' || $fieldName === 'reading_level') {
+        if ($fieldName === 'age_range' || $fieldName === 'reading_level' || $fieldName === 'format' || $fieldName === 'price_range') {
             error_log("FIELD_EXTRACTION_DEBUG: Field '$fieldName' - Amazon data available: " . (!empty($amazonData) ? 'YES' : 'NO'));
-            error_log("FIELD_EXTRACTION_DEBUG: Field '$fieldName' - Google value: " . ($googleValue ?: 'NULL'));
-            error_log("FIELD_EXTRACTION_DEBUG: Field '$fieldName' - OpenLibrary value: " . ($openLibraryValue ?: 'NULL'));
-            error_log("FIELD_EXTRACTION_DEBUG: Field '$fieldName' - Amazon value extracted: " . ($amazonValue ?: 'NULL'));
+            error_log("FIELD_EXTRACTION_DEBUG: Field '$fieldName' - Google value: " . (is_null($googleValue) ? 'NULL' : "'$googleValue'"));
+            error_log("FIELD_EXTRACTION_DEBUG: Field '$fieldName' - OpenLibrary value: " . (is_null($openLibraryValue) ? 'NULL' : "'$openLibraryValue'"));
+            error_log("FIELD_EXTRACTION_DEBUG: Field '$fieldName' - Amazon value extracted: " . (is_null($amazonValue) ? 'NULL' : "'$amazonValue'"));
+            error_log("FIELD_EXTRACTION_DEBUG: Field '$fieldName' - Google empty check: " . (empty($googleValue) ? 'TRUE' : 'FALSE'));
+            error_log("FIELD_EXTRACTION_DEBUG: Field '$fieldName' - OpenLibrary empty check: " . (empty($openLibraryValue) ? 'TRUE' : 'FALSE'));
+            error_log("FIELD_EXTRACTION_DEBUG: Field '$fieldName' - Amazon empty check: " . (empty($amazonValue) ? 'TRUE' : 'FALSE'));
             if (!empty($amazonData)) {
                 error_log("FIELD_EXTRACTION_DEBUG: Amazon metadata: " . json_encode($amazonData['metadata'] ?? []));
+                error_log("FIELD_EXTRACTION_DEBUG: Amazon buying_options: " . json_encode($amazonData['buying_options'] ?? []));
             }
         }
 
@@ -219,8 +223,18 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $amazonData
 
         // Check if we have data from any source (Google, OpenLibrary, or Amazon)
         if (!empty($googleValue) || !empty($openLibraryValue) || !empty($amazonValue)) {
-            // Special handling for tags - always merge them
-            if ($fieldName === 'tags') {
+            // Special handling for Amazon-only fields (age_range, reading_level, format, price_range)
+            if (in_array($fieldName, ['age_range', 'reading_level', 'format', 'price_range']) && !empty($amazonValue)) {
+                // Amazon data takes priority for these fields
+                $combinedFields[$fieldName] = [
+                    'value' => $amazonValue,
+                    'source' => 'amazon',
+                    'confidence' => $fieldConfig['confidence'],
+                    'label' => $fieldConfig['label']
+                ];
+                error_log("ENRICHMENT_DEBUG: Using Amazon data for $fieldName: $amazonValue");
+            } elseif ($fieldName === 'tags') {
+                // Special handling for tags - always merge them
                 $mergedTags = mergeTagsFromSources($googleValue, $openLibraryValue);
                 if (!empty($mergedTags)) {
                     $combinedFields[$fieldName] = [

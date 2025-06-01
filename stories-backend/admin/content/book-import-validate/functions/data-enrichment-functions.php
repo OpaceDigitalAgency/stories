@@ -2643,9 +2643,9 @@ function extractAmazonMetadata($responses) {
                 'isbn_13' => '/<span[^>]*class="a-text-bold"[^>]*>ISBN-13[^<]*<\/span>\s*<span[^>]*>([^<]+)<\/span>/i',
                 'dimensions' => '/<span[^>]*class="a-text-bold"[^>]*>Dimensions[^<]*<\/span>\s*<span[^>]*>([^<]+)<\/span>/i',
                 'item_weight' => '/<span[^>]*class="a-text-bold"[^>]*>Item weight[^<]*<\/span>\s*<span[^>]*>([^<]+)<\/span>/i',
-                'series' => '/<span[^>]*class="a-text-bold"[^>]*>Book \d+ of \d+[^<]*<\/span>\s*<a[^>]*><span[^>]*>([^<]+)<\/span><\/a>/i',
-                'series_alt1' => '/Book \d+ of \d+\s*:\s*([^<\n]+)/i',
-                'series_alt2' => '/<span[^>]*class="a-list-item"[^>]*>.*?Book \d+ of \d+.*?<a[^>]*>([^<]+)<\/a>/is',
+                'series' => '/<span[^>]*class="a-text-bold"[^>]*>(Book \d+ of \d+)[^<]*<\/span>\s*<a[^>]*><span[^>]*>([^<]+)<\/span><\/a>/i',
+                'series_alt1' => '/(Book \d+ of \d+)\s*:\s*([^<\n]+)/i',
+                'series_alt2' => '/<span[^>]*class="a-list-item"[^>]*>.*?(Book \d+ of \d+).*?<a[^>]*>([^<]+)<\/a>/is',
             ];
 
             foreach ($bulletPatterns as $key => $pattern) {
@@ -2678,8 +2678,18 @@ function extractAmazonMetadata($responses) {
                         } elseif (strpos($key, 'series') === 0) {
                             // For series alternatives, map them all to 'series' and only keep the first match
                             if (!isset($metadata['series'])) {
-                                $metadata['series'] = $value;
-                                error_log("AMAZON_EXTRACT_DEBUG: Set series to: '$value'");
+                                // Check if we have both book position and series name (2 capture groups)
+                                if (isset($matches[2]) && !empty($matches[2])) {
+                                    // Format as "Book X of Y: Series Name"
+                                    $bookPosition = trim($matches[1]);
+                                    $seriesName = trim($matches[2]);
+                                    $metadata['series'] = $bookPosition . ': ' . $seriesName;
+                                    error_log("AMAZON_EXTRACT_DEBUG: Set series with position to: '$bookPosition: $seriesName'");
+                                } else {
+                                    // Fallback to just the series name
+                                    $metadata['series'] = $value;
+                                    error_log("AMAZON_EXTRACT_DEBUG: Set series (no position) to: '$value'");
+                                }
                             }
                         } else {
                             $metadata[$key] = $value;
@@ -2949,7 +2959,8 @@ function getAmazonEnrichmentData($isbn, $currentBookData = null) {
             'language' => 'Language',
             'print_length' => 'Page Count',
             'isbn_10' => 'ISBN-10',
-            'isbn_13' => 'ISBN-13'
+            'isbn_13' => 'ISBN-13',
+            'series' => 'Series'
         ];
 
         foreach ($fieldMappings as $amazonField => $label) {

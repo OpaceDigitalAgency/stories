@@ -1213,10 +1213,11 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
 
         // FIXED: Ensure both fields have synchronized source options before setting up sync
         // Only run if both fields exist and have data
-        // TEMPORARILY DISABLED to debug empty modal issue
-        // setTimeout(() => {
-        //     ensureSynchronizedSourceOptions();
-        // }, 500);
+        setTimeout(() => {
+            ensureSynchronizedSourceOptions();
+            ensureProperSourceSelection();
+            ensureCoverImageDeselected();
+        }, 500);
 
         // Debug: Show what fields are actually available
         setTimeout(() => {
@@ -1931,6 +1932,50 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
 
         if (stateHtml) {
             fieldContainer.append(stateHtml);
+        }
+    }
+
+    /**
+     * Ensure proper source selection matches book-check-compare.php assignments
+     */
+    function ensureProperSourceSelection() {
+        console.log('🎯 ensureProperSourceSelection called');
+
+        if (!window.currentEnrichmentData || !window.currentEnrichmentData.fields) {
+            console.log('🎯 No enrichment data available for source selection');
+            return;
+        }
+
+        // For each field, ensure the selected source matches the "All Enriched Fields" assignment
+        Object.keys(window.currentEnrichmentData.fields).forEach(fieldName => {
+            const field = window.currentEnrichmentData.fields[fieldName];
+            if (field.new_data) {
+                const fieldContainer = $(`.enrichment-field[data-field="${fieldName}"]`);
+                if (fieldContainer.length > 0) {
+                    // If field has options, select the one that matches the assigned source
+                    if (field.new_data.options) {
+                        const assignedSource = field.new_data.source || field.new_data.options[0]?.source;
+                        const sourceRadio = fieldContainer.find(`input[name="${fieldName}_source"][value="${assignedSource}"]`);
+                        if (sourceRadio.length > 0 && !sourceRadio.is(':checked')) {
+                            sourceRadio.prop('checked', true);
+                            console.log(`🎯 Auto-selected source ${assignedSource} for field ${fieldName}`);
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    /**
+     * Ensure cover image is always deselected by default
+     */
+    function ensureCoverImageDeselected() {
+        console.log('🖼️ ensureCoverImageDeselected called');
+
+        const coverImageCheckbox = $('#field_cover_url');
+        if (coverImageCheckbox.length > 0 && coverImageCheckbox.is(':checked')) {
+            coverImageCheckbox.prop('checked', false);
+            console.log('🖼️ Deselected cover image checkbox');
         }
     }
 

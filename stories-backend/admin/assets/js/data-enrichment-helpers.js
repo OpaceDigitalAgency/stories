@@ -350,6 +350,17 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
             const items = value.split(',').map(item => item.trim()).filter(item => item.length > 0);
             const uniqueItems = [...new Set(items)]; // Remove duplicates
             return uniqueItems.map(item => `<span class="badge badge-info mr-1 mb-1">${item}</span>`).join('');
+        } else if (fieldName === 'genres') {
+            // CRITICAL FIX: Handle genres field with same styling as tags for current value
+            if (Array.isArray(value)) {
+                const uniqueGenres = [...new Set(value.map(genre => genre.trim()).filter(genre => genre.length > 0))];
+                return uniqueGenres.map(item => `<span class="badge badge-primary mr-1">${item}</span>`).join('');
+            } else if (typeof value === 'string') {
+                const items = value.split(',').map(item => item.trim()).filter(item => item.length > 0);
+                const uniqueItems = [...new Set(items)]; // Remove duplicates
+                return uniqueItems.map(item => `<span class="badge badge-primary mr-1">${item}</span>`).join('');
+            }
+            return `<span class="badge badge-primary">${value}</span>`;
         } else if (fieldName === 'purchase_links') {
             // CRITICAL FIX: Use same logic as formatFieldValue for consistency
             try {
@@ -534,6 +545,22 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
             return `<span class="badge badge-info">${value}</span>`;
         } else if (fieldName === 'awards') {
             return value.split(',').map(award => `<span class="badge badge-warning mr-1">${award.trim()}</span>`).join('');
+        } else if (fieldName === 'characters' || fieldName === 'settings') {
+            // CRITICAL FIX: Use same styling as Alternative ISBNs and deduplicate
+            const items = value.split(',').map(item => item.trim()).filter(item => item.length > 0);
+            const uniqueItems = [...new Set(items)]; // Remove duplicates
+            return uniqueItems.map(item => `<span class="badge badge-info mr-1 mb-1">${item}</span>`).join('');
+        } else if (fieldName === 'genres') {
+            // CRITICAL FIX: Handle genres field with same styling as tags
+            if (Array.isArray(value)) {
+                const uniqueGenres = [...new Set(value.map(genre => genre.trim()).filter(genre => genre.length > 0))];
+                return uniqueGenres.map(item => `<span class="badge badge-success mr-1 mb-1">${item}</span>`).join('');
+            } else if (typeof value === 'string') {
+                const items = value.split(',').map(item => item.trim()).filter(item => item.length > 0);
+                const uniqueItems = [...new Set(items)]; // Remove duplicates
+                return uniqueItems.map(item => `<span class="badge badge-success mr-1 mb-1">${item}</span>`).join('');
+            }
+            return `<span class="badge badge-success">${value}</span>`;
         } else if (fieldName === 'alternative_isbns') {
             // Display alternative ISBNs in a scrollable container
             const isbns = value.split(',').map(isbn => isbn.trim()).filter(isbn => isbn.length >= 10);

@@ -1404,10 +1404,41 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
                 }
             }
 
-            // CRITICAL FIX: COMPLETELY REMOVE all age range inference from OpenLibrary
-            // OpenLibrary does NOT provide explicit age ranges - only Amazon does
-            // Any "age range" from OpenLibrary is inferred from Lexile/subjects and should not be shown as a source
-            // This prevents fake "OpenLibrary" sources from appearing when OL doesn't actually have age data
+            // Check OpenLibrary subjects for EXPLICIT age patterns
+            if (!$ageRange && isset($match['subject_facet']) && is_array($match['subject_facet'])) {
+                error_log("AGE_TEST: AGE_RANGE_EXTRACT_DEBUG: Found OpenLibrary subject_facet: " . json_encode($match['subject_facet']));
+                foreach ($match['subject_facet'] as $subject) {
+                    if (is_string($subject)) {
+                        error_log("AGE_TEST: AGE_RANGE_EXTRACT_DEBUG: Checking OpenLibrary subject: '$subject'");
+                        // Look for explicit age patterns with numbers - NO generic mappings
+                        if (preg_match('/(\d+)\s*-\s*(\d+)\s*years?/i', $subject, $matches)) {
+                            $rawAgeRange = $matches[0]; // e.g., "8-12 years"
+                            error_log("AGE_TEST: AGE_RANGE_EXTRACT_DEBUG: Found explicit age pattern '$rawAgeRange' in OpenLibrary subject");
+                            $ageRange = mapAmazonAgeRangeToStandard($rawAgeRange);
+                            if ($ageRange) {
+                                error_log("AGE_TEST: AGE_RANGE_EXTRACT_DEBUG: Mapped to standard: '$ageRange'");
+                                break;
+                            }
+                        }
+                        // Also check for grade levels that can be mapped to ages
+                        if (preg_match('/grade\s*(\d+)/i', $subject, $matches)) {
+                            $grade = intval($matches[1]);
+                            // Map grades to approximate ages (Grade 1 = age 6-7, etc.)
+                            if ($grade >= 1 && $grade <= 12) {
+                                $startAge = $grade + 5; // Grade 1 = age 6
+                                $endAge = $startAge + 1;
+                                $rawAgeRange = "$startAge-$endAge years";
+                                error_log("AGE_TEST: AGE_RANGE_EXTRACT_DEBUG: Found grade '$grade' in OpenLibrary, mapped to '$rawAgeRange'");
+                                $ageRange = mapAmazonAgeRangeToStandard($rawAgeRange);
+                                if ($ageRange) {
+                                    error_log("AGE_TEST: AGE_RANGE_EXTRACT_DEBUG: Mapped grade to standard: '$ageRange'");
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             // FINAL FILTER: Remove any remaining problematic values
             if ($ageRange && (strpos($ageRange, '12+') !== false || strpos($ageRange, 'unknown') !== false)) {

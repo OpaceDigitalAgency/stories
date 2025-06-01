@@ -228,11 +228,14 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
                 error_log("Created Amazon field: $fieldName with pending_amazon_data status");
             } elseif (!empty($googleValue) && !empty($openLibraryValue)) {
                 // Both sources have data - check if they match
-                error_log("PUBLISHER_TEST: Field '$fieldName' has both Google and OpenLibrary values: Google='$googleValue', OpenLibrary='$openLibraryValue'");
+                debugLog("Field '$fieldName' has both Google and OpenLibrary values", [
+                    'google' => $googleValue,
+                    'openLibrary' => $openLibraryValue
+                ]);
 
                 if (normalizeForComparison($googleValue) === normalizeForComparison($openLibraryValue)) {
                     // Values match - use combined source
-                    error_log("PUBLISHER_TEST: Field '$fieldName' values match after normalization");
+                    debugLog("Field '$fieldName' values match after normalization");
 
                     // Check if this matches the current value exactly for 100% confidence
                     $finalValue = preferEnglishVersion($googleValue, $openLibraryValue);
@@ -241,7 +244,7 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
                     // If it matches current value exactly, set to 100%
                     if (isset($currentValues[$fieldName]) && isExactValueMatch($currentValues[$fieldName], $finalValue)) {
                         $confidence = 100;
-                        error_log("PUBLISHER_TEST: Field '$fieldName' exactly matches current value - setting confidence to 100%");
+                        debugLog("Field '$fieldName' exactly matches current value - setting confidence to 100%");
                     }
 
                     $combinedFields[$fieldName] = [
@@ -251,55 +254,66 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
                         'label' => $fieldConfig['label']
                     ];
                 } else {
-                    // Values differ - offer both options with enhanced publisher matching
-                    error_log("PUBLISHER_TEST: Field '$fieldName' values differ, creating options");
-                    $options = [
-                        [
+                    // Values differ - for core fields like title/author, prefer Google Books
+                    // For other fields, create options
+                    debugLog("Field '$fieldName' values differ", [
+                        'google' => $googleValue,
+                        'openLibrary' => $openLibraryValue
+                    ]);
+
+                    if (in_array($fieldName, ['title', 'author'])) {
+                        // CRITICAL FIX: For title/author, prefer Google Books when values differ
+                        debugLog("Using Google Books value for core field '$fieldName': $googleValue");
+                        $combinedFields[$fieldName] = [
                             'value' => $googleValue,
                             'source' => 'google_books',
                             'confidence' => $fieldConfig['confidence'],
-                            'label' => $fieldConfig['label']
-                        ],
-                        [
-                            'value' => $openLibraryValue,
-                            'source' => 'open_library',
-                            'confidence' => $fieldConfig['confidence'] - 5, // Slightly lower confidence for OpenLibrary
-                            'label' => $fieldConfig['label']
-                        ]
-                    ];
+                            'label' => $fieldConfig['label'],
+                            'alternative' => $openLibraryValue // Keep alternative for reference
+                        ];
+                    } else {
+                        // For other fields, create options as before
+                        $options = [
+                            [
+                                'value' => $googleValue,
+                                'source' => 'google_books',
+                                'confidence' => $fieldConfig['confidence'],
+                                'label' => $fieldConfig['label']
+                            ],
+                            [
+                                'value' => $openLibraryValue,
+                                'source' => 'open_library',
+                                'confidence' => $fieldConfig['confidence'] - 5, // Slightly lower confidence for OpenLibrary
+                                'label' => $fieldConfig['label']
+                            ]
+                        ];
 
-                    // For publisher field, add recommended matches from existing database
-                    if ($fieldName === 'publisher') {
-                        error_log("PUBLISHER_TEST: Processing publisher field with options: " . json_encode($options));
-                        error_log("PUBLISHER_TEST: Options count: " . count($options));
-                        foreach ($options as $index => &$option) {
-                            error_log("PUBLISHER_TEST: Option $index structure: " . json_encode($option));
-                            if (isset($option['value']) && !empty($option['value'])) {
-                                error_log("PUBLISHER_TEST: Looking for publisher match for: " . $option['value']);
-                                $bestMatch = findBestPublisherMatch($option['value']);
-                                error_log("PUBLISHER_TEST: Publisher match result: " . json_encode($bestMatch));
-                                if ($bestMatch && $bestMatch['confidence'] >= 80) { // Higher threshold - only recommend very good matches
-                                    $option['recommended'] = $bestMatch['name'];
-                                    $option['recommendation_confidence'] = $bestMatch['confidence'];
-                                    $option['match_type'] = $bestMatch['match_type'];
-                                    error_log("PUBLISHER_TEST: Added recommendation: " . $bestMatch['name'] . " with confidence " . $bestMatch['confidence']);
-                                } else {
-                                    $option['recommended'] = false; // Explicitly set to false when no good match
-                                    error_log("PUBLISHER_TEST: No suitable match found (confidence: " . ($bestMatch ? $bestMatch['confidence'] : 'no match') . "%)");
+                        // For publisher field, add recommended matches from existing database
+                        if ($fieldName === 'publisher') {
+                            debugLog("Processing publisher field with options", $options);
+                            foreach ($options as $index => &$option) {
+                                if (isset($option['value']) && !empty($option['value'])) {
+                                    $bestMatch = findBestPublisherMatch($option['value']);
+                                    if ($bestMatch && $bestMatch['confidence'] >= 80) { // Higher threshold - only recommend very good matches
+                                        $option['recommended'] = $bestMatch['name'];
+                                        $option['recommendation_confidence'] = $bestMatch['confidence'];
+                                        $option['match_type'] = $bestMatch['match_type'];
+                                        debugLog("Added publisher recommendation: " . $bestMatch['name'] . " with confidence " . $bestMatch['confidence']);
+                                    } else {
+                                        $option['recommended'] = false; // Explicitly set to false when no good match
+                                        debugLog("No suitable publisher match found");
+                                    }
                                 }
-                            } else {
-                                error_log("PUBLISHER_TEST: Option $index has no value or empty value: " . json_encode($option));
                             }
+                            unset($option); // Break the reference to avoid issues
                         }
-                        unset($option); // Break the reference to avoid issues
-                        error_log("PUBLISHER_TEST: Final publisher options with recommendations: " . json_encode($options));
-                    }
 
-                    $combinedFields[$fieldName] = [
-                        'current_value' => $currentValues[$fieldName] ?? null,
-                        'new_data' => ['options' => $options],
-                        'label' => $fieldConfig['label']
-                    ];
+                        $combinedFields[$fieldName] = [
+                            'current_value' => $currentValues[$fieldName] ?? null,
+                            'new_data' => ['options' => $options],
+                            'label' => $fieldConfig['label']
+                        ];
+                    }
                 }
             } elseif (!in_array($fieldName, ['purchase_links', 'format', 'price_range'])) {
                 // Only one source has data (but don't override Amazon fields)

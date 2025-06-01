@@ -498,8 +498,13 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
             structure: data.fields[f]
         })));
 
-        // Fetch Amazon data asynchronously to populate Amazon-derived fields
-        fetchAmazonDataForFields(data.fields);
+        // CRITICAL FIX: Only fetch Amazon data if not already included in PHP response
+        if (!hasAmazonData) {
+            console.log('📦 AMAZON_FETCH_FIX: Amazon data not in PHP response - fetching via AJAX');
+            fetchAmazonDataForFields(data.fields);
+        } else {
+            console.log('📦 AMAZON_FETCH_FIX: Amazon data already in PHP response - skipping redundant AJAX call');
+        }
 
         // Update Google Books status badge based on available data
         if (data.fields && Object.keys(data.fields).length > 0) {
@@ -1608,6 +1613,36 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                             } else {
                                 console.log('🔄 Radio change: No mapping found for age range', ageRangeValue);
                                 updateFieldDisplay('reading_level', null, true);
+                            }
+
+                            // CRITICAL FIX: Synchronize source selection between age_range and reading_level
+                            const selectedOptionIndex = $(this).val();
+                            console.log('🔄 SOURCE_SYNC: Age range source changed to index:', selectedOptionIndex);
+
+                            // Find corresponding reading level radio button and select it
+                            const readingLevelRadio = $(`input[name="field_reading_level_option"][value="${selectedOptionIndex}"]`);
+                            if (readingLevelRadio.length > 0 && !readingLevelRadio.is(':checked')) {
+                                readingLevelRadio.prop('checked', true);
+                                console.log('🔄 SOURCE_SYNC: Auto-selected corresponding reading level source at index:', selectedOptionIndex);
+
+                                // Trigger change event to update display
+                                readingLevelRadio.trigger('change');
+                            }
+                        }
+
+                        // CRITICAL FIX: If reading_level radio changed, sync with age_range
+                        if (fieldName === 'reading_level') {
+                            const selectedOptionIndex = $(this).val();
+                            console.log('🔄 SOURCE_SYNC: Reading level source changed to index:', selectedOptionIndex);
+
+                            // Find corresponding age range radio button and select it
+                            const ageRangeRadio = $(`input[name="field_age_range_option"][value="${selectedOptionIndex}"]`);
+                            if (ageRangeRadio.length > 0 && !ageRangeRadio.is(':checked')) {
+                                ageRangeRadio.prop('checked', true);
+                                console.log('🔄 SOURCE_SYNC: Auto-selected corresponding age range source at index:', selectedOptionIndex);
+
+                                // Trigger change event to update display
+                                ageRangeRadio.trigger('change');
                             }
                         }
                     }, 100);

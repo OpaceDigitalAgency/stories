@@ -1493,18 +1493,28 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
             return !empty($awards) ? implode(', ', array_unique($awards)) : null;
 
         case 'characters':
-            // Get characters from OpenLibrary person_facet data
+            // Get characters from OpenLibrary person_facet data with deduplication
+            $characters = [];
             if (isset($match['person_facet']) && is_array($match['person_facet'])) {
-                return implode(', ', array_slice($match['person_facet'], 0, 5));
+                $characters = $match['person_facet'];
             }
             // Fallback to person[] if person_facet not available
             elseif (isset($match['person']) && is_array($match['person'])) {
-                return implode(', ', array_slice($match['person'], 0, 5));
+                $characters = $match['person'];
+            }
+
+            if (!empty($characters)) {
+                // CRITICAL FIX: Deduplicate and clean characters
+                $uniqueCharacters = array_unique(array_map('trim', $characters));
+                $uniqueCharacters = array_filter($uniqueCharacters, function($char) {
+                    return !empty($char) && strlen($char) > 1; // Remove empty and single character entries
+                });
+                return implode(', ', array_slice($uniqueCharacters, 0, 5));
             }
             break;
 
         case 'settings':
-            // Use Open Library place_facet[] with enhanced processing
+            // Use Open Library place_facet[] with enhanced processing and deduplication
             $places = [];
             if (isset($match['place_facet']) && is_array($match['place_facet'])) {
                 $places = $match['place_facet'];
@@ -1513,8 +1523,14 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
             }
 
             if (!empty($places)) {
+                // CRITICAL FIX: Deduplicate and clean places first
+                $uniquePlaces = array_unique(array_map('trim', $places));
+                $uniquePlaces = array_filter($uniquePlaces, function($place) {
+                    return !empty($place) && strlen($place) > 1; // Remove empty and single character entries
+                });
+
                 // Convert array to comma-separated string for processing
-                $placesString = implode(', ', $places);
+                $placesString = implode(', ', $uniquePlaces);
 
                 // Use enhanced location processing
                 $processedPlaces = processLocationValues($placesString);

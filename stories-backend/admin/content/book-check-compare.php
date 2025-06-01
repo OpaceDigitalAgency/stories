@@ -301,40 +301,36 @@ $pageActions = '
                     <!-- Dynamic Root Cause Analysis -->
                     <?php
                     $enrichedFields = $enrichedData['fields'] ?? [];
-                    $titleField = $enrichedFields['title'] ?? null;
-                    $authorField = $enrichedFields['author'] ?? null;
-                    $ageRangeField = $enrichedFields['age_range'] ?? null;
-                    $readingLevelField = $enrichedFields['reading_level'] ?? null;
-
                     $issues = [];
                     $working = [];
 
-                    // Check title
-                    if (!$titleField || ($titleField['value'] ?? null) === null) {
-                        $issues[] = "Title extraction failing";
-                    } else {
-                        $working[] = "Title extraction (" . ($titleField['source'] ?? 'unknown') . ")";
+                    // Analyze all enriched fields dynamically
+                    foreach ($enrichedFields as $fieldName => $fieldData) {
+                        // Skip maturity_rating as requested
+                        if ($fieldName === 'maturity_rating') continue;
+
+                        $value = $fieldData['value'] ?? null;
+                        $source = $fieldData['source'] ?? 'unknown';
+
+                        if (empty($value) || $value === 'Not extracted' || $value === 'N/A') {
+                            $issues[] = ucfirst(str_replace('_', ' ', $fieldName)) . " extraction (" . $source . ")";
+                        } else {
+                            $working[] = ucfirst(str_replace('_', ' ', $fieldName)) . " extraction (" . $source . ")";
+                        }
                     }
 
-                    // Check author
-                    if (!$authorField || ($authorField['value'] ?? null) === null) {
-                        $issues[] = "Author extraction failing";
-                    } else {
-                        $working[] = "Author extraction (" . ($authorField['source'] ?? 'unknown') . ")";
-                    }
+                    // Check API connectivity dynamically
+                    if (isset($results['api_tests'])) {
+                        foreach ($results['api_tests'] as $apiName => $apiResult) {
+                            $apiDisplayName = ucfirst(str_replace('_', ' ', $apiName)) . " API";
 
-                    // Check age range
-                    if (!$ageRangeField || ($ageRangeField['value'] ?? null) === null) {
-                        $issues[] = "Age range processing not working";
-                    } else {
-                        $working[] = "Age range processing (" . ($ageRangeField['source'] ?? 'unknown') . ")";
-                    }
-
-                    // Check reading level
-                    if (!$readingLevelField || ($readingLevelField['value'] ?? null) === null) {
-                        $issues[] = "Reading level derivation not working";
-                    } else {
-                        $working[] = "Reading level derivation (" . ($readingLevelField['source'] ?? 'unknown') . ")";
+                            if (isset($apiResult['success']) && $apiResult['success']) {
+                                $working[] = $apiDisplayName . " connectivity";
+                            } else {
+                                $error = $apiResult['error'] ?? $apiResult['message'] ?? 'Connection failed';
+                                $issues[] = $apiDisplayName . " (" . $error . ")";
+                            }
+                        }
                     }
 
                     $alertClass = empty($issues) ? 'alert-success' : 'alert-warning';
@@ -779,6 +775,37 @@ $pageActions = '
                                         'google' => 'Not available',
                                         'ol' => isset($olData['series']) ? implode(', ', $olData['series']) : 'N/A',
                                         'amazon' => $amazonData['metadata']['series'] ?? 'N/A'
+                                    ],
+                                    'awards' => [
+                                        'google' => 'Not available',
+                                        'ol' => (function() use ($olData) {
+                                            $awards = [];
+                                            if (isset($olData['subject_facet']) && is_array($olData['subject_facet'])) {
+                                                foreach ($olData['subject_facet'] as $facet) {
+                                                    if (stripos($facet, 'award:hugo_award=2003') !== false) {
+                                                        $awards[] = "Hugo Award (2003)";
+                                                    } elseif (stripos($facet, 'award:hugo_award=novella') !== false) {
+                                                        $awards[] = "Hugo Award (Novella)";
+                                                    } elseif (stripos($facet, 'Hugo Award Winner') !== false) {
+                                                        $awards[] = "Hugo Award Winner";
+                                                    } elseif (stripos($facet, 'award') !== false || stripos($facet, 'winner') !== false) {
+                                                        $awards[] = $facet;
+                                                    }
+                                                }
+                                            }
+                                            if (isset($olData['subject']) && is_array($olData['subject'])) {
+                                                foreach ($olData['subject'] as $subject) {
+                                                    if (stripos($subject, 'Hugo Award Winner') !== false ||
+                                                        stripos($subject, 'Newbery') !== false ||
+                                                        stripos($subject, 'Caldecott') !== false ||
+                                                        stripos($subject, 'award') !== false) {
+                                                        $awards[] = $subject;
+                                                    }
+                                                }
+                                            }
+                                            return !empty($awards) ? implode(', ', array_unique($awards)) : 'N/A';
+                                        })(),
+                                        'amazon' => 'Not available'
                                     ]
                                 ];
 
@@ -827,62 +854,175 @@ $pageActions = '
                         <h6><strong>📋 AVAILABLE DATA NOT BEING USED:</strong></h6>
                         <div class="row">
                             <div class="col-md-4">
-                                <strong>🛒 Amazon (HTML Available):</strong>
+                                <strong>🛒 Amazon (Available but NOT Used):</strong>
                                 <ul class="mb-0 small">
-                                    <?php if (isset($amazonData['metadata']['reading_age'])): ?>
-                                    <li><strong>Specific Age:</strong> "<?php echo htmlspecialchars($amazonData['metadata']['reading_age']); ?>"</li>
+                                    <?php
+                                    $amazonUnused = [];
+                                    $amazonUsedFields = ['reading_age', 'publisher', 'publication_date', 'language', 'print_length', 'isbn_10', 'isbn_13'];
+
+                                    // Check for unused Amazon metadata
+                                    if (isset($amazonData['metadata'])) {
+                                        foreach ($amazonData['metadata'] as $key => $value) {
+                                            if (!in_array($key, $amazonUsedFields) && !empty($value)) {
+                                                $amazonUnused[] = ucfirst(str_replace('_', ' ', $key)) . ': "' . htmlspecialchars($value) . '"';
+                                            }
+                                        }
+                                    }
+
+                                    // Check for unused buying options data
+                                    if (!empty($amazonData['buying_options'])) {
+                                        $formatCount = count($amazonData['buying_options']);
+                                        $formats = array_keys($amazonData['buying_options']);
+                                        $amazonUnused[] = 'Reviews/Ratings: Available in HTML but not extracted';
+                                        $amazonUnused[] = 'Best Sellers Rank: Available in HTML but not extracted';
+                                        $amazonUnused[] = 'Product Details: Available in HTML but not extracted';
+                                    }
+
+                                    if (!empty($amazonUnused)):
+                                        foreach (array_slice($amazonUnused, 0, 5) as $unused):
+                                    ?>
+                                    <li><?php echo $unused; ?></li>
+                                    <?php
+                                        endforeach;
+                                        if (count($amazonUnused) > 5):
+                                    ?>
+                                    <li><em>...and <?php echo count($amazonUnused) - 5; ?> more fields</em></li>
                                     <?php endif; ?>
-                                    <?php if (isset($amazonData['metadata']['series'])): ?>
-                                    <li><strong>Series:</strong> "<?php echo htmlspecialchars($amazonData['metadata']['series']); ?>"</li>
-                                    <?php endif; ?>
-                                    <?php if (isset($amazonData['metadata']['reviews'])): ?>
-                                    <li><strong>Reviews:</strong> "<?php echo htmlspecialchars($amazonData['metadata']['reviews']); ?>"</li>
-                                    <?php endif; ?>
-                                    <?php if (isset($amazonData['metadata']['pages'])): ?>
-                                    <li><strong>Physical:</strong> "<?php echo htmlspecialchars($amazonData['metadata']['pages']); ?> pages<?php
-                                        if (isset($amazonData['metadata']['weight'])) echo ', ' . htmlspecialchars($amazonData['metadata']['weight']);
-                                        if (isset($amazonData['metadata']['dimensions'])) echo ', ' . htmlspecialchars($amazonData['metadata']['dimensions']);
-                                    ?>"</li>
-                                    <?php endif; ?>
-                                    <?php if (isset($amazonData['metadata']['rankings'])): ?>
-                                    <li><strong>Rankings:</strong> "<?php echo htmlspecialchars($amazonData['metadata']['rankings']); ?>"</li>
-                                    <?php endif; ?>
-                                    <?php if (!isset($amazonData['metadata']['reading_age']) && !isset($amazonData['metadata']['series']) && !isset($amazonData['metadata']['reviews']) && !isset($amazonData['metadata']['pages']) && !isset($amazonData['metadata']['rankings'])): ?>
-                                    <li><em>No additional metadata extracted</em></li>
+                                    <?php else: ?>
+                                    <li><em>All available Amazon data is being used</em></li>
                                     <?php endif; ?>
                                 </ul>
                             </div>
                             <div class="col-md-4">
-                                <strong>📖 OpenLibrary (Available):</strong>
+                                <strong>📖 OpenLibrary (Available but NOT Used):</strong>
                                 <ul class="mb-0 small">
-                                    <?php if (isset($olData['subject']) && !empty($olData['subject'])): ?>
-                                    <li><strong>Rich Subjects:</strong> "<?php echo htmlspecialchars(implode(', ', array_slice($olData['subject'], 0, 8))); ?><?php echo count($olData['subject']) > 8 ? '...' : ''; ?>"</li>
+                                    <?php
+                                    $olUnused = [];
+                                    $olUsedFields = ['title', 'author_name', 'publisher', 'first_publish_year', 'number_of_pages_median', 'language', 'isbn', 'subject', 'subject_key', 'subject_facet'];
+
+                                    // Check for unused OpenLibrary fields
+                                    if (isset($olData)) {
+                                        // Characters (person/person_facet) - NOT used in enrichment
+                                        if (isset($olData['person']) && !empty($olData['person'])) {
+                                            $personCount = count($olData['person']);
+                                            $displayPersons = array_slice($olData['person'], 0, 4);
+                                            $olUnused[] = "Characters ($personCount): " . htmlspecialchars(implode(', ', $displayPersons)) . ($personCount > 4 ? '...' : '');
+                                        }
+
+                                        // Settings (place/place_facet) - NOT used in enrichment
+                                        if (isset($olData['place']) && !empty($olData['place'])) {
+                                            $placeCount = count($olData['place']);
+                                            $displayPlaces = array_slice($olData['place'], 0, 4);
+                                            $olUnused[] = "Settings ($placeCount): " . htmlspecialchars(implode(', ', $displayPlaces)) . ($placeCount > 4 ? '...' : '');
+                                        }
+
+                                        // Ratings - NOT used in enrichment
+                                        if (isset($olData['ratings_average']) && !empty($olData['ratings_average'])) {
+                                            $olUnused[] = "Average Rating: " . htmlspecialchars($olData['ratings_average']);
+                                        }
+                                        if (isset($olData['ratings_count']) && !empty($olData['ratings_count'])) {
+                                            $olUnused[] = "Rating Count: " . htmlspecialchars($olData['ratings_count']);
+                                        }
+
+                                        // Internet Archive ID - NOT used in enrichment
+                                        if (isset($olData['ia']) && !empty($olData['ia'])) {
+                                            $olUnused[] = "Internet Archive ID: " . htmlspecialchars($olData['ia'][0]);
+                                        }
+
+                                        // Lexile scores - NOT used in enrichment
+                                        if (isset($olData['lexile']) && !empty($olData['lexile'])) {
+                                            $olUnused[] = "Lexile Score: " . htmlspecialchars($olData['lexile'][0]);
+                                        }
+
+                                        // Check for other unused fields
+                                        foreach ($olData as $key => $value) {
+                                            if (!in_array($key, $olUsedFields) && !empty($value) && !in_array($key, ['person', 'place', 'ratings_average', 'ratings_count', 'ia', 'lexile'])) {
+                                                if (is_array($value)) {
+                                                    $olUnused[] = ucfirst(str_replace('_', ' ', $key)) . " (" . count($value) . " items): " . htmlspecialchars(implode(', ', array_slice($value, 0, 3))) . (count($value) > 3 ? '...' : '');
+                                                } else {
+                                                    $olUnused[] = ucfirst(str_replace('_', ' ', $key)) . ": " . htmlspecialchars($value);
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    if (!empty($olUnused)):
+                                        foreach (array_slice($olUnused, 0, 6) as $unused):
+                                    ?>
+                                    <li><?php echo $unused; ?></li>
+                                    <?php
+                                        endforeach;
+                                        if (count($olUnused) > 6):
+                                    ?>
+                                    <li><em>...and <?php echo count($olUnused) - 6; ?> more fields</em></li>
                                     <?php endif; ?>
-                                    <?php if (isset($olData['person']) && !empty($olData['person'])): ?>
-                                    <li><strong>Characters:</strong> "<?php echo htmlspecialchars(implode(', ', array_slice($olData['person'], 0, 5))); ?><?php echo count($olData['person']) > 5 ? '...' : ''; ?>"</li>
-                                    <?php endif; ?>
-                                    <?php if (isset($olData['place']) && !empty($olData['place'])): ?>
-                                    <li><strong>Settings:</strong> "<?php echo htmlspecialchars(implode(', ', array_slice($olData['place'], 0, 5))); ?><?php echo count($olData['place']) > 5 ? '...' : ''; ?>"</li>
-                                    <?php endif; ?>
-                                    <?php if (!isset($olData['subject']) && !isset($olData['person']) && !isset($olData['place'])): ?>
-                                    <li><em>No additional metadata available</em></li>
+                                    <?php else: ?>
+                                    <li><em>All available OpenLibrary data is being used</em></li>
                                     <?php endif; ?>
                                 </ul>
                             </div>
                             <div class="col-md-4">
-                                <strong>📚 Google Books (Available):</strong>
+                                <strong>📚 Google Books (Available but NOT Used):</strong>
                                 <ul class="mb-0 small">
-                                    <?php if (isset($googleData['categories']) && !empty($googleData['categories'])): ?>
-                                    <li><strong>Categories:</strong> "<?php echo htmlspecialchars(implode(', ', $googleData['categories'])); ?>" <?php echo (count($googleData['categories']) == 1 && strtolower($googleData['categories'][0]) == 'children') ? '(too vague for age mapping)' : ''; ?></li>
+                                    <?php
+                                    $googleUnused = [];
+                                    $googleUsedFields = ['title', 'authors', 'publisher', 'publishedDate', 'pageCount', 'language', 'categories', 'industryIdentifiers', 'imageLinks', 'previewLink'];
+
+                                    // Check for unused Google Books fields
+                                    if (isset($googleData)) {
+                                        // Description - NOT used in enrichment
+                                        if (isset($googleData['description']) && !empty($googleData['description'])) {
+                                            $descLength = strlen($googleData['description']);
+                                            $googleUnused[] = "Description: Full book description available ($descLength characters)";
+                                        }
+
+                                        // Ratings - NOT used in enrichment
+                                        if (isset($googleData['averageRating']) && !empty($googleData['averageRating'])) {
+                                            $googleUnused[] = "Average Rating: " . htmlspecialchars($googleData['averageRating']);
+                                        }
+                                        if (isset($googleData['ratingsCount']) && !empty($googleData['ratingsCount'])) {
+                                            $googleUnused[] = "Ratings Count: " . htmlspecialchars($googleData['ratingsCount']);
+                                        }
+
+                                        // Maturity Rating - NOT used in enrichment
+                                        if (isset($googleData['maturityRating']) && !empty($googleData['maturityRating'])) {
+                                            $googleUnused[] = "Maturity Rating: " . htmlspecialchars($googleData['maturityRating']);
+                                        }
+
+                                        // Print Type - NOT used in enrichment
+                                        if (isset($googleData['printType']) && !empty($googleData['printType'])) {
+                                            $googleUnused[] = "Print Type: " . htmlspecialchars($googleData['printType']);
+                                        }
+
+                                        // Content Version - NOT used in enrichment
+                                        if (isset($googleData['contentVersion']) && !empty($googleData['contentVersion'])) {
+                                            $googleUnused[] = "Content Version: " . htmlspecialchars($googleData['contentVersion']);
+                                        }
+
+                                        // Check for other unused fields
+                                        foreach ($googleData as $key => $value) {
+                                            if (!in_array($key, $googleUsedFields) && !empty($value) && !in_array($key, ['description', 'averageRating', 'ratingsCount', 'maturityRating', 'printType', 'contentVersion'])) {
+                                                if (is_array($value)) {
+                                                    $googleUnused[] = ucfirst(str_replace('_', ' ', $key)) . " (" . count($value) . " items): " . htmlspecialchars(implode(', ', array_slice($value, 0, 3))) . (count($value) > 3 ? '...' : '');
+                                                } else {
+                                                    $googleUnused[] = ucfirst(str_replace('_', ' ', $key)) . ": " . htmlspecialchars($value);
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    if (!empty($googleUnused)):
+                                        foreach (array_slice($googleUnused, 0, 6) as $unused):
+                                    ?>
+                                    <li><?php echo $unused; ?></li>
+                                    <?php
+                                        endforeach;
+                                        if (count($googleUnused) > 6):
+                                    ?>
+                                    <li><em>...and <?php echo count($googleUnused) - 6; ?> more fields</em></li>
                                     <?php endif; ?>
-                                    <?php if (isset($googleData['description'])): ?>
-                                    <li><strong>Description:</strong> Full book description available</li>
-                                    <?php endif; ?>
-                                    <?php if (isset($googleData['previewLink'])): ?>
-                                    <li><strong>Preview:</strong> Book preview links</li>
-                                    <?php endif; ?>
-                                    <?php if (!isset($googleData['categories']) && !isset($googleData['description']) && !isset($googleData['previewLink'])): ?>
-                                    <li><em>No additional metadata available</em></li>
+                                    <?php else: ?>
+                                    <li><em>All available Google Books data is being used</em></li>
                                     <?php endif; ?>
                                 </ul>
                             </div>

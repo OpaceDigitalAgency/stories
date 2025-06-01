@@ -2644,6 +2644,8 @@ function extractAmazonMetadata($responses) {
                 'dimensions' => '/<span[^>]*class="a-text-bold"[^>]*>Dimensions[^<]*<\/span>\s*<span[^>]*>([^<]+)<\/span>/i',
                 'item_weight' => '/<span[^>]*class="a-text-bold"[^>]*>Item weight[^<]*<\/span>\s*<span[^>]*>([^<]+)<\/span>/i',
                 'series' => '/<span[^>]*class="a-text-bold"[^>]*>Book \d+ of \d+[^<]*<\/span>\s*<a[^>]*><span[^>]*>([^<]+)<\/span><\/a>/i',
+                'series_alt1' => '/Book \d+ of \d+\s*:\s*([^<\n]+)/i',
+                'series_alt2' => '/<span[^>]*class="a-list-item"[^>]*>.*?Book \d+ of \d+.*?<a[^>]*>([^<]+)<\/a>/is',
             ];
 
             foreach ($bulletPatterns as $key => $pattern) {
@@ -2673,6 +2675,12 @@ function extractAmazonMetadata($responses) {
                         if (strpos($key, 'reading_age') === 0) {
                             $metadata['reading_age'] = $value;
                             error_log("AMAZON_EXTRACT_DEBUG: Set reading_age to: '$value'");
+                        } elseif (strpos($key, 'series') === 0) {
+                            // For series alternatives, map them all to 'series' and only keep the first match
+                            if (!isset($metadata['series'])) {
+                                $metadata['series'] = $value;
+                                error_log("AMAZON_EXTRACT_DEBUG: Set series to: '$value'");
+                            }
                         } else {
                             $metadata[$key] = $value;
                         }

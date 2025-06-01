@@ -1419,26 +1419,55 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
             return null;
 
         case 'author':
-            // Handle different author field formats between APIs
-            if (isset($match['author_name']) && is_array($match['author_name'])) {
-                // OpenLibrary format: author_name array
-                return !empty($match['author_name']) ? $match['author_name'][0] : null;
-            } elseif (isset($match['author_name']) && is_string($match['author_name'])) {
-                // OpenLibrary format: author_name string
-                return $match['author_name'];
-            } elseif (isset($match['author'])) {
-                // Google Books format: author field
-                if (is_array($match['author'])) {
-                    return !empty($match['author']) ? $match['author'][0] : null;
-                } else {
-                    return $match['author'];
-                }
+            // CRITICAL FIX: Handle different author field formats between APIs
+            error_log("AUTHOR_EXTRACT_DEBUG: Processing author field for match: " . json_encode($match));
+
+            // Google Books format: 'author' field (string, already joined)
+            if (isset($match['author']) && !empty($match['author'])) {
+                error_log("AUTHOR_EXTRACT_DEBUG: Found Google Books author field: " . $match['author']);
+                return $match['author'];
             }
+
+            // OpenLibrary format: author_name array
+            if (isset($match['author_name']) && is_array($match['author_name'])) {
+                $author = !empty($match['author_name']) ? $match['author_name'][0] : null;
+                error_log("AUTHOR_EXTRACT_DEBUG: Found OpenLibrary author_name array: " . json_encode($author));
+                return $author;
+            } elseif (isset($match['author_name']) && is_string($match['author_name'])) {
+                error_log("AUTHOR_EXTRACT_DEBUG: Found OpenLibrary author_name string: " . $match['author_name']);
+                return $match['author_name'];
+            }
+
+            // Fallback: check for 'authors' array (some APIs use this)
+            if (isset($match['authors']) && is_array($match['authors'])) {
+                $author = !empty($match['authors']) ? $match['authors'][0] : null;
+                error_log("AUTHOR_EXTRACT_DEBUG: Found authors array: " . json_encode($author));
+                return $author;
+            }
+
+            error_log("AUTHOR_EXTRACT_DEBUG: No author field found in match data");
+            return null;
+
+        case 'title':
+            // CRITICAL FIX: Handle title field extraction
+            error_log("TITLE_EXTRACT_DEBUG: Processing title field for match: " . json_encode($match));
+
+            // Standard title field (used by both Google Books and OpenLibrary)
+            if (isset($match['title']) && !empty($match['title'])) {
+                error_log("TITLE_EXTRACT_DEBUG: Found title field: " . $match['title']);
+                return $match['title'];
+            }
+
+            error_log("TITLE_EXTRACT_DEBUG: No title field found in match data");
             return null;
 
         default:
-            // Standard field extraction
-            return $match[$fieldName] ?? null;
+            // Standard field extraction with debug logging
+            $value = $match[$fieldName] ?? null;
+            if ($fieldName === 'author' || $fieldName === 'title') {
+                error_log("FIELD_EXTRACT_DEBUG: Standard extraction for '$fieldName': " . json_encode($value));
+            }
+            return $value;
     }
 
     return null;
@@ -2430,17 +2459,29 @@ function extractAmazonMetadata($responses) {
             foreach ($bulletPatterns as $key => $pattern) {
                 if (preg_match($pattern, $bulletContent, $matches)) {
                     $value = trim(strip_tags($matches[1]));
-                    // Clean up whitespace and special characters
-                    $value = preg_replace('/\s+/', ' ', $value);
-                    $value = trim($value, " \t\n\r\0\x0B\xE2\x80\x8F\xE2\x80\x8E"); // Remove Unicode directional marks
 
-                    if (!empty($value)) {
+                    // CRITICAL FIX: Comprehensive cleaning of Amazon text
+                    // Remove all Unicode directional marks and invisible characters
+                    $value = preg_replace('/[\x{200E}\x{200F}\x{202A}-\x{202E}\x{2066}-\x{2069}]/u', '', $value);
+                    // Remove HTML entities
+                    $value = html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                    // Clean up whitespace
+                    $value = preg_replace('/\s+/', ' ', $value);
+                    // Final trim
+                    $value = trim($value);
+
+                    error_log("AMAZON_EXTRACT_DEBUG: Key '$key' extracted value: '" . $value . "' (length: " . strlen($value) . ")");
+
+                    if (!empty($value) && $value !== '‎' && strlen($value) > 1) {
                         // For reading age alternatives, map them all to 'reading_age'
                         if (strpos($key, 'reading_age') === 0) {
                             $metadata['reading_age'] = $value;
+                            error_log("AMAZON_EXTRACT_DEBUG: Set reading_age to: '$value'");
                         } else {
                             $metadata[$key] = $value;
                         }
+                    } else {
+                        error_log("AMAZON_EXTRACT_DEBUG: Rejected empty or invalid value for '$key': '" . $value . "'");
                     }
                 }
             }
@@ -2453,8 +2494,18 @@ function extractAmazonMetadata($responses) {
             // Extract reading age from carousel
             if (preg_match('/<span>Reading age<\/span>.*?<span[^>]*>([^<]+)<\/span>/is', $carouselContent, $readingMatch)) {
                 $readingAge = trim(strip_tags($readingMatch[1]));
-                if (!empty($readingAge) && !isset($metadata['reading_age'])) {
+
+                // CRITICAL FIX: Apply same cleaning as bullet points
+                $readingAge = preg_replace('/[\x{200E}\x{200F}\x{202A}-\x{202E}\x{2066}-\x{2069}]/u', '', $readingAge);
+                $readingAge = html_entity_decode($readingAge, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                $readingAge = preg_replace('/\s+/', ' ', $readingAge);
+                $readingAge = trim($readingAge);
+
+                error_log("AMAZON_CAROUSEL_DEBUG: Extracted reading age: '$readingAge' (length: " . strlen($readingAge) . ")");
+
+                if (!empty($readingAge) && $readingAge !== '‎' && strlen($readingAge) > 1 && !isset($metadata['reading_age'])) {
                     $metadata['reading_age'] = $readingAge;
+                    error_log("AMAZON_CAROUSEL_DEBUG: Set reading_age from carousel to: '$readingAge'");
                 }
             }
 

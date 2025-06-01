@@ -11,6 +11,36 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 ini_set('log_errors', 1);
 
+// Add JavaScript error handler
+echo '<script>
+window.onerror = function(msg, url, lineNo, columnNo, error) {
+    console.error("BOOK_CHECK_JS_ERROR:", {
+        message: msg,
+        source: url,
+        line: lineNo,
+        column: columnNo,
+        error: error
+    });
+
+    // Display error on page
+    var errorDiv = document.createElement("div");
+    errorDiv.className = "alert alert-danger";
+    errorDiv.innerHTML = "<strong>JavaScript Error:</strong> " + msg + " (Line: " + lineNo + ")";
+    document.body.insertBefore(errorDiv, document.body.firstChild);
+
+    return false;
+};
+
+window.addEventListener("unhandledrejection", function(event) {
+    console.error("BOOK_CHECK_PROMISE_ERROR:", event.reason);
+
+    var errorDiv = document.createElement("div");
+    errorDiv.className = "alert alert-danger";
+    errorDiv.innerHTML = "<strong>Promise Error:</strong> " + event.reason;
+    document.body.insertBefore(errorDiv, document.body.firstChild);
+});
+</script>';
+
 // Set page title and current page
 $pageTitle = 'Book Check & Compare';
 $currentPage = 'book-check-compare';

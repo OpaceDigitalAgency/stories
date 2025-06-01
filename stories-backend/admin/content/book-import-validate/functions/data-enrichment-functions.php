@@ -252,6 +252,15 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $amazonData
             if (!empty($amazonData)) {
                 debugLog("Amazon metadata for field '$fieldName'", $amazonData['metadata'] ?? []);
                 debugLog("Amazon buying_options for field '$fieldName'", $amazonData['buying_options'] ?? []);
+
+                // CRITICAL: Debug the specific field extraction
+                if ($fieldName === 'age_range' && isset($amazonData['metadata']['reading_age'])) {
+                    debugLog("CRITICAL: Amazon has reading_age but extraction returned NULL: " . $amazonData['metadata']['reading_age']);
+                }
+                if ($fieldName === 'format' && isset($amazonData['buying_options'])) {
+                    debugLog("CRITICAL: Amazon has buying_options but format extraction returned NULL");
+                    debugLog("Available formats", array_keys($amazonData['buying_options']));
+                }
             }
         }
 
@@ -3236,16 +3245,16 @@ function extractAmazonFieldValue($amazonData, $fieldName, $currentISBN = '') {
 
             // Check buying options for price
             $buyingOptions = $amazonData['buying_options'] ?? [];
-            error_log("SCRAPE_TEST: Price extraction - buying_options available: " . (!empty($buyingOptions) ? 'YES' : 'NO'));
+            debugLog("Price extraction - buying_options available: " . (!empty($buyingOptions) ? 'YES' : 'NO'));
             if (!empty($buyingOptions)) {
-                error_log("SCRAPE_TEST: Price extraction - buying_options data: " . json_encode($buyingOptions));
+                debugLog("Price extraction - buying_options data", $buyingOptions);
                 foreach ($buyingOptions as $format => $option) {
                     if (isset($option['is_selected']) && $option['is_selected'] && isset($option['price'])) {
-                        error_log("SCRAPE_TEST: Found selected price from buying_options: '{$option['price']}'");
+                        debugLog("Found selected price from buying_options: '{$option['price']}'");
                         if (preg_match('/£(\d+\.\d{2})/', $option['price'], $matches)) {
                             $numericPrice = floatval($matches[1]);
                             $priceRange = mapPriceToRange($numericPrice);
-                            error_log("SCRAPE_TEST: Mapped price £$numericPrice to range: '$priceRange'");
+                            debugLog("Mapped price £$numericPrice to range: '$priceRange'");
                             return $priceRange;
                         }
                     }
@@ -3253,17 +3262,17 @@ function extractAmazonFieldValue($amazonData, $fieldName, $currentISBN = '') {
                 // If no selected price, use first available
                 $firstOption = reset($buyingOptions);
                 if ($firstOption && isset($firstOption['price'])) {
-                    error_log("SCRAPE_TEST: Using first available price: '{$firstOption['price']}'");
+                    debugLog("Using first available price: '{$firstOption['price']}'");
                     if (preg_match('/£(\d+\.\d{2})/', $firstOption['price'], $matches)) {
                         $numericPrice = floatval($matches[1]);
                         $priceRange = mapPriceToRange($numericPrice);
-                        error_log("SCRAPE_TEST: Mapped price £$numericPrice to range: '$priceRange'");
+                        debugLog("Mapped price £$numericPrice to range: '$priceRange'");
                         return $priceRange;
                     }
                 }
             }
 
-            error_log("SCRAPE_TEST: No price found in Amazon data");
+            debugLog("No price found in Amazon data");
             return null;
 
         case 'purchase_links':

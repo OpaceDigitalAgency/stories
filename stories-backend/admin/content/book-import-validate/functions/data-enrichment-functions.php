@@ -135,6 +135,12 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
     $googleMatch = findBestDataMatch($googleResults, $title, $author, $currentISBN);
     $openLibraryMatch = findBestDataMatch($openLibraryResults, $title, $author, $currentISBN);
 
+    // CRITICAL DEBUG: Log the actual matches found
+    error_log("MATCH_DEBUG: Google match found: " . ($googleMatch ? 'YES' : 'NO'));
+    error_log("MATCH_DEBUG: Google match data: " . json_encode($googleMatch));
+    error_log("MATCH_DEBUG: OpenLibrary match found: " . ($openLibraryMatch ? 'YES' : 'NO'));
+    error_log("MATCH_DEBUG: OpenLibrary match data: " . json_encode($openLibraryMatch));
+
     // Validate OpenLibrary match if we have an ISBN - STRICT validation
     if (!empty($currentISBN) && $openLibraryMatch) {
         $isValidMatch = validateOpenLibraryISBNMatch($openLibraryMatch, $currentISBN);

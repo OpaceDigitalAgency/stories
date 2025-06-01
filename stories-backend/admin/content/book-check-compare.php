@@ -415,6 +415,7 @@ $pageActions = '
                     </div>
 
                     <!-- Comprehensive Field Mapping Table -->
+                    <?php if (isset($results['api_tests'])): ?>
                     <div class="table-responsive mb-4">
                         <h6>📊 Complete Field Mapping: Books Table vs API Sources</h6>
                         <table class="table table-bordered table-hover">
@@ -429,10 +430,16 @@ $pageActions = '
                             </thead>
                             <tbody>
                                 <?php
-                                // Get API data
-                                $googleData = $results['api_tests']['google_books']['data']['items'][0]['volumeInfo'] ?? null;
-                                $olData = $results['api_tests']['open_library']['data']['docs'][0] ?? null;
-                                $amazonData = $results['api_tests']['amazon']['data'] ?? null;
+                                // Get API data safely
+                                $googleData = null;
+                                $olData = null;
+                                $amazonData = null;
+
+                                if (isset($results['api_tests'])) {
+                                    $googleData = $results['api_tests']['google_books']['data']['items'][0]['volumeInfo'] ?? null;
+                                    $olData = $results['api_tests']['open_library']['data']['docs'][0] ?? null;
+                                    $amazonData = $results['api_tests']['amazon']['data'] ?? null;
+                                }
 
                                 // Define field mappings
                                 $fieldMappings = [
@@ -545,6 +552,7 @@ $pageActions = '
                         </div>
                         <?php endif; ?>
                     </div>
+                    <?php endif; ?>
 
                     <!-- Note about testing approach -->
                     <?php if (isset($results['note'])): ?>

@@ -1421,12 +1421,6 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
             }
             return null;
 
-        case 'purchase_links':
-        case 'format':
-            // These fields are now handled directly in the main enrichment flow
-            // to avoid duplicate Amazon API calls
-            return null;
-
         case 'author':
             // CRITICAL FIX: Handle different author field formats between APIs
             error_log("AUTHOR_EXTRACT_DEBUG: Processing author field for match: " . json_encode($match));

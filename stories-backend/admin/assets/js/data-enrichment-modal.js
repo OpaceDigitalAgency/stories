@@ -2197,7 +2197,13 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                 console.log('🏷️ DISPLAY_DEBUG: Raw newData.value before formatting:', newData.value);
                 console.log('🏷️ DISPLAY_DEBUG: Type of newData.value:', typeof newData.value);
             }
-            displayValue = formatFieldValue(fieldName, newData.value);
+            // CRITICAL FIX: Ensure formatFieldValue is available before calling it
+            if (typeof window.formatFieldValue === 'function') {
+                displayValue = window.formatFieldValue(fieldName, newData.value);
+            } else {
+                console.warn('formatFieldValue function not available, using raw value for field:', fieldName);
+                displayValue = newData.value;
+            }
             // CRITICAL DEBUG: Log the formatted value
             if (fieldName === 'tags') {
                 console.log('🏷️ DISPLAY_DEBUG: Formatted displayValue:', displayValue);

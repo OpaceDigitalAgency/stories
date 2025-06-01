@@ -655,7 +655,6 @@ $siteName = get_config('site.name', 'Stories From The Web');
 
                 <!-- User Info and Actions (pushed to the right) -->
                 <div class="user-info ml-auto">
-                    <span class="user-name">Welcome, <?php echo htmlspecialchars($user['name'] ?? 'User'); ?></span>
                     <?php if ($isPublicDir): ?>
                     <a href="../admin/clear_session.php" class="btn btn-warning btn-sm" title="Clear session data if you experience login issues">
                         <i class="fas fa-broom"></i> Clear Session

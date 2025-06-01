@@ -240,26 +240,22 @@ require_once '../includes/header.php';
                                     '<small class="text-muted">' . htmlspecialchars(implode(', ', $missingFields)) . '</small>' :
                                     '<span class="badge badge-success">Complete</span>';
 
-                                // Format publisher, date, and format for display
+                                // Format publisher and date for display
                                 $publisher = !empty($book['publisher']) ? htmlspecialchars($book['publisher']) : '<span class="text-muted">Unknown</span>';
                                 $pubDate = !empty($book['publication_date']) ? htmlspecialchars($book['publication_date']) : '<span class="text-muted">Unknown</span>';
-                                $format = !empty($book['format']) ? htmlspecialchars($book['format']) : '<span class="text-muted">Unknown</span>';
 
                                 $tableData[] = [
                                     'id' => $book['id'],
                                     'title' => htmlspecialchars($book['title']),
-                                    'isbn' => !empty($isbn) ? htmlspecialchars($isbn) : '<span class="text-danger">Missing</span>',
+                                    'isbn13' => !empty($book['isbn13']) ? htmlspecialchars($book['isbn13']) : '<span class="text-danger">Missing</span>',
+                                    'isbn10' => !empty($book['isbn']) ? htmlspecialchars($book['isbn']) : '<span class="text-danger">Missing</span>',
                                     'publisher' => $publisher,
                                     'pub_date' => $pubDate,
-                                    'format' => $format,
                                     'status' => '<span class="isbn-status badge badge-' . $statusClass . '" title="' . htmlspecialchars($statusMessage) . '" data-book-id="' . $book['id'] . '" data-isbn="' . htmlspecialchars($book['isbn13'] ?? $book['isbn'] ?? '') . '"><i class="fas fa-' . $statusIcon . '"></i> ' . ucfirst($isbnStatus) . '</span>' .
                                                '<br><span class="goodreads-status badge badge-secondary" data-book-id="' . $book['id'] . '" data-isbn="' . htmlspecialchars($book['isbn13'] ?? $book['isbn'] ?? '') . '"><i class="fas fa-spinner fa-spin"></i> Checking...</span>',
                                     'missing_data' => $missingDataDisplay,
-                                    'actions' => '<a href="book-import-validate-new.php?action=validate_book&book_id=' . $book['id'] . '" ' .
-                                               'class="btn btn-sm btn-info" title="View detailed validation data">' .
-                                               '<i class="fas fa-search"></i></a>' .
-                                               ($isbnStatus === 'invalid' || $isbnStatus === 'mismatch' ?
-                                                   ' <button class="btn btn-sm btn-warning fix-isbn-btn" ' .
+                                    'actions' => ($isbnStatus === 'invalid' || $isbnStatus === 'mismatch' ?
+                                                   '<button class="btn btn-sm btn-warning fix-isbn-btn" ' .
                                                    'data-book-id="' . $book['id'] . '" ' .
                                                    'data-book-title="' . htmlspecialchars($book['title']) . '" ' .
                                                    'data-author="' . htmlspecialchars($book['author']) . '" ' .
@@ -281,10 +277,10 @@ require_once '../includes/header.php';
                             // Define table columns - include new fields for comparison
                             $columns = [
                                 'title' => 'Title',
-                                'isbn' => 'ISBN',
+                                'isbn13' => 'ISBN-13',
+                                'isbn10' => 'ISBN-10',
                                 'publisher' => 'Publisher',
                                 'pub_date' => 'Date',
-                                'format' => 'Format',
                                 'status' => 'Status',
                                 'missing_data' => 'Missing Data',
                                 'actions' => 'Actions'
@@ -305,7 +301,7 @@ require_once '../includes/header.php';
                                     'itemsPerPage' => $isbnPerPage,
                                     'currentPage' => $isbnPage,
                                     'totalItems' => $totalBooks,
-                                    'htmlFields' => ['isbn', 'publisher', 'pub_date', 'format', 'status', 'missing_data', 'actions'],
+                                    'htmlFields' => ['isbn13', 'isbn10', 'publisher', 'pub_date', 'status', 'missing_data', 'actions'],
                                     'showPagination' => false,
                                     'showItemsPerPage' => false
                                 ]

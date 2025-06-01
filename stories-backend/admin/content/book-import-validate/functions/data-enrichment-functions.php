@@ -167,6 +167,15 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
             error_log("AUTHOR_DEBUG: OpenLibrary value extracted: " . json_encode($openLibraryValue));
         }
 
+        // CRITICAL DEBUG: Log title field processing
+        if ($fieldName === 'title') {
+            error_log("TITLE_DEBUG: Processing title field");
+            error_log("TITLE_DEBUG: Google match data: " . json_encode($googleMatch));
+            error_log("TITLE_DEBUG: OpenLibrary match data: " . json_encode($openLibraryMatch));
+            error_log("TITLE_DEBUG: Google value extracted: " . json_encode($googleValue));
+            error_log("TITLE_DEBUG: OpenLibrary value extracted: " . json_encode($openLibraryValue));
+        }
+
         // Check if we have data from either source OR if this is an Amazon-derived field
         if (!empty($googleValue) || !empty($openLibraryValue) || in_array($fieldName, ['purchase_links', 'format', 'price_range'])) {
             // Special handling for tags - always merge them

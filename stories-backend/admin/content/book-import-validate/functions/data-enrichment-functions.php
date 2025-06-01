@@ -131,7 +131,21 @@ function getEnrichedBookData($title, $author, $currentISBN = '', $currentPublish
                 define('AMAZON_DEBUG', true);
             }
 
-            $amazonData = scrapeAmazonBuyingOptions($currentISBN);
+            // CRITICAL FIX: Amazon requires ISBN-10, so convert ISBN-13 to ISBN-10
+            $amazonISBN = $currentISBN;
+            if (strlen(preg_replace('/[^0-9X]/i', '', $currentISBN)) === 13) {
+                $isbn10 = convertISBN13ToISBN10($currentISBN);
+                if ($isbn10) {
+                    $amazonISBN = $isbn10;
+                    debugLog("Converted ISBN-13 to ISBN-10 for Amazon: $currentISBN -> $amazonISBN");
+                } else {
+                    debugLog("Failed to convert ISBN-13 to ISBN-10: $currentISBN");
+                }
+            } else {
+                debugLog("Using original ISBN for Amazon (already ISBN-10): $amazonISBN");
+            }
+
+            $amazonData = scrapeAmazonBuyingOptions($amazonISBN);
             $enrichedData['sources_checked'][] = 'amazon';
 
             // CRITICAL DEBUG: Log what Amazon data was actually retrieved

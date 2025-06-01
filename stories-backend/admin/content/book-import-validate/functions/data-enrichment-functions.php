@@ -2464,14 +2464,20 @@ function extractAmazonMetadata($responses) {
                     $value = trim(strip_tags($matches[1]));
 
                     // CRITICAL FIX: Comprehensive cleaning of Amazon text
+                    // Log raw value for debugging
+                    error_log("AMAZON_EXTRACT_DEBUG: Raw value for '$key': '" . $value . "' (hex: " . bin2hex($value) . ")");
+
                     // Remove all Unicode directional marks and invisible characters
-                    $value = preg_replace('/[\x{200E}\x{200F}\x{202A}-\x{202E}\x{2066}-\x{2069}]/u', '', $value);
+                    $value = preg_replace('/[\x{200E}\x{200F}\x{202A}-\x{202E}\x{2066}-\x{2069}\x{200B}\x{FEFF}]/u', '', $value);
                     // Remove HTML entities
                     $value = html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
                     // Clean up whitespace
                     $value = preg_replace('/\s+/', ' ', $value);
                     // Final trim
                     $value = trim($value);
+
+                    // Log cleaned value for debugging
+                    error_log("AMAZON_EXTRACT_DEBUG: Cleaned value for '$key': '" . $value . "' (hex: " . bin2hex($value) . ")");
 
                     error_log("AMAZON_EXTRACT_DEBUG: Key '$key' extracted value: '" . $value . "' (length: " . strlen($value) . ")");
 
@@ -2499,10 +2505,12 @@ function extractAmazonMetadata($responses) {
                 $readingAge = trim(strip_tags($readingMatch[1]));
 
                 // CRITICAL FIX: Apply same cleaning as bullet points
-                $readingAge = preg_replace('/[\x{200E}\x{200F}\x{202A}-\x{202E}\x{2066}-\x{2069}]/u', '', $readingAge);
+                error_log("AMAZON_CAROUSEL_DEBUG: Raw reading age: '" . $readingAge . "' (hex: " . bin2hex($readingAge) . ")");
+                $readingAge = preg_replace('/[\x{200E}\x{200F}\x{202A}-\x{202E}\x{2066}-\x{2069}\x{200B}\x{FEFF}]/u', '', $readingAge);
                 $readingAge = html_entity_decode($readingAge, ENT_QUOTES | ENT_HTML5, 'UTF-8');
                 $readingAge = preg_replace('/\s+/', ' ', $readingAge);
                 $readingAge = trim($readingAge);
+                error_log("AMAZON_CAROUSEL_DEBUG: Cleaned reading age: '" . $readingAge . "' (hex: " . bin2hex($readingAge) . ")");
 
                 error_log("AMAZON_CAROUSEL_DEBUG: Extracted reading age: '$readingAge' (length: " . strlen($readingAge) . ")");
 

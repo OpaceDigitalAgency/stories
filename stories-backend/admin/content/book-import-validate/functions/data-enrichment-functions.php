@@ -188,6 +188,15 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $amazonData
         $openLibraryValue = extractFieldValue($openLibraryMatch, $fieldName, $currentISBN);
         $amazonValue = extractAmazonFieldValue($amazonData, $fieldName, $currentISBN);
 
+        // CRITICAL DEBUG: Log Amazon field extraction for age_range and reading_level
+        if ($fieldName === 'age_range' || $fieldName === 'reading_level') {
+            error_log("FIELD_EXTRACTION_DEBUG: Field '$fieldName' - Amazon data available: " . (!empty($amazonData) ? 'YES' : 'NO'));
+            error_log("FIELD_EXTRACTION_DEBUG: Field '$fieldName' - Amazon value extracted: " . ($amazonValue ?: 'NULL'));
+            if (!empty($amazonData)) {
+                error_log("FIELD_EXTRACTION_DEBUG: Amazon data structure: " . json_encode($amazonData));
+            }
+        }
+
         // CRITICAL DEBUG: Log author field processing
         if ($fieldName === 'author') {
             debugLog("Processing author field");
@@ -2789,7 +2798,8 @@ function getAmazonEnrichmentData($isbn, $currentBookData = null) {
                 ];
 
                 // Also map to reading level using standard_reading_levels table
-                $readingLevel = mapAgeRangeToReadingLevel($standardizedAgeRange);
+                global $db;
+                $readingLevel = mapAgeRangeToReadingLevel($standardizedAgeRange, $db);
                 if ($readingLevel) {
                     $enrichmentFields['reading_level'] = [
                         'label' => 'Reading Level',
@@ -2902,24 +2912,33 @@ function getAmazonEnrichmentData($isbn, $currentBookData = null) {
 /**
  * Map age range to reading level using standard_reading_levels table
  */
-function mapAgeRangeToReadingLevel($ageRange) {
+function mapAgeRangeToReadingLevel($ageRange, $dbConnection = null) {
     global $db;
 
+    // Use provided connection or global connection
+    $connection = $dbConnection ?: $db;
+
+    if (!$connection) {
+        error_log("READING_LEVEL_MAPPING: No database connection available");
+        return null;
+    }
+
     try {
-        $stmt = $db->prepare("SELECT reading_stage FROM standard_reading_levels WHERE age_group = ? LIMIT 1");
+        error_log("READING_LEVEL_MAPPING: Mapping age range '$ageRange' to reading level");
+        $stmt = $connection->prepare("SELECT reading_stage FROM standard_reading_levels WHERE age_group = ? LIMIT 1");
         $stmt->execute([$ageRange]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($result) {
-            debugLog("Age range '$ageRange' mapped to reading level: " . $result['reading_stage']);
+            error_log("READING_LEVEL_MAPPING: Age range '$ageRange' mapped to reading level: " . $result['reading_stage']);
             return $result['reading_stage'];
         }
 
-        debugLog("No reading level found for age range: $ageRange");
+        error_log("READING_LEVEL_MAPPING: No reading level found for age range: $ageRange");
         return null;
 
     } catch (PDOException $e) {
-        debugLog("Database error mapping age range to reading level: " . $e->getMessage());
+        error_log("READING_LEVEL_MAPPING: Database error mapping age range to reading level: " . $e->getMessage());
         return null;
     }
 }
@@ -2928,8 +2947,12 @@ function mapAgeRangeToReadingLevel($ageRange) {
  * Map Amazon age range to our standardized age ranges
  */
 function mapAmazonAgeRangeToStandard($amazonAgeRange) {
-    // Clean up the Amazon age range
+    // Clean up the Amazon age range - remove extra text like "from customers"
     $amazonAgeRange = trim($amazonAgeRange);
+    $amazonAgeRange = preg_replace('/,?\s*from\s+customers?/i', '', $amazonAgeRange);
+    $amazonAgeRange = trim($amazonAgeRange);
+
+    error_log("AGE_RANGE_MAPPING: Processing Amazon age range: '$amazonAgeRange'");
 
     // Our standardized age ranges (from debug-age-ranges.php)
     $standardRanges = [
@@ -2953,6 +2976,8 @@ function mapAmazonAgeRangeToStandard($amazonAgeRange) {
         '11 - 14 years' => '11-14 years',
 
         // Common Amazon ranges that need mapping
+        '6-9 years' => '7-8 years',     // Map to midpoint (6+9)/2 = 7.5 → 7-8 years
+        '6 - 9 years' => '7-8 years',   // With spaces
         '8-11 years' => '8-9 years',    // Map to closest standard range
         '8 - 11 years' => '8-9 years',  // With spaces
         '7-10 years' => '7-8 years',    // Map to closest standard range
@@ -2978,7 +3003,9 @@ function mapAmazonAgeRangeToStandard($amazonAgeRange) {
 
     // Try direct mapping first
     if (isset($directMappings[$amazonAgeRange])) {
-        return $directMappings[$amazonAgeRange];
+        $result = $directMappings[$amazonAgeRange];
+        error_log("AGE_RANGE_MAPPING: Direct mapping found: '$amazonAgeRange' -> '$result'");
+        return $result;
     }
 
     // Try case-insensitive mapping
@@ -3053,16 +3080,21 @@ function extractAmazonFieldValue($amazonData, $fieldName, $currentISBN = '') {
             // Extract age range from Amazon metadata
             $readingAge = $amazonData['metadata']['reading_age'] ?? null;
             if ($readingAge) {
+                error_log("AMAZON_FIELD_EXTRACT: Processing reading_age: '$readingAge'");
                 // Map Amazon age range to our standard format
-                return mapAmazonAgeToStandardRange($readingAge);
+                $standardAge = mapAmazonAgeRangeToStandard($readingAge);
+                error_log("AMAZON_FIELD_EXTRACT: Mapped to standard age: '$standardAge'");
+                return $standardAge;
             }
+            error_log("AMAZON_FIELD_EXTRACT: No reading_age found in Amazon metadata");
             return null;
 
         case 'reading_level':
             // Derive reading level from age range
             $ageRange = extractAmazonFieldValue($amazonData, 'age_range', $currentISBN);
             if ($ageRange) {
-                return mapAgeRangeToReadingLevel($ageRange);
+                global $db;
+                return mapAgeRangeToReadingLevel($ageRange, $db);
             }
             return null;
 

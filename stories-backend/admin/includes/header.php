@@ -594,7 +594,7 @@ $siteName = get_config('site.name', 'Stories From The Web');
 
                     <!-- Debug Dropdown -->
                     <div class="dropdown mx-1">
-                        <button type="button" class="nav-link dropdown-toggle <?php echo in_array($currentPage, ['debug-logs', 'check-fetchers']) ? 'active' : ''; ?>" data-toggle="dropdown" aria-expanded="false">
+                        <button type="button" class="nav-link dropdown-toggle <?php echo in_array($currentPage, ['debug-logs', 'check-fetchers', 'book-check-compare']) ? 'active' : ''; ?>" data-toggle="dropdown" aria-expanded="false">
                             <i class="fas fa-bug" aria-hidden="true"></i> Debug
                         </button>
                         <div class="dropdown-menu">
@@ -668,6 +668,10 @@ $siteName = get_config('site.name', 'Stories From The Web');
 
                             <a href="<?php echo $isContentDir ? 'check-fetchers.php' : $contentPrefix . 'check-fetchers.php'; ?>" class="dropdown-item <?php echo $currentPage === 'check-fetchers' ? 'active' : ''; ?>">
                                 <i class="fas fa-check-circle" aria-hidden="true"></i> Check Fetchers
+                            </a>
+
+                            <a href="<?php echo $isContentDir ? 'book-check-compare.php' : $contentPrefix . 'book-check-compare.php'; ?>" class="dropdown-item <?php echo $currentPage === 'book-check-compare' ? 'active' : ''; ?>">
+                                <i class="fas fa-search" aria-hidden="true"></i> Book Check & Compare
                             </a>
                         </div>
                     </div>

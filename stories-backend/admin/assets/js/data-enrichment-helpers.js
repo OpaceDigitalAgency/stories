@@ -19,21 +19,55 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
         let optionsHtml = '';
         const options = field.new_data.options || [];
 
-        // CRITICAL FIX: Check if all sources have the same value - if so, convert to single-source field
-        if (options.length > 1) {
-            const firstValue = options[0]?.value;
-            const allSameValue = options.every(option => option.value === firstValue);
+        // CRITICAL FIX: Deduplicate options by value first, then check if all sources agree
+        const uniqueOptions = [];
+        const seenValues = new Set();
+
+        options.forEach(option => {
+            const normalizedValue = normalizeValue(option.value);
+            if (!seenValues.has(normalizedValue) && normalizedValue !== '' && normalizedValue !== 'unknown') {
+                uniqueOptions.push(option);
+                seenValues.add(normalizedValue);
+            } else {
+                console.log(`📦 DUPLICATE_REMOVED: Skipping duplicate value "${option.value}" from ${option.source} for ${fieldName}`);
+            }
+        });
+
+        // Update options to use deduplicated list
+        field.new_data.options = uniqueOptions;
+
+        // Check if all remaining sources have the same value - if so, convert to single-source field
+        if (uniqueOptions.length === 1) {
+            const singleOption = uniqueOptions[0];
+            console.log(`📦 SINGLE_VALUE_FIX: Only one unique value for ${fieldName}: "${singleOption.value}" - converting to single-source field`);
+
+            // Create a single-source field instead
+            const singleSourceField = {
+                ...field,
+                new_data: {
+                    value: singleOption.value,
+                    source: singleOption.source,
+                    confidence: singleOption.confidence || 0,
+                    status: 'available'
+                }
+            };
+
+            return window.createSingleSourceField(fieldName, singleSourceField, label, false, false);
+        } else if (uniqueOptions.length > 1) {
+            const firstValue = uniqueOptions[0]?.value;
+            const allSameValue = uniqueOptions.every(option => normalizeValue(option.value) === normalizeValue(firstValue));
 
             if (allSameValue && firstValue) {
                 console.log(`📦 SINGLE_VALUE_FIX: All sources for ${fieldName} have same value "${firstValue}" - converting to single-source field`);
 
-                // Create a single-source field instead
+                // Create a single-source field with combined sources
+                const combinedSources = uniqueOptions.map(opt => opt.source).join(' + ');
                 const singleSourceField = {
                     ...field,
                     new_data: {
                         value: firstValue,
-                        source: 'multiple_sources_agree',
-                        confidence: Math.max(...options.map(opt => opt.confidence || 0)),
+                        source: combinedSources,
+                        confidence: Math.max(...uniqueOptions.map(opt => opt.confidence || 0)),
                         status: 'available'
                     }
                 };
@@ -42,10 +76,10 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
             }
         }
 
-        // Determine overall benefit level for multi-source field
+        // Determine overall benefit level for multi-source field using deduplicated options
         let bestBenefitLevel = 'not_beneficial';
         let hasExactMatch = false;
-        options.forEach((option) => {
+        uniqueOptions.forEach((option) => {
             const benefitLevel = determineBenefitLevel(field.current_value, option.value, false);
             if (benefitLevel === 'exact_match') {
                 hasExactMatch = true;
@@ -64,14 +98,8 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
         const benefitClass = getBenefitColorClass(bestBenefitLevel);
         const benefitBorder = getBenefitBorderClass(bestBenefitLevel);
 
-        // Filter out options with "unknown" values
-        const validOptions = options.filter(option =>
-            option.value !== 'Unknown' &&
-            option.value !== 'unknown' &&
-            option.value !== null &&
-            option.value !== undefined &&
-            option.value !== ''
-        );
+        // Use the already deduplicated and filtered uniqueOptions as validOptions
+        const validOptions = uniqueOptions;
 
         if (validOptions.length === 0) {
             console.log(`📦 No valid options for ${fieldName} - all were unknown/empty`);
@@ -127,15 +155,15 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
 
         // Add database recommendation option for publisher field
         if (fieldName === 'publisher') {
-            console.log('🏢 PUBLISHER_DEBUG: Processing publisher field options:', options);
+            console.log('🏢 PUBLISHER_DEBUG: Processing publisher field options:', validOptions);
             console.log('🏢 PUBLISHER_DEBUG: Field structure:', field);
 
             // Check if any option has a database recommendation
-            const hasRecommendation = options.some(option => option.recommended);
+            const hasRecommendation = validOptions.some(option => option.recommended);
             console.log('🏢 PUBLISHER_DEBUG: Has recommendation:', hasRecommendation);
 
             // Debug each option
-            options.forEach((option, index) => {
+            validOptions.forEach((option, index) => {
                 console.log(`🏢 PUBLISHER_DEBUG: Option ${index}:`, {
                     value: option.value,
                     recommended: option.recommended,
@@ -146,7 +174,7 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
 
             if (hasRecommendation) {
                 // Show the specific database recommendation
-                const recommendedOption = options.find(option => option.recommended);
+                const recommendedOption = validOptions.find(option => option.recommended);
                 console.log('🏢 Recommended option:', recommendedOption);
                 optionsHtml += `
                     <div class="form-check mt-3 p-2 bg-light border border-success rounded">
@@ -180,7 +208,7 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
 
         // Update hasExactMatch based on exact value comparison (already declared above)
         if (!hasExactMatch) {
-            hasExactMatch = options.some(option => {
+            hasExactMatch = validOptions.some(option => {
                 const currentVal = normalizeValue(field.current_value);
                 const newVal = normalizeValue(option.value);
                 return currentVal === newVal && currentVal !== '' && currentVal !== null;

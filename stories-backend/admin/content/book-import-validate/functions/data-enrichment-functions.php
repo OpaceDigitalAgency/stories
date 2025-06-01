@@ -1361,7 +1361,15 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
             // CRITICAL FIX: Only return age range data when there's EXPLICIT age information
             // Do NOT create fake age data from generic categories like "Fiction" or "Children's Fiction"
             $ageRange = null;
-            error_log("AGE_TEST: AGE_RANGE_EXTRACT_DEBUG: Starting age range extraction for source: " . ($match['source'] ?? 'unknown'));
+            $source = $match['source'] ?? 'unknown';
+            error_log("AGE_TEST: AGE_RANGE_EXTRACT_DEBUG: Starting age range extraction for source: $source");
+
+            // CRITICAL DEBUG: Log all available data for OpenLibrary
+            if ($source === 'open_library') {
+                error_log("AGE_TEST: OpenLibrary subject_facet data: " . json_encode($match['subject_facet'] ?? []));
+                error_log("AGE_TEST: OpenLibrary age_range field: " . json_encode($match['age_range'] ?? null));
+                error_log("AGE_TEST: OpenLibrary all keys: " . implode(', ', array_keys($match)));
+            }
 
             // Check Google Books categories for EXPLICIT age patterns ONLY
             if (isset($match['categories']) && is_array($match['categories'])) {
@@ -1396,27 +1404,10 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
                 }
             }
 
-            // OpenLibrary subject_facet[] - ONLY very specific age-related patterns with explicit age numbers
-            if (!$ageRange && isset($match['subject_facet']) && is_array($match['subject_facet'])) {
-                foreach ($match['subject_facet'] as $subject) {
-                    // ONLY accept very specific age-related subjects with explicit age numbers
-                    if (stripos($subject, "Children's Books/Ages") !== false && preg_match('/Ages\s+(\d+)-(\d+)/i', $subject)) {
-                        if (stripos($subject, "Ages 9-12") !== false) {
-                            $ageRange = '9-10 years';
-                            break;
-                        } elseif (stripos($subject, "Ages 6-9") !== false) {
-                            $ageRange = '6-7 years';
-                            break;
-                        } elseif (stripos($subject, "Ages 4-8") !== false) {
-                            $ageRange = '4-5 years';
-                            break;
-                        }
-                        // Add more specific age mappings as needed
-                    }
-                    // REMOVED: Generic mappings like "Tweens" or "Young Adult Fiction"
-                    // These create fake data when there's no actual age information
-                }
-            }
+            // CRITICAL FIX: COMPLETELY REMOVE all age range inference from OpenLibrary
+            // OpenLibrary does NOT provide explicit age ranges - only Amazon does
+            // Any "age range" from OpenLibrary is inferred from Lexile/subjects and should not be shown as a source
+            // This prevents fake "OpenLibrary" sources from appearing when OL doesn't actually have age data
 
             // FINAL FILTER: Remove any remaining problematic values
             if ($ageRange && (strpos($ageRange, '12+') !== false || strpos($ageRange, 'unknown') !== false)) {
@@ -1429,30 +1420,15 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
             return $ageRange;
 
         case 'reading_level':
-            // CRITICAL FIX: Only return reading level data when there's EXPLICIT reading level information
-            // Do NOT create fake reading level data from generic categories
-
-            // OpenLibrary: use lexile[] with conversion to readable format (this is explicit reading level data)
-            if (isset($match['lexile']) && is_array($match['lexile']) && !empty($match['lexile'])) {
-                $lexileValue = $match['lexile'][0];
-                $readingLevel = convertLexileToReadingLevel($lexileValue);
-                // FILTER OUT UNKNOWN VALUES
-                if ($readingLevel && stripos($readingLevel, 'unknown') === false) {
-                    return $readingLevel;
-                }
-            }
-            // Also check if lexile is a direct value
-            elseif (isset($match['lexile']) && is_numeric($match['lexile'])) {
-                $readingLevel = convertLexileToReadingLevel($match['lexile']);
-                // FILTER OUT UNKNOWN VALUES
-                if ($readingLevel && stripos($readingLevel, 'unknown') === false) {
-                    return $readingLevel;
-                }
-            }
+            // CRITICAL FIX: COMPLETELY REMOVE all reading level inference
+            // Reading levels should ONLY come from Amazon-derived age ranges
+            // OpenLibrary Lexile scores are NOT explicit reading levels - they're inferred
+            // This prevents fake "OpenLibrary" sources from appearing when OL doesn't actually provide reading levels
 
             // REMOVED: Google Books categories to reading level mapping
-            // This was creating fake reading level data when APIs don't actually have reading level information
-            // Only Amazon and OpenLibrary Lexile data provide explicit reading level information
+            // REMOVED: OpenLibrary Lexile to reading level conversion
+            // These were creating fake reading level data when APIs don't actually have reading level information
+            // Only Amazon provides explicit reading age data that can be mapped to reading levels
 
             // Return null if no EXPLICIT reading level data found
             return null;
@@ -3335,15 +3311,20 @@ function extractAmazonFieldValue($amazonData, $fieldName, $currentISBN = '') {
         case 'purchase_links':
             $buyingOptions = $amazonData['buying_options'] ?? [];
             if (!empty($buyingOptions)) {
-                // Return the selected format's URL or first available
-                foreach ($buyingOptions as $option) {
-                    if (isset($option['is_selected']) && $option['is_selected']) {
-                        return $option['url'] ?? null;
-                    }
+                // CRITICAL FIX: Return ALL buying options in JSON format as requested
+                // Format: {"amazon_kindle": "url", "amazon_paperback": "url", "amazon_hardcover": "url"}
+                $purchaseLinks = [];
+
+                foreach ($buyingOptions as $format => $option) {
+                    // Convert format names to consistent keys
+                    $formatKey = 'amazon_' . strtolower(str_replace([' ', 'Audio CD'], ['_', 'audiobook'], $format));
+                    $purchaseLinks[$formatKey] = $option['url'] ?? null;
+
+                    error_log("PURCHASE_LINKS_DEBUG: Added $format as $formatKey: " . ($option['url'] ?? 'null'));
                 }
-                // Fallback to first option
-                $firstOption = reset($buyingOptions);
-                return $firstOption['url'] ?? null;
+
+                // Return as JSON string to match existing format
+                return json_encode($purchaseLinks);
             }
             return null;
 

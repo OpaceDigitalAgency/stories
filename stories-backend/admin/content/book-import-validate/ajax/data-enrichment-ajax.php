@@ -1091,15 +1091,19 @@ function filterRelevantFields($fields, $currentBookData) {
                 'new_data' => $newFieldData
             ];
 
-            // Handle multi-source fields
+            // Handle multi-source fields from combineMultiSourceData
             if ($newFieldData && isset($newFieldData['options'])) {
+                // Multi-source field with options array
                 $filteredFields[$fieldName]['new_data'] = [
-                    'options' => $newFieldData['options']
+                    'options' => $newFieldData['options'],
+                    'source' => $newFieldData['source'] ?? 'multiple',
+                    'status' => 'available'
                 ];
+                error_log("MODAL_DEBUG: Created multi-source field for $fieldName with " . count($newFieldData['options']) . " options");
             } elseif ($newFieldData && isset($newFieldData['new_data'])) {
                 // Amazon-derived fields that already have the correct structure
                 $filteredFields[$fieldName]['new_data'] = $newFieldData['new_data'];
-                error_log("Preserved Amazon field structure for $fieldName: " . json_encode($newFieldData['new_data']));
+                error_log("MODAL_DEBUG: Preserved Amazon field structure for $fieldName");
             } elseif ($newFieldData && isset($newFieldData['value'])) {
                 // Single source field with actual data
                 $filteredFields[$fieldName]['new_data'] = [
@@ -1108,6 +1112,7 @@ function filterRelevantFields($fields, $currentBookData) {
                     'confidence' => $newFieldData['confidence'] ?? 0,
                     'status' => $newFieldData['status'] ?? 'available'
                 ];
+                error_log("MODAL_DEBUG: Created single-source field for $fieldName from " . ($newFieldData['source'] ?? 'unknown'));
             } else {
                 // No new data available
                 $filteredFields[$fieldName]['new_data'] = [
@@ -1116,6 +1121,7 @@ function filterRelevantFields($fields, $currentBookData) {
                     'source' => 'unknown',
                     'confidence' => 0
                 ];
+                error_log("MODAL_DEBUG: No data available for $fieldName");
             }
         }
     }

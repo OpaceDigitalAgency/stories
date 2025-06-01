@@ -298,16 +298,40 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $amazonData
 
         // Check if we have data from any source (Google, OpenLibrary, or Amazon)
         if (!empty($googleValue) || !empty($openLibraryValue) || !empty($amazonValue)) {
-            // Special handling for Amazon-priority fields
-            if (in_array($fieldName, ['age_range', 'reading_level', 'format', 'price_range', 'page_count', 'publisher', 'publication_date', 'language', 'isbn', 'isbn13', 'series']) && !empty($amazonValue)) {
-                // Amazon data takes priority for these fields
+            // Count how many sources have data for this field
+            $sourcesWithData = [];
+            if (!empty($googleValue)) $sourcesWithData['google_books'] = $googleValue;
+            if (!empty($openLibraryValue)) $sourcesWithData['open_library'] = $openLibraryValue;
+            if (!empty($amazonValue)) $sourcesWithData['amazon'] = $amazonValue;
+
+            if (count($sourcesWithData) > 1) {
+                // Multiple sources have data - create multi-source options
+                $options = [];
+                foreach ($sourcesWithData as $source => $value) {
+                    $options[] = [
+                        'value' => $value,
+                        'source' => $source,
+                        'confidence' => $fieldConfig['confidence'],
+                        'label' => $fieldConfig['label']
+                    ];
+                }
+
+                // Determine primary source for display
+                $primarySource = 'amazon'; // Default to Amazon for priority fields
+                if (in_array($fieldName, ['title', 'author'])) {
+                    $primarySource = $fieldName === 'author' ? 'open_library' : 'google_books';
+                } elseif (!isset($sourcesWithData['amazon'])) {
+                    $primarySource = isset($sourcesWithData['google_books']) ? 'google_books' : 'open_library';
+                }
+
                 $combinedFields[$fieldName] = [
-                    'value' => $amazonValue,
-                    'source' => 'amazon',
+                    'value' => $sourcesWithData[$primarySource],
+                    'source' => implode(' + ', array_keys($sourcesWithData)),
                     'confidence' => $fieldConfig['confidence'],
-                    'label' => $fieldConfig['label']
+                    'label' => $fieldConfig['label'],
+                    'options' => $options
                 ];
-                debugLog("Using Amazon data for $fieldName: $amazonValue");
+                debugLog("Created multi-source field for $fieldName with " . count($options) . " options");
             } elseif ($fieldName === 'tags') {
                 // Special handling for tags - always merge them
                 $mergedTags = mergeTagsFromSources($googleValue, $openLibraryValue);
@@ -440,29 +464,17 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $amazonData
                     }
                 }
             } else {
-                // Only one source has data - determine which one
-                if (!empty($amazonValue)) {
-                    // Amazon has data
-                    $combinedFields[$fieldName] = [
-                        'value' => $amazonValue,
-                        'source' => 'amazon',
-                        'confidence' => $fieldConfig['confidence'],
-                        'label' => $fieldConfig['label']
-                    ];
-                    error_log("ENRICHMENT_DEBUG: Using Amazon data for $fieldName: $amazonValue");
-                } else {
-                    // Google or OpenLibrary has data
-                    $value = !empty($googleValue) ? $googleValue : $openLibraryValue;
-                    $source = !empty($googleValue) ? 'google_books' : 'open_library';
-                    $confidence = !empty($googleValue) ? $fieldConfig['confidence'] : $fieldConfig['confidence'] - 5;
+                // Only one source has data - create single-source field
+                $singleSource = array_keys($sourcesWithData)[0];
+                $singleValue = $sourcesWithData[$singleSource];
 
-                    $combinedFields[$fieldName] = [
-                        'value' => $value,
-                        'source' => $source,
-                        'confidence' => $confidence,
-                        'label' => $fieldConfig['label']
-                    ];
-                }
+                $combinedFields[$fieldName] = [
+                    'value' => $singleValue,
+                    'source' => $singleSource,
+                    'confidence' => $fieldConfig['confidence'],
+                    'label' => $fieldConfig['label']
+                ];
+                debugLog("Created single-source field for $fieldName from $singleSource: $singleValue");
             }
         } else {
             // No data from any source - show as unknown

@@ -104,22 +104,22 @@ function getEnrichedBookData($title, $author, $currentISBN = '', $currentPublish
     if (!empty($currentISBN)) {
         // Try to get Amazon data for age range, format, price, etc.
         try {
-            error_log("ENRICHMENT_DEBUG: Starting Amazon scraping for ISBN $currentISBN");
+            error_log("SCRAPE_TEST: Starting Amazon scraping for ISBN $currentISBN");
             $amazonData = scrapeAmazonBuyingOptions($currentISBN);
             $enrichedData['sources_checked'][] = 'amazon';
 
             // CRITICAL DEBUG: Log what Amazon data was actually retrieved
-            error_log("ENRICHMENT_DEBUG: Amazon data retrieved for ISBN $currentISBN");
-            error_log("ENRICHMENT_DEBUG: Amazon metadata: " . json_encode($amazonData['metadata'] ?? []));
-            error_log("ENRICHMENT_DEBUG: Amazon buying_options: " . json_encode($amazonData['buying_options'] ?? []));
+            error_log("SCRAPE_TEST: Amazon data retrieved for ISBN $currentISBN");
+            error_log("SCRAPE_TEST: Amazon metadata: " . json_encode($amazonData['metadata'] ?? []));
+            error_log("SCRAPE_TEST: Amazon buying_options: " . json_encode($amazonData['buying_options'] ?? []));
 
             // Check specifically for reading_age
             if (isset($amazonData['metadata']['reading_age'])) {
-                error_log("ENRICHMENT_DEBUG: Found reading_age in Amazon data: '" . $amazonData['metadata']['reading_age'] . "'");
+                error_log("SCRAPE_TEST: Found reading_age in Amazon data: '" . $amazonData['metadata']['reading_age'] . "'");
             } else {
-                error_log("ENRICHMENT_DEBUG: NO reading_age found in Amazon metadata");
+                error_log("SCRAPE_TEST: NO reading_age found in Amazon metadata");
                 if (isset($amazonData['metadata'])) {
-                    error_log("ENRICHMENT_DEBUG: Available metadata keys: " . implode(', ', array_keys($amazonData['metadata'])));
+                    error_log("SCRAPE_TEST: Available metadata keys: " . implode(', ', array_keys($amazonData['metadata'])));
                 }
             }
         } catch (Exception $e) {
@@ -205,16 +205,16 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $amazonData
 
         // CRITICAL DEBUG: Log Amazon field extraction for key fields
         if (in_array($fieldName, ['age_range', 'reading_level', 'format', 'price_range', 'page_count', 'publisher', 'publication_date', 'language'])) {
-            error_log("FIELD_EXTRACTION_DEBUG: Field '$fieldName' - Amazon data available: " . (!empty($amazonData) ? 'YES' : 'NO'));
-            error_log("FIELD_EXTRACTION_DEBUG: Field '$fieldName' - Google value: " . (is_null($googleValue) ? 'NULL' : "'$googleValue'"));
-            error_log("FIELD_EXTRACTION_DEBUG: Field '$fieldName' - OpenLibrary value: " . (is_null($openLibraryValue) ? 'NULL' : "'$openLibraryValue'"));
-            error_log("FIELD_EXTRACTION_DEBUG: Field '$fieldName' - Amazon value extracted: " . (is_null($amazonValue) ? 'NULL' : "'$amazonValue'"));
-            error_log("FIELD_EXTRACTION_DEBUG: Field '$fieldName' - Google empty check: " . (empty($googleValue) ? 'TRUE' : 'FALSE'));
-            error_log("FIELD_EXTRACTION_DEBUG: Field '$fieldName' - OpenLibrary empty check: " . (empty($openLibraryValue) ? 'TRUE' : 'FALSE'));
-            error_log("FIELD_EXTRACTION_DEBUG: Field '$fieldName' - Amazon empty check: " . (empty($amazonValue) ? 'TRUE' : 'FALSE'));
+            error_log("SCRAPE_TEST: Field '$fieldName' - Amazon data available: " . (!empty($amazonData) ? 'YES' : 'NO'));
+            error_log("SCRAPE_TEST: Field '$fieldName' - Google value: " . (is_null($googleValue) ? 'NULL' : "'$googleValue'"));
+            error_log("SCRAPE_TEST: Field '$fieldName' - OpenLibrary value: " . (is_null($openLibraryValue) ? 'NULL' : "'$openLibraryValue'"));
+            error_log("SCRAPE_TEST: Field '$fieldName' - Amazon value extracted: " . (is_null($amazonValue) ? 'NULL' : "'$amazonValue'"));
+            error_log("SCRAPE_TEST: Field '$fieldName' - Google empty check: " . (empty($googleValue) ? 'TRUE' : 'FALSE'));
+            error_log("SCRAPE_TEST: Field '$fieldName' - OpenLibrary empty check: " . (empty($openLibraryValue) ? 'TRUE' : 'FALSE'));
+            error_log("SCRAPE_TEST: Field '$fieldName' - Amazon empty check: " . (empty($amazonValue) ? 'TRUE' : 'FALSE'));
             if (!empty($amazonData)) {
-                error_log("FIELD_EXTRACTION_DEBUG: Amazon metadata: " . json_encode($amazonData['metadata'] ?? []));
-                error_log("FIELD_EXTRACTION_DEBUG: Amazon buying_options: " . json_encode($amazonData['buying_options'] ?? []));
+                error_log("SCRAPE_TEST: Amazon metadata: " . json_encode($amazonData['metadata'] ?? []));
+                error_log("SCRAPE_TEST: Amazon buying_options: " . json_encode($amazonData['buying_options'] ?? []));
             }
         }
 
@@ -247,7 +247,7 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $amazonData
                     'confidence' => $fieldConfig['confidence'],
                     'label' => $fieldConfig['label']
                 ];
-                error_log("ENRICHMENT_DEBUG: Using Amazon data for $fieldName: $amazonValue");
+                error_log("SCRAPE_TEST: Using Amazon data for $fieldName: $amazonValue");
             } elseif ($fieldName === 'tags') {
                 // Special handling for tags - always merge them
                 $mergedTags = mergeTagsFromSources($googleValue, $openLibraryValue);
@@ -2983,7 +2983,7 @@ function mapAmazonAgeRangeToStandard($amazonAgeRange) {
     $amazonAgeRange = preg_replace('/,?\s*from\s+customers?/i', '', $amazonAgeRange);
     $amazonAgeRange = trim($amazonAgeRange);
 
-    error_log("AGE_RANGE_MAPPING: Processing Amazon age range: '$amazonAgeRange'");
+    error_log("SCRAPE_TEST: Processing Amazon age range: '$amazonAgeRange'");
 
     // Our standardized age ranges (from debug-age-ranges.php)
     $standardRanges = [
@@ -3035,7 +3035,7 @@ function mapAmazonAgeRangeToStandard($amazonAgeRange) {
     // Try direct mapping first
     if (isset($directMappings[$amazonAgeRange])) {
         $result = $directMappings[$amazonAgeRange];
-        error_log("AGE_RANGE_MAPPING: Direct mapping found: '$amazonAgeRange' -> '$result'");
+        error_log("SCRAPE_TEST: Direct mapping found: '$amazonAgeRange' -> '$result'");
         return $result;
     }
 
@@ -3111,13 +3111,13 @@ function extractAmazonFieldValue($amazonData, $fieldName, $currentISBN = '') {
             // Extract age range from Amazon metadata
             $readingAge = $amazonData['metadata']['reading_age'] ?? null;
             if ($readingAge) {
-                error_log("AMAZON_FIELD_EXTRACT: Processing reading_age: '$readingAge'");
+                error_log("SCRAPE_TEST: Processing reading_age: '$readingAge'");
                 // Map Amazon age range to our standard format
                 $standardAge = mapAmazonAgeRangeToStandard($readingAge);
-                error_log("AMAZON_FIELD_EXTRACT: Mapped to standard age: '$standardAge'");
+                error_log("SCRAPE_TEST: Mapped to standard age: '$standardAge'");
                 return $standardAge;
             }
-            error_log("AMAZON_FIELD_EXTRACT: No reading_age found in Amazon metadata");
+            error_log("SCRAPE_TEST: No reading_age found in Amazon metadata");
             return null;
 
         case 'reading_level':
@@ -3132,54 +3132,59 @@ function extractAmazonFieldValue($amazonData, $fieldName, $currentISBN = '') {
         case 'format':
             // Check for format in buying options or metadata
             $selectedFormat = $amazonData['selected_format'] ?? null;
+            error_log("SCRAPE_TEST: Format extraction - selected_format: " . ($selectedFormat ?? 'NULL'));
             if ($selectedFormat) {
-                error_log("AMAZON_FIELD_EXTRACT: Found selected_format: '$selectedFormat'");
+                error_log("SCRAPE_TEST: Found selected_format: '$selectedFormat'");
                 return $selectedFormat;
             }
 
             // Check buying options for format
             $buyingOptions = $amazonData['buying_options'] ?? [];
+            error_log("SCRAPE_TEST: Format extraction - buying_options available: " . (!empty($buyingOptions) ? 'YES' : 'NO'));
             if (!empty($buyingOptions)) {
+                error_log("SCRAPE_TEST: Format extraction - available formats: " . implode(', ', array_keys($buyingOptions)));
                 foreach ($buyingOptions as $format => $option) {
                     if (isset($option['is_selected']) && $option['is_selected']) {
-                        error_log("AMAZON_FIELD_EXTRACT: Found selected format from buying_options: '$format'");
+                        error_log("SCRAPE_TEST: Found selected format from buying_options: '$format'");
                         return $format;
                     }
                 }
                 // If no selected format, return first available
                 $firstFormat = array_keys($buyingOptions)[0] ?? null;
                 if ($firstFormat) {
-                    error_log("AMAZON_FIELD_EXTRACT: Using first available format: '$firstFormat'");
+                    error_log("SCRAPE_TEST: Using first available format: '$firstFormat'");
                     return $firstFormat;
                 }
             }
 
-            error_log("AMAZON_FIELD_EXTRACT: No format found in Amazon data");
+            error_log("SCRAPE_TEST: No format found in Amazon data");
             return null;
 
         case 'price_range':
             // Check for selected price first
             $selectedPrice = $amazonData['selected_price'] ?? null;
             if ($selectedPrice) {
-                error_log("AMAZON_FIELD_EXTRACT: Found selected_price: '$selectedPrice'");
+                error_log("SCRAPE_TEST: Found selected_price: '$selectedPrice'");
                 if (preg_match('/£(\d+\.\d{2})/', $selectedPrice, $matches)) {
                     $numericPrice = floatval($matches[1]);
                     $priceRange = mapPriceToRange($numericPrice);
-                    error_log("AMAZON_FIELD_EXTRACT: Mapped price £$numericPrice to range: '$priceRange'");
+                    error_log("SCRAPE_TEST: Mapped price £$numericPrice to range: '$priceRange'");
                     return $priceRange;
                 }
             }
 
             // Check buying options for price
             $buyingOptions = $amazonData['buying_options'] ?? [];
+            error_log("SCRAPE_TEST: Price extraction - buying_options available: " . (!empty($buyingOptions) ? 'YES' : 'NO'));
             if (!empty($buyingOptions)) {
+                error_log("SCRAPE_TEST: Price extraction - buying_options data: " . json_encode($buyingOptions));
                 foreach ($buyingOptions as $format => $option) {
                     if (isset($option['is_selected']) && $option['is_selected'] && isset($option['price'])) {
-                        error_log("AMAZON_FIELD_EXTRACT: Found selected price from buying_options: '{$option['price']}'");
+                        error_log("SCRAPE_TEST: Found selected price from buying_options: '{$option['price']}'");
                         if (preg_match('/£(\d+\.\d{2})/', $option['price'], $matches)) {
                             $numericPrice = floatval($matches[1]);
                             $priceRange = mapPriceToRange($numericPrice);
-                            error_log("AMAZON_FIELD_EXTRACT: Mapped price £$numericPrice to range: '$priceRange'");
+                            error_log("SCRAPE_TEST: Mapped price £$numericPrice to range: '$priceRange'");
                             return $priceRange;
                         }
                     }
@@ -3187,17 +3192,17 @@ function extractAmazonFieldValue($amazonData, $fieldName, $currentISBN = '') {
                 // If no selected price, use first available
                 $firstOption = reset($buyingOptions);
                 if ($firstOption && isset($firstOption['price'])) {
-                    error_log("AMAZON_FIELD_EXTRACT: Using first available price: '{$firstOption['price']}'");
+                    error_log("SCRAPE_TEST: Using first available price: '{$firstOption['price']}'");
                     if (preg_match('/£(\d+\.\d{2})/', $firstOption['price'], $matches)) {
                         $numericPrice = floatval($matches[1]);
                         $priceRange = mapPriceToRange($numericPrice);
-                        error_log("AMAZON_FIELD_EXTRACT: Mapped price £$numericPrice to range: '$priceRange'");
+                        error_log("SCRAPE_TEST: Mapped price £$numericPrice to range: '$priceRange'");
                         return $priceRange;
                     }
                 }
             }
 
-            error_log("AMAZON_FIELD_EXTRACT: No price found in Amazon data");
+            error_log("SCRAPE_TEST: No price found in Amazon data");
             return null;
 
         case 'purchase_links':
@@ -3218,70 +3223,70 @@ function extractAmazonFieldValue($amazonData, $fieldName, $currentISBN = '') {
         case 'publisher':
             $publisher = $amazonData['metadata']['publisher'] ?? null;
             if ($publisher) {
-                error_log("AMAZON_FIELD_EXTRACT: Found publisher: '$publisher'");
+                error_log("SCRAPE_TEST: Found publisher: '$publisher'");
                 return $publisher;
             }
-            error_log("AMAZON_FIELD_EXTRACT: No publisher found in Amazon data");
+            error_log("SCRAPE_TEST: No publisher found in Amazon data");
             return null;
 
         case 'page_count':
             // Amazon stores this as 'print_length' like "208 pages"
             $printLength = $amazonData['metadata']['print_length'] ?? null;
             if ($printLength) {
-                error_log("AMAZON_FIELD_EXTRACT: Found print_length: '$printLength'");
+                error_log("SCRAPE_TEST: Found print_length: '$printLength'");
                 // Extract number from "208 pages"
                 if (preg_match('/(\d+)\s*pages?/i', $printLength, $matches)) {
                     $pageCount = intval($matches[1]);
-                    error_log("AMAZON_FIELD_EXTRACT: Extracted page count: $pageCount");
+                    error_log("SCRAPE_TEST: Extracted page count: $pageCount");
                     return $pageCount;
                 }
             }
-            error_log("AMAZON_FIELD_EXTRACT: No page count found in Amazon data");
+            error_log("SCRAPE_TEST: No page count found in Amazon data");
             return null;
 
         case 'language':
             $language = $amazonData['metadata']['language'] ?? null;
             if ($language) {
-                error_log("AMAZON_FIELD_EXTRACT: Found language: '$language'");
+                error_log("SCRAPE_TEST: Found language: '$language'");
                 return $language;
             }
-            error_log("AMAZON_FIELD_EXTRACT: No language found in Amazon data");
+            error_log("SCRAPE_TEST: No language found in Amazon data");
             return null;
 
         case 'publication_date':
             $pubDate = $amazonData['metadata']['publication_date'] ?? null;
             if ($pubDate) {
-                error_log("AMAZON_FIELD_EXTRACT: Found publication_date: '$pubDate'");
+                error_log("SCRAPE_TEST: Found publication_date: '$pubDate'");
                 return $pubDate;
             }
-            error_log("AMAZON_FIELD_EXTRACT: No publication_date found in Amazon data");
+            error_log("SCRAPE_TEST: No publication_date found in Amazon data");
             return null;
 
         case 'isbn':
             $isbn10 = $amazonData['metadata']['isbn_10'] ?? null;
             if ($isbn10) {
-                error_log("AMAZON_FIELD_EXTRACT: Found ISBN-10: '$isbn10'");
+                error_log("SCRAPE_TEST: Found ISBN-10: '$isbn10'");
                 return $isbn10;
             }
-            error_log("AMAZON_FIELD_EXTRACT: No ISBN-10 found in Amazon data");
+            error_log("SCRAPE_TEST: No ISBN-10 found in Amazon data");
             return null;
 
         case 'isbn13':
             $isbn13 = $amazonData['metadata']['isbn_13'] ?? null;
             if ($isbn13) {
-                error_log("AMAZON_FIELD_EXTRACT: Found ISBN-13: '$isbn13'");
+                error_log("SCRAPE_TEST: Found ISBN-13: '$isbn13'");
                 return $isbn13;
             }
-            error_log("AMAZON_FIELD_EXTRACT: No ISBN-13 found in Amazon data");
+            error_log("SCRAPE_TEST: No ISBN-13 found in Amazon data");
             return null;
 
         case 'series':
             $series = $amazonData['metadata']['series'] ?? null;
             if ($series) {
-                error_log("AMAZON_FIELD_EXTRACT: Found series: '$series'");
+                error_log("SCRAPE_TEST: Found series: '$series'");
                 return $series;
             }
-            error_log("AMAZON_FIELD_EXTRACT: No series found in Amazon data");
+            error_log("SCRAPE_TEST: No series found in Amazon data");
             return null;
 
         default:

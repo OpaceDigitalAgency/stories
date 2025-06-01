@@ -1,21 +1,88 @@
 <?php
 /**
- * Book Check & Compare
+ * Book Check & Compare - Diagnostic Tool
  *
- * This page allows testing of book enrichment data from multiple sources with any ISBN.
+ * This page provides comprehensive diagnostics for book enrichment data from multiple sources.
+ * It uses the EXACT same functions as the modal to ensure accurate testing.
  */
 
 // Set page title and current page
 $pageTitle = 'Book Check & Compare';
 $currentPage = 'book-check-compare';
-$pageDescription = 'Test book enrichment data from multiple sources with any ISBN';
+$pageDescription = 'Comprehensive diagnostic tool for book enrichment data';
 
 // Include the header
 require_once '../includes/auth-check.php';
 require_once '../includes/header.php';
 
-// Include required functions
+// Include ALL the same functions the modal uses
 require_once 'book-import-validate/functions/data-enrichment-functions.php';
+require_once 'book-import-validate/functions/google-books-validation-functions.php';
+require_once 'book-import-validate/functions/open-library-validation-functions.php';
+
+/**
+ * Test individual APIs with detailed diagnostics
+ */
+function testIndividualAPIs($isbn) {
+    $results = [];
+
+    // Test Google Books API
+    try {
+        $googleUrl = "https://www.googleapis.com/books/v1/volumes?q=isbn:$isbn";
+        $ch = curl_init($googleUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0');
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        $results['google_books'] = [
+            'status' => $httpCode === 200 ? 'success' : 'failed',
+            'http_code' => $httpCode,
+            'data' => $response ? json_decode($response, true) : null
+        ];
+    } catch (Exception $e) {
+        $results['google_books'] = ['status' => 'error', 'message' => $e->getMessage()];
+    }
+
+    // Test OpenLibrary API
+    try {
+        $olUrl = "https://openlibrary.org/search.json?q=isbn:$isbn&fields=*,availability&limit=1";
+        $ch = curl_init($olUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0');
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        $results['open_library'] = [
+            'status' => $httpCode === 200 ? 'success' : 'failed',
+            'http_code' => $httpCode,
+            'data' => $response ? json_decode($response, true) : null
+        ];
+    } catch (Exception $e) {
+        $results['open_library'] = ['status' => 'error', 'message' => $e->getMessage()];
+    }
+
+    // Test Amazon Scraping
+    try {
+        if (function_exists('scrapeAmazonBuyingOptions')) {
+            $amazonData = scrapeAmazonBuyingOptions($isbn);
+            $results['amazon'] = [
+                'status' => $amazonData && !empty($amazonData) ? 'success' : 'no_data',
+                'data' => $amazonData
+            ];
+        } else {
+            $results['amazon'] = ['status' => 'function_missing', 'message' => 'scrapeAmazonBuyingOptions function not available'];
+        }
+    } catch (Exception $e) {
+        $results['amazon'] = ['status' => 'error', 'message' => $e->getMessage()];
+    }
+
+    return $results;
+}
 
 // Handle form submission
 $results = [];
@@ -31,17 +98,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['isbn'])) {
     if (empty($isbn)) {
         $results['error'] = 'Please enter an ISBN';
     } else {
-        // Test the enrichment
         $startTime = microtime(true);
         try {
+            // Step 1: Test individual APIs
+            $results['api_tests'] = testIndividualAPIs($isbn);
+
+            // Step 2: Test the main enrichment function (same as modal)
             $enrichedData = getEnrichedBookData($title, $author, $isbn);
+
             $endTime = microtime(true);
             $executionTime = round($endTime - $startTime, 2);
 
             $results['success'] = true;
             $results['enriched_data'] = $enrichedData;
             $results['execution_time'] = $executionTime;
-            $results['confidence_score'] = $enrichedData['confidence_score'];
+            $results['confidence_score'] = $enrichedData['confidence_score'] ?? 'N/A';
 
         } catch (Exception $e) {
             $results['error'] = 'Enrichment failed: ' . $e->getMessage();
@@ -130,8 +201,70 @@ $pageActions = '
                         Confidence Score: <?php echo $results['confidence_score']; ?>
                     </div>
 
+                    <!-- API Status Overview -->
+                    <div class="table-responsive mb-4">
+                        <h6>🔍 API Status Overview</h6>
+                        <table class="table table-sm table-bordered">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>API Source</th>
+                                    <th>Status</th>
+                                    <th>HTTP Code</th>
+                                    <th>Data Found</th>
+                                    <th>Key Fields</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($results['api_tests'] as $source => $test): ?>
+                                <tr>
+                                    <td><strong><?php echo ucwords(str_replace('_', ' ', $source)); ?></strong></td>
+                                    <td>
+                                        <?php if ($test['status'] === 'success'): ?>
+                                            <span class="badge badge-success">✓ Success</span>
+                                        <?php elseif ($test['status'] === 'no_data'): ?>
+                                            <span class="badge badge-warning">⚠ No Data</span>
+                                        <?php else: ?>
+                                            <span class="badge badge-danger">✗ Failed</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td><?php echo $test['http_code'] ?? 'N/A'; ?></td>
+                                    <td>
+                                        <?php
+                                        if ($source === 'google_books' && isset($test['data']['items'][0])) {
+                                            echo 'Title, Author, Categories';
+                                        } elseif ($source === 'open_library' && isset($test['data']['docs'][0])) {
+                                            echo 'Title, Author, Subjects';
+                                        } elseif ($source === 'amazon' && isset($test['data']['metadata'])) {
+                                            echo 'Price, Format, Age Range';
+                                        } else {
+                                            echo 'None';
+                                        }
+                                        ?>
+                                    </td>
+                                    <td>
+                                        <?php
+                                        if ($source === 'google_books' && isset($test['data']['items'][0]['volumeInfo'])) {
+                                            $book = $test['data']['items'][0]['volumeInfo'];
+                                            echo htmlspecialchars(($book['title'] ?? 'N/A') . ' by ' . implode(', ', $book['authors'] ?? []));
+                                        } elseif ($source === 'open_library' && isset($test['data']['docs'][0])) {
+                                            $book = $test['data']['docs'][0];
+                                            echo htmlspecialchars(($book['title'] ?? 'N/A') . ' by ' . implode(', ', $book['author_name'] ?? []));
+                                        } elseif ($source === 'amazon' && isset($test['data']['metadata']['reading_age'])) {
+                                            echo 'Age: ' . htmlspecialchars($test['data']['metadata']['reading_age']);
+                                        } else {
+                                            echo isset($test['message']) ? htmlspecialchars($test['message']) : 'No data';
+                                        }
+                                        ?>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+
                     <!-- Expected vs Actual Analysis -->
                     <div class="table-responsive mb-4">
+                        <h6>🎯 Expected vs Actual Data</h6>
                         <table class="table table-bordered table-striped">
                             <thead class="thead-dark">
                                 <tr>

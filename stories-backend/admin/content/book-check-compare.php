@@ -760,17 +760,25 @@ $pageActions = '
                                     'purchase_links' => [
                                         'google' => $googleData['previewLink'] ?? 'N/A',
                                         'ol' => 'No purchase links',
-                                        'amazon' => isset($amazonData['buying_options']) ? 'Available' : 'N/A'
+                                        'amazon' => !empty($amazonData['buying_options']) ?
+                                            count($amazonData['buying_options']) . ' format(s): ' . implode(', ', array_keys($amazonData['buying_options'])) : 'N/A'
                                     ],
                                     'format' => [
                                         'google' => 'Not available',
                                         'ol' => 'Not available',
-                                        'amazon' => isset($amazonData['selected_format']) ? $amazonData['selected_format'] : 'Not found'
+                                        'amazon' => !empty($amazonData['buying_options']) ?
+                                            implode(', ', array_keys($amazonData['buying_options'])) : 'Not found'
                                     ],
                                     'price_range' => [
                                         'google' => 'Not available',
                                         'ol' => 'Not available',
-                                        'amazon' => isset($amazonData['selected_price']) ? 'Calculated from ' . $amazonData['selected_price'] : 'Not found'
+                                        'amazon' => !empty($amazonData['buying_options']) ?
+                                            'From ' . min(array_column($amazonData['buying_options'], 'price')) . ' to ' . max(array_column($amazonData['buying_options'], 'price')) : 'Not found'
+                                    ],
+                                    'series' => [
+                                        'google' => 'Not available',
+                                        'ol' => isset($olData['series']) ? implode(', ', $olData['series']) : 'N/A',
+                                        'amazon' => $amazonData['metadata']['series'] ?? 'N/A'
                                     ]
                                 ];
 
@@ -778,7 +786,7 @@ $pageActions = '
                                     $hasData = false;
 
                                     // Check if field is derived/calculated vs direct scraped
-                                    $isDerived = in_array($field, ['reading_level', 'price_range']);
+                                    $isDerived = in_array($field, ['reading_level', 'price_range', 'format']);
 
                                     foreach ($sources as $key => $value) {
                                         if ($value !== 'N/A' && $value !== 'Not found' && $value !== 'Not available' && $value !== 'Not used' && $value !== 'No purchase links') {
@@ -821,27 +829,61 @@ $pageActions = '
                             <div class="col-md-4">
                                 <strong>🛒 Amazon (HTML Available):</strong>
                                 <ul class="mb-0 small">
-                                    <li><strong>Specific Age:</strong> "6 - 9 years, from customers"</li>
-                                    <li><strong>Series:</strong> "Book 2 of 7: Chronicles of Narnia"</li>
-                                    <li><strong>Reviews:</strong> "4.5/5 stars (19,649 reviews)"</li>
-                                    <li><strong>Physical:</strong> "208 pages, 430g, 12.5x1.4x18.6cm"</li>
-                                    <li><strong>Rankings:</strong> "#10 in Fiction Classics for Young Adults"</li>
+                                    <?php if (isset($amazonData['metadata']['reading_age'])): ?>
+                                    <li><strong>Specific Age:</strong> "<?php echo htmlspecialchars($amazonData['metadata']['reading_age']); ?>"</li>
+                                    <?php endif; ?>
+                                    <?php if (isset($amazonData['metadata']['series'])): ?>
+                                    <li><strong>Series:</strong> "<?php echo htmlspecialchars($amazonData['metadata']['series']); ?>"</li>
+                                    <?php endif; ?>
+                                    <?php if (isset($amazonData['metadata']['reviews'])): ?>
+                                    <li><strong>Reviews:</strong> "<?php echo htmlspecialchars($amazonData['metadata']['reviews']); ?>"</li>
+                                    <?php endif; ?>
+                                    <?php if (isset($amazonData['metadata']['pages'])): ?>
+                                    <li><strong>Physical:</strong> "<?php echo htmlspecialchars($amazonData['metadata']['pages']); ?> pages<?php
+                                        if (isset($amazonData['metadata']['weight'])) echo ', ' . htmlspecialchars($amazonData['metadata']['weight']);
+                                        if (isset($amazonData['metadata']['dimensions'])) echo ', ' . htmlspecialchars($amazonData['metadata']['dimensions']);
+                                    ?>"</li>
+                                    <?php endif; ?>
+                                    <?php if (isset($amazonData['metadata']['rankings'])): ?>
+                                    <li><strong>Rankings:</strong> "<?php echo htmlspecialchars($amazonData['metadata']['rankings']); ?>"</li>
+                                    <?php endif; ?>
+                                    <?php if (!isset($amazonData['metadata']['reading_age']) && !isset($amazonData['metadata']['series']) && !isset($amazonData['metadata']['reviews']) && !isset($amazonData['metadata']['pages']) && !isset($amazonData['metadata']['rankings'])): ?>
+                                    <li><em>No additional metadata extracted</em></li>
+                                    <?php endif; ?>
                                 </ul>
                             </div>
                             <div class="col-md-4">
                                 <strong>📖 OpenLibrary (Available):</strong>
                                 <ul class="mb-0 small">
-                                    <li><strong>Rich Subjects:</strong> "the Blitz, fauns, Turkish Delight, lions, English Children's stories, Fantasy & Magic, Action & Adventure, Classics"</li>
-                                    <li><strong>Characters:</strong> "Aslan, Edmund Pevensie, Father Christmas"</li>
-                                    <li><strong>Settings:</strong> "Cair Paravel, England, London"</li>
+                                    <?php if (isset($olData['subject']) && !empty($olData['subject'])): ?>
+                                    <li><strong>Rich Subjects:</strong> "<?php echo htmlspecialchars(implode(', ', array_slice($olData['subject'], 0, 8))); ?><?php echo count($olData['subject']) > 8 ? '...' : ''; ?>"</li>
+                                    <?php endif; ?>
+                                    <?php if (isset($olData['person']) && !empty($olData['person'])): ?>
+                                    <li><strong>Characters:</strong> "<?php echo htmlspecialchars(implode(', ', array_slice($olData['person'], 0, 5))); ?><?php echo count($olData['person']) > 5 ? '...' : ''; ?>"</li>
+                                    <?php endif; ?>
+                                    <?php if (isset($olData['place']) && !empty($olData['place'])): ?>
+                                    <li><strong>Settings:</strong> "<?php echo htmlspecialchars(implode(', ', array_slice($olData['place'], 0, 5))); ?><?php echo count($olData['place']) > 5 ? '...' : ''; ?>"</li>
+                                    <?php endif; ?>
+                                    <?php if (!isset($olData['subject']) && !isset($olData['person']) && !isset($olData['place'])): ?>
+                                    <li><em>No additional metadata available</em></li>
+                                    <?php endif; ?>
                                 </ul>
                             </div>
                             <div class="col-md-4">
                                 <strong>📚 Google Books (Available):</strong>
                                 <ul class="mb-0 small">
-                                    <li><strong>Categories:</strong> "Children" (too vague for age mapping)</li>
+                                    <?php if (isset($googleData['categories']) && !empty($googleData['categories'])): ?>
+                                    <li><strong>Categories:</strong> "<?php echo htmlspecialchars(implode(', ', $googleData['categories'])); ?>" <?php echo (count($googleData['categories']) == 1 && strtolower($googleData['categories'][0]) == 'children') ? '(too vague for age mapping)' : ''; ?></li>
+                                    <?php endif; ?>
+                                    <?php if (isset($googleData['description'])): ?>
                                     <li><strong>Description:</strong> Full book description available</li>
+                                    <?php endif; ?>
+                                    <?php if (isset($googleData['previewLink'])): ?>
                                     <li><strong>Preview:</strong> Book preview links</li>
+                                    <?php endif; ?>
+                                    <?php if (!isset($googleData['categories']) && !isset($googleData['description']) && !isset($googleData['previewLink'])): ?>
+                                    <li><em>No additional metadata available</em></li>
+                                    <?php endif; ?>
                                 </ul>
                             </div>
                         </div>

@@ -125,13 +125,30 @@ function getEnrichedBookData($title, $author, $currentISBN = '', $currentPublish
         // Try to get Amazon data for age range, format, price, etc.
         try {
             debugLog("Starting Amazon scraping for ISBN $currentISBN");
+
+            // CRITICAL: Enable Amazon debug mode for detailed logging
+            if (!defined('AMAZON_DEBUG')) {
+                define('AMAZON_DEBUG', true);
+            }
+
             $amazonData = scrapeAmazonBuyingOptions($currentISBN);
             $enrichedData['sources_checked'][] = 'amazon';
 
             // CRITICAL DEBUG: Log what Amazon data was actually retrieved
             debugLog("Amazon data retrieved for ISBN $currentISBN");
+            debugLog("Amazon data structure", $amazonData);
             debugLog("Amazon metadata", $amazonData['metadata'] ?? []);
             debugLog("Amazon buying_options", $amazonData['buying_options'] ?? []);
+
+            // Check if Amazon data is completely empty
+            if (empty($amazonData) || (empty($amazonData['metadata']) && empty($amazonData['buying_options']))) {
+                debugLog("WARNING: Amazon scraping returned empty data for ISBN $currentISBN");
+                debugLog("Amazon data empty check", [
+                    'amazonData_empty' => empty($amazonData),
+                    'metadata_empty' => empty($amazonData['metadata'] ?? []),
+                    'buying_options_empty' => empty($amazonData['buying_options'] ?? [])
+                ]);
+            }
 
             // Check specifically for reading_age
             if (isset($amazonData['metadata']['reading_age'])) {
@@ -2388,7 +2405,10 @@ function scrapeAmazonBuyingOptions($isbn) {
         define('AMAZON_DEBUG', false);
     }
 
+    debugLog("scrapeAmazonBuyingOptions called with ISBN: $isbn");
+
     if (empty($isbn)) {
+        debugLog("ERROR: ISBN is empty");
         if (AMAZON_DEBUG) {
             echo "<p><strong>❌ Error:</strong> ISBN is empty.</p>\n";
         }
@@ -2396,10 +2416,14 @@ function scrapeAmazonBuyingOptions($isbn) {
     }
 
     $cleanISBN = preg_replace('/[^0-9X]/i', '', $isbn);
+    debugLog("Cleaned ISBN: $cleanISBN");
+
     $endpoints = [
         'desktop' => "https://www.amazon.co.uk/dp/{$cleanISBN}",
         'mobile'  => "https://www.amazon.co.uk/gp/aw/d/{$cleanISBN}"
     ];
+
+    debugLog("Amazon endpoints", $endpoints);
     $userAgents = [
         'desktop' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'mobile'  => 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1'
@@ -2420,14 +2444,22 @@ function scrapeAmazonBuyingOptions($isbn) {
         curl_setopt($ch, CURLOPT_ENCODING, '');
         $body = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
         curl_close($ch);
+
+        debugLog("Amazon $type request: HTTP $httpCode, " . strlen($body ?: '') . " bytes" . ($curlError ? ", Error: $curlError" : ""));
+
         if ($httpCode === 200 && $body) {
             $responses[$type] = $body;
+            debugLog("Amazon $type response successful");
             if (AMAZON_DEBUG) {
                 echo "<p><strong>📡 HTTP Status Code ({$type}):</strong> {$httpCode}</p>\n";
             }
-        } elseif (AMAZON_DEBUG) {
-            echo "<p><strong>⚠️ {$type} fetch failed or empty response (HTTP {$httpCode})</strong></p>\n";
+        } else {
+            debugLog("Amazon $type request failed: HTTP $httpCode" . ($curlError ? ", cURL Error: $curlError" : ""));
+            if (AMAZON_DEBUG) {
+                echo "<p><strong>⚠️ {$type} fetch failed or empty response (HTTP {$httpCode})</strong></p>\n";
+            }
         }
     }
     if (empty($responses)) {
@@ -2547,10 +2579,19 @@ function scrapeAmazonBuyingOptions($isbn) {
         }
     }
 
-    return [
+    $result = [
         'buying_options' => $buyingOptions,
         'metadata' => $metadata
     ];
+
+    debugLog("scrapeAmazonBuyingOptions returning", [
+        'buying_options_count' => count($buyingOptions),
+        'metadata_count' => count($metadata),
+        'buying_options' => $buyingOptions,
+        'metadata' => $metadata
+    ]);
+
+    return $result;
 }
 
 /**

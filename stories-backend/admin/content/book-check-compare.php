@@ -577,22 +577,86 @@ $pageActions = '
                                         // Don't show source in brackets since we have a separate Source column
                                         $displayValue = $value;
 
-                                        // Highlight important fields
+                                        // Highlight important fields and derived/calculated fields
                                         $rowClass = '';
+                                        $valueClass = '';
+
                                         if ($fieldName === 'age_range' && $value === '18+ years') {
                                             $rowClass = ' class="table-danger"';
                                         } elseif (in_array($fieldName, ['title', 'author', 'age_range', 'reading_level'])) {
                                             $rowClass = ' class="table-warning"';
                                         }
+
+                                        // Color code derived/calculated fields
+                                        if (in_array($fieldName, ['reading_level', 'price_range'])) {
+                                            $valueClass = 'text-info font-weight-bold';
+                                        } elseif ($fieldName === 'format') {
+                                            $valueClass = 'text-success font-weight-bold';
+                                        }
                                         ?>
                                         <tr<?php echo $rowClass; ?>>
                                             <td><strong><?php echo htmlspecialchars($fieldName); ?></strong></td>
-                                            <td style="word-wrap: break-word; word-break: break-all; max-width: 0;"><?php echo htmlspecialchars($displayValue); ?></td>
+                                            <td style="word-wrap: break-word; word-break: break-all; max-width: 0;" class="<?php echo $valueClass; ?>"><?php echo htmlspecialchars($displayValue); ?></td>
                                             <td><?php echo htmlspecialchars($source); ?></td>
                                             <td><?php echo htmlspecialchars($confidence); ?></td>
                                         </tr>
                                     <?php endif; ?>
                                 <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Database Reference Data -->
+                    <div class="table-responsive mb-4">
+                        <h6>📊 Database Reference Data (Current/Actual Values)</h6>
+                        <div class="alert alert-info">
+                            <small><strong>Note:</strong> This shows the current data stored in the database for this book, which serves as the baseline for comparison.</small>
+                        </div>
+                        <table class="table table-sm table-bordered">
+                            <thead class="thead-secondary">
+                                <tr>
+                                    <th>Field</th>
+                                    <th>Current Database Value</th>
+                                    <th>Source</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Title</strong></td>
+                                    <td><?php echo htmlspecialchars($title); ?></td>
+                                    <td>Database (input)</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Author</strong></td>
+                                    <td><?php echo htmlspecialchars($author); ?></td>
+                                    <td>Database (input)</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>ISBN</strong></td>
+                                    <td><?php echo htmlspecialchars($isbn); ?></td>
+                                    <td>Database (input)</td>
+                                </tr>
+                                <?php
+                                // Show reading levels from database
+                                try {
+                                    $stmt = $db->prepare("SELECT age_group, reading_stage FROM standard_reading_levels ORDER BY id");
+                                    $stmt->execute();
+                                    $readingLevels = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                                    if (!empty($readingLevels)) {
+                                        echo '<tr><td colspan="3"><strong>Available Reading Levels in Database:</strong></td></tr>';
+                                        foreach ($readingLevels as $level) {
+                                            echo '<tr class="table-light">';
+                                            echo '<td><em>' . htmlspecialchars($level['age_group']) . '</em></td>';
+                                            echo '<td><em>' . htmlspecialchars($level['reading_stage']) . '</em></td>';
+                                            echo '<td><em>standard_reading_levels table</em></td>';
+                                            echo '</tr>';
+                                        }
+                                    }
+                                } catch (Exception $e) {
+                                    echo '<tr><td colspan="3"><em>Could not load reading levels from database</em></td></tr>';
+                                }
+                                ?>
                             </tbody>
                         </table>
                     </div>
@@ -676,14 +740,12 @@ $pageActions = '
                                     'age_range' => [
                                         'google' => 'Too vague (Children)',
                                         'ol' => 'Not available',
-                                        'amazon' => $amazonData['metadata']['reading_age'] ?? 'Not found',
-                                        'automated' => true
+                                        'amazon' => $amazonData['metadata']['reading_age'] ?? 'Not found'
                                     ],
                                     'reading_level' => [
                                         'google' => 'Not available',
                                         'ol' => 'Not available',
-                                        'amazon' => 'Derived from age_range',
-                                        'automated' => true
+                                        'amazon' => 'Derived from age_range'
                                     ],
                                     'tags' => [
                                         'google' => isset($googleData['categories']) ? implode(', ', $googleData['categories']) : 'N/A',
@@ -708,17 +770,18 @@ $pageActions = '
                                     'price_range' => [
                                         'google' => 'Not available',
                                         'ol' => 'Not available',
-                                        'amazon' => isset($amazonData['selected_price']) ? 'Calculated from ' . $amazonData['selected_price'] : 'Not found',
-                                        'automated' => true
+                                        'amazon' => isset($amazonData['selected_price']) ? 'Calculated from ' . $amazonData['selected_price'] : 'Not found'
                                     ]
                                 ];
 
                                 foreach ($fieldMappings as $field => $sources) {
                                     $hasData = false;
-                                    $isAutomated = isset($sources['automated']) && $sources['automated'];
+
+                                    // Check if field is derived/calculated vs direct scraped
+                                    $isDerived = in_array($field, ['reading_level', 'price_range']);
 
                                     foreach ($sources as $key => $value) {
-                                        if ($key !== 'automated' && $value !== 'N/A' && $value !== 'Not found' && $value !== 'Not available' && $value !== 'Not used' && $value !== 'No purchase links') {
+                                        if ($value !== 'N/A' && $value !== 'Not found' && $value !== 'Not available' && $value !== 'Not used' && $value !== 'No purchase links') {
                                             $hasData = true;
                                             break;
                                         }
@@ -726,14 +789,14 @@ $pageActions = '
 
                                     $statusClass = $hasData ? 'table-success' : 'table-warning';
                                     $statusIcon = $hasData ? '✅' : '⚠️';
-                                    $fieldClass = $isAutomated ? 'text-primary font-weight-bold' : '';
-                                    $fieldLabel = $isAutomated ? $field . ' (automated)' : $field;
+                                    $fieldClass = $isDerived ? 'text-info font-weight-bold' : '';
+                                    $fieldLabel = $field;
                                     ?>
                                     <tr class="<?php echo $statusClass; ?>">
                                         <td><strong class="<?php echo $fieldClass; ?>"><?php echo htmlspecialchars($fieldLabel); ?></strong></td>
-                                        <td class="<?php echo $isAutomated ? 'text-muted' : ''; ?>"><?php echo htmlspecialchars($sources['google']); ?></td>
-                                        <td class="<?php echo $isAutomated ? 'text-muted' : ''; ?>"><?php echo htmlspecialchars($sources['ol']); ?></td>
-                                        <td class="<?php echo $isAutomated ? 'text-primary' : ''; ?>"><?php echo htmlspecialchars($sources['amazon']); ?></td>
+                                        <td><?php echo htmlspecialchars($sources['google']); ?></td>
+                                        <td><?php echo htmlspecialchars($sources['ol']); ?></td>
+                                        <td class="<?php echo $isDerived ? 'text-info font-weight-bold' : ''; ?>"><?php echo htmlspecialchars($sources['amazon']); ?></td>
                                         <td><?php echo $statusIcon; ?></td>
                                     </tr>
                                     <?php

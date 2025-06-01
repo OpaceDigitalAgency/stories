@@ -339,21 +339,33 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $amazonData
                         ];
                     }
                 }
-            } elseif (!in_array($fieldName, ['purchase_links', 'format', 'price_range'])) {
-                // Only one source has data (but don't override Amazon fields)
-                $value = !empty($googleValue) ? $googleValue : $openLibraryValue;
-                $source = !empty($googleValue) ? 'google_books' : 'open_library';
-                $confidence = !empty($googleValue) ? $fieldConfig['confidence'] : $fieldConfig['confidence'] - 5;
+            } else {
+                // Only one source has data - determine which one
+                if (!empty($amazonValue)) {
+                    // Amazon has data
+                    $combinedFields[$fieldName] = [
+                        'value' => $amazonValue,
+                        'source' => 'amazon',
+                        'confidence' => $fieldConfig['confidence'],
+                        'label' => $fieldConfig['label']
+                    ];
+                    error_log("ENRICHMENT_DEBUG: Using Amazon data for $fieldName: $amazonValue");
+                } else {
+                    // Google or OpenLibrary has data
+                    $value = !empty($googleValue) ? $googleValue : $openLibraryValue;
+                    $source = !empty($googleValue) ? 'google_books' : 'open_library';
+                    $confidence = !empty($googleValue) ? $fieldConfig['confidence'] : $fieldConfig['confidence'] - 5;
 
-                $combinedFields[$fieldName] = [
-                    'value' => $value,
-                    'source' => $source,
-                    'confidence' => $confidence,
-                    'label' => $fieldConfig['label']
-                ];
+                    $combinedFields[$fieldName] = [
+                        'value' => $value,
+                        'source' => $source,
+                        'confidence' => $confidence,
+                        'label' => $fieldConfig['label']
+                    ];
+                }
             }
-        } elseif (!in_array($fieldName, ['purchase_links', 'format', 'price_range'])) {
-            // No data from either source - show as unknown (but don't override Amazon fields)
+        } else {
+            // No data from any source - show as unknown
 
             // CRITICAL DEBUG: Log when fields are marked as unknown
             if ($fieldName === 'author' || $fieldName === 'title') {

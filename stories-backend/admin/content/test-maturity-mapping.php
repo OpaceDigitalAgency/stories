@@ -21,8 +21,8 @@ echo "<style>
     th { background-color: #f2f2f2; }
 </style></head><body>";
 
-echo "<h1>🔍 Age Range Issue Test</h1>";
-echo "<p>Testing Chronicles of Narnia to identify why it shows '18+ years' instead of children's age range</p>";
+echo "<h1>🔍 Data Enrichment Debug Test</h1>";
+echo "<p>Testing Chronicles of Narnia to identify wrong book data and age/reading level issues</p>";
 
 // Test case: Chronicles of Narnia
 $title = "The Lion, the Witch and the Wardrobe";
@@ -30,7 +30,18 @@ $author = "C.S. Lewis";
 $isbn = "9780007416851";
 
 echo "<div class='test-section'>";
-echo "<h2>Test 1: Direct Enrichment Function</h2>";
+echo "<h2>🎯 Expected vs Actual Data</h2>";
+echo "<table>";
+echo "<tr><th>Field</th><th>Expected (Chronicles of Narnia)</th><th>Status</th></tr>";
+echo "<tr><td><strong>Title</strong></td><td>The Lion, the Witch and the Wardrobe</td><td>❌ Getting 'Earwig and the Witch'</td></tr>";
+echo "<tr><td><strong>Author</strong></td><td>C.S. Lewis</td><td>❌ Getting 'Diana Wynne Jones'</td></tr>";
+echo "<tr><td><strong>Age Range</strong></td><td>8-9 years (children's book)</td><td>❌ Getting null or 18+ years</td></tr>";
+echo "<tr><td><strong>Reading Level</strong></td><td>Fluent Reader</td><td>❌ Getting 'Early Reader'</td></tr>";
+echo "</table>";
+echo "</div>";
+
+echo "<div class='test-section'>";
+echo "<h2>Test 1: Direct Enrichment Function Analysis</h2>";
 echo "<p>Testing book: <strong>$title</strong> by <strong>$author</strong> (ISBN: <strong>$isbn</strong>)</p>";
 
 try {
@@ -42,25 +53,56 @@ try {
     echo "<p>Processing time: {$processingTime} seconds</p>";
     echo "<p>Confidence Score: <strong>{$enrichedData['confidence_score']}</strong></p>";
 
-    // Check age_range field specifically
-    $ageRangeField = $enrichedData['fields']['age_range'] ?? null;
-    if ($ageRangeField) {
-        echo "<h3>Age Range Field Analysis:</h3>";
-        echo "<table>";
-        echo "<tr><th>Property</th><th>Value</th></tr>";
-        echo "<tr><td>Value</td><td><strong>" . htmlspecialchars($ageRangeField['value'] ?? 'null') . "</strong></td></tr>";
-        echo "<tr><td>Source</td><td>" . htmlspecialchars($ageRangeField['source'] ?? 'null') . "</td></tr>";
-        echo "<tr><td>Confidence</td><td>" . htmlspecialchars($ageRangeField['confidence'] ?? 'null') . "</td></tr>";
-        echo "</table>";
+    // Analyze critical data mismatches
+    echo "<h3>🚨 Critical Data Analysis:</h3>";
+    echo "<table>";
+    echo "<tr><th>Field</th><th>Expected</th><th>Actual</th><th>Status</th><th>Source</th></tr>";
 
-        if (($ageRangeField['value'] ?? '') === '18+ years') {
-            echo "<p class='error'>❌ PROBLEM FOUND: Age range is '18+ years' for a children's book!</p>";
-            echo "<p>Source: " . htmlspecialchars($ageRangeField['source'] ?? 'unknown') . "</p>";
-        } else {
-            echo "<p class='success'>✅ Age range looks appropriate: " . htmlspecialchars($ageRangeField['value'] ?? 'null') . "</p>";
-        }
-    } else {
-        echo "<p class='warning'>⚠ No age_range field found</p>";
+    // Check title
+    $titleField = $enrichedData['fields']['title'] ?? null;
+    $actualTitle = $titleField['value'] ?? 'N/A';
+    $titleStatus = (stripos($actualTitle, 'Lion') !== false || stripos($actualTitle, 'Wardrobe') !== false) ? '✅ Correct' : '❌ WRONG BOOK';
+    echo "<tr><td><strong>Title</strong></td><td>The Lion, the Witch and the Wardrobe</td><td>" . htmlspecialchars($actualTitle) . "</td><td>$titleStatus</td><td>" . htmlspecialchars($titleField['source'] ?? 'unknown') . "</td></tr>";
+
+    // Check author
+    $authorField = $enrichedData['fields']['author'] ?? null;
+    $actualAuthor = $authorField['value'] ?? 'N/A';
+    $authorStatus = (stripos($actualAuthor, 'C.S. Lewis') !== false || stripos($actualAuthor, 'Lewis') !== false) ? '✅ Correct' : '❌ WRONG AUTHOR';
+    echo "<tr><td><strong>Author</strong></td><td>C.S. Lewis</td><td>" . htmlspecialchars($actualAuthor) . "</td><td>$authorStatus</td><td>" . htmlspecialchars($authorField['source'] ?? 'unknown') . "</td></tr>";
+
+    // Check age range
+    $ageRangeField = $enrichedData['fields']['age_range'] ?? null;
+    $actualAgeRange = $ageRangeField['value'] ?? 'null';
+    $ageStatus = ($actualAgeRange === 'null') ? '❌ NULL' : (($actualAgeRange === '18+ years') ? '❌ ADULT AGE' : '✅ Has Value');
+    echo "<tr><td><strong>Age Range</strong></td><td>8-9 years (children's)</td><td>" . htmlspecialchars($actualAgeRange) . "</td><td>$ageStatus</td><td>" . htmlspecialchars($ageRangeField['source'] ?? 'unknown') . "</td></tr>";
+
+    // Check reading level
+    $readingField = $enrichedData['fields']['reading_level'] ?? null;
+    $actualReading = $readingField['value'] ?? 'N/A';
+    $readingStatus = (stripos($actualReading, 'Fluent') !== false) ? '✅ Expected' : '📝 Different';
+    echo "<tr><td><strong>Reading Level</strong></td><td>Fluent Reader</td><td>" . htmlspecialchars($actualReading) . "</td><td>$readingStatus</td><td>" . htmlspecialchars($readingField['source'] ?? 'unknown') . "</td></tr>";
+
+    // Check maturity rating (should now be null)
+    $maturityField = $enrichedData['fields']['maturity_rating'] ?? null;
+    $actualMaturity = $maturityField['value'] ?? 'null';
+    $maturityStatus = ($actualMaturity === 'null') ? '✅ Removed' : '⚠ Still Present';
+    echo "<tr><td><strong>Maturity Rating</strong></td><td>null (removed)</td><td>" . htmlspecialchars($actualMaturity) . "</td><td>$maturityStatus</td><td>" . htmlspecialchars($maturityField['source'] ?? 'unknown') . "</td></tr>";
+
+    echo "</table>";
+
+    // Root cause analysis
+    if ($titleStatus === '❌ WRONG BOOK' || $authorStatus === '❌ WRONG AUTHOR') {
+        echo "<div style='background-color: #ffeeee; padding: 15px; margin: 10px 0; border-left: 5px solid red;'>";
+        echo "<h4>🚨 ROOT CAUSE IDENTIFIED: Wrong Book Data</h4>";
+        echo "<p><strong>The ISBN search is returning completely wrong book data!</strong></p>";
+        echo "<p>This explains why:</p>";
+        echo "<ul>";
+        echo "<li>Author shows as 'Diana Wynne Jones' instead of 'C.S. Lewis'</li>";
+        echo "<li>Title shows as 'Earwig and the Witch' instead of 'Chronicles of Narnia'</li>";
+        echo "<li>Age ranges and reading levels are wrong for the intended book</li>";
+        echo "</ul>";
+        echo "<p><strong>Next step:</strong> Check why ISBN 9780007416851 returns wrong book from APIs</p>";
+        echo "</div>";
     }
 
 } catch (Exception $e) {
@@ -135,14 +177,30 @@ if ($response && $httpCode === 200) {
         echo "<tr><td>Publisher</td><td>" . htmlspecialchars($book['publisher'] ?? 'N/A') . "</td></tr>";
         echo "</table>";
 
-        // Check maturity rating specifically
-        $maturityRating = $book['maturityRating'] ?? null;
-        if ($maturityRating === 'NOT_MATURE') {
-            echo "<p class='warning'>⚠ Google Books returns maturityRating: 'NOT_MATURE' - this should map to children's age range, not 18+!</p>";
-        } elseif ($maturityRating === 'MATURE') {
-            echo "<p class='error'>❌ Google Books returns maturityRating: 'MATURE' - this would correctly map to 18+</p>";
+        // Check if this is the correct book
+        $bookTitle = $book['title'] ?? '';
+        $bookAuthors = $book['authors'] ?? [];
+        $isCorrectBook = (stripos($bookTitle, 'Lion') !== false || stripos($bookTitle, 'Wardrobe') !== false) &&
+                        (in_array('C.S. Lewis', $bookAuthors) || array_filter($bookAuthors, function($author) { return stripos($author, 'Lewis') !== false; }));
+
+        if ($isCorrectBook) {
+            echo "<p class='success'>✅ Google Books returned the CORRECT book</p>";
         } else {
-            echo "<p>Maturity rating: " . htmlspecialchars($maturityRating ?? 'null') . "</p>";
+            echo "<p class='error'>❌ Google Books returned the WRONG book - this explains the data mismatch!</p>";
+            echo "<p><strong>Expected:</strong> The Lion, the Witch and the Wardrobe by C.S. Lewis</p>";
+            echo "<p><strong>Got:</strong> " . htmlspecialchars($bookTitle) . " by " . htmlspecialchars(implode(', ', $bookAuthors)) . "</p>";
+        }
+
+        // Check for age-related categories
+        $categories = $book['categories'] ?? [];
+        $ageRelatedCategories = array_filter($categories, function($cat) {
+            return preg_match('/\d+.*years?|children|juvenile|young|teen/i', $cat);
+        });
+
+        if (!empty($ageRelatedCategories)) {
+            echo "<p><strong>Age-related categories found:</strong> " . htmlspecialchars(implode(', ', $ageRelatedCategories)) . "</p>";
+        } else {
+            echo "<p class='warning'>⚠ No age-related categories found in Google Books data</p>";
         }
     } else {
         echo "<p class='error'>✗ No results found in Google Books</p>";
@@ -159,9 +217,10 @@ echo "<h2>Test 4: Individual Source Analysis</h2>";
 
 echo "<h3>🔍 Issues Found in Test Results:</h3>";
 echo "<ul class='error'>";
-echo "<li><strong>Wrong Book:</strong> Google Books returned 'Earwig and the Witch' by Diana Wynne Jones instead of 'The Lion, the Witch and the Wardrobe' by C.S. Lewis</li>";
-echo "<li><strong>Age Range is null:</strong> Despite maturity_rating being '8-9 years', age_range field is null</li>";
-echo "<li><strong>Maturity Rating Mapping:</strong> Google Books maturityRating 'NOT_MATURE' correctly mapped to '8-9 years' in maturity_rating field</li>";
+echo "<li><strong>Wrong Book Data:</strong> APIs are returning 'Earwig and the Witch' by Diana Wynne Jones instead of 'The Lion, the Witch and the Wardrobe' by C.S. Lewis</li>";
+echo "<li><strong>Age Range is null:</strong> No age range data being extracted from any source</li>";
+echo "<li><strong>Reading Level Mismatch:</strong> Getting 'Early Reader' instead of expected 'Fluent Reader' for 8-9 year olds</li>";
+echo "<li><strong>Maturity Rating Removed:</strong> Maturity rating logic has been removed as requested</li>";
 echo "</ul>";
 
 // Test OpenLibrary directly
@@ -312,9 +371,10 @@ echo "</table>";
 
 echo "<h3>🔍 Key Findings:</h3>";
 echo "<ul>";
-echo "<li><strong>'8-9 years' maps to 'Fluent Reader'</strong> - This is what should appear in the modal</li>";
+echo "<li><strong>'8-9 years' maps to 'Fluent Reader'</strong> - This is what should appear in the modal for Chronicles of Narnia</li>";
 echo "<li><strong>'18+ years' maps to 'Proficient Reader'</strong> - Adult content mapping</li>";
-echo "<li><strong>Google Books maturity_rating 'NOT_MATURE' correctly maps to '8-9 years'</strong></li>";
+echo "<li><strong>Maturity rating logic removed</strong> - Age ranges now come only from OpenLibrary subjects and Amazon metadata</li>";
+echo "<li><strong>Wrong book data is the root cause</strong> - ISBN search returning incorrect book affects all fields</li>";
 echo "</ul>";
 
 echo "</div>";
@@ -323,16 +383,18 @@ echo "<div class='test-section'>";
 echo "<h2>🎯 Summary & Next Steps</h2>";
 echo "<h3>✅ What's Working:</h3>";
 echo "<ul class='success'>";
-echo "<li>Google Books maturityRating 'NOT_MATURE' correctly maps to '8-9 years' in maturity_rating field</li>";
+echo "<li>Maturity rating logic successfully removed as requested</li>";
 echo "<li>Enrichment function runs successfully with 100% confidence</li>";
 echo "<li>Alternative ISBNs are being found correctly</li>";
+echo "<li>Age range to reading level mapping is properly defined</li>";
 echo "</ul>";
 
-echo "<h3>❌ Issues to Fix:</h3>";
+echo "<h3>❌ Critical Issues to Fix:</h3>";
 echo "<ul class='error'>";
-echo "<li><strong>Wrong Book Match:</strong> ISBN search returning wrong book (Earwig vs Chronicles of Narnia)</li>";
-echo "<li><strong>Age Range Field Null:</strong> Despite maturity_rating being set, age_range field is null</li>";
-echo "<li><strong>Field Mapping:</strong> maturity_rating field has correct value but age_range field doesn't</li>";
+echo "<li><strong>Wrong Book Data:</strong> ISBN 9780007416851 returns 'Earwig and the Witch' instead of 'Chronicles of Narnia'</li>";
+echo "<li><strong>Age Range Extraction Failing:</strong> No age range data being extracted from any source</li>";
+echo "<li><strong>Reading Level Mismatch:</strong> Getting 'Early Reader' instead of 'Fluent Reader'</li>";
+echo "<li><strong>Source Data Quality:</strong> All enrichment sources returning wrong book metadata</li>";
 echo "</ul>";
 
 echo "<h3>🔧 Debugging Steps:</h3>";

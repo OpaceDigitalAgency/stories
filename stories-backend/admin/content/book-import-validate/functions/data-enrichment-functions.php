@@ -1127,11 +1127,9 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
             break;
 
         case 'maturity_rating':
-            // Google Books: maturityRating, try to map to age ranges
-            if (isset($match['maturity_rating'])) {
-                return mapMaturityRatingToAgeRange($match['maturity_rating']);
-            }
-            break;
+            // REMOVED: Maturity rating logic removed as it causes confusion
+            // Age ranges should come from OpenLibrary subjects and Amazon metadata only
+            return null;
 
         case 'language':
             // Normalize language codes
@@ -1483,28 +1481,7 @@ function mapCategoryToReadingLevel($category) {
     return null;
 }
 
-/**
- * Map Google Books maturity rating to age range
- * CRITICAL FIX: NOT_MATURE should NEVER map to 18+ years
- */
-function mapMaturityRatingToAgeRange($maturityRating) {
-    error_log("AGE_TEST: mapMaturityRatingToAgeRange called with: '$maturityRating'");
-
-    switch (strtoupper($maturityRating)) {
-        case 'NOT_MATURE':
-            // FIXED: Return a reasonable children's age range instead of "All Ages" which gets mapped to 18+
-            $result = '8-9 years';
-            error_log("AGE_TEST: NOT_MATURE mapped to: '$result'");
-            return $result;
-        case 'MATURE':
-            $result = '18+ years';
-            error_log("AGE_TEST: MATURE mapped to: '$result'");
-            return $result;
-        default:
-            error_log("AGE_TEST: Unknown maturity rating '$maturityRating', returning as-is");
-            return $maturityRating;
-    }
-}
+// REMOVED: mapMaturityRatingToAgeRange function - maturity rating logic removed as it causes confusion
 
 /**
  * Normalize language codes to readable names

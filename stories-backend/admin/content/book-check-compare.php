@@ -21,10 +21,32 @@ require_once 'book-import-validate/functions/google-books-validation-functions.p
 require_once 'book-import-validate/functions/open-library-validation-functions.php';
 
 /**
- * Test individual APIs with detailed diagnostics
+ * Convert ISBN-13 to ISBN-10
+ */
+function convertISBN13ToISBN10($isbn13) {
+    if (strlen($isbn13) !== 13 || substr($isbn13, 0, 3) !== '978') {
+        return null;
+    }
+
+    $isbn10Base = substr($isbn13, 3, 9);
+    $sum = 0;
+    for ($i = 0; $i < 9; $i++) {
+        $sum += (int)$isbn10Base[$i] * (10 - $i);
+    }
+    $checkDigit = (11 - ($sum % 11)) % 11;
+    $checkDigit = $checkDigit === 10 ? 'X' : (string)$checkDigit;
+
+    return $isbn10Base . $checkDigit;
+}
+
+/**
+ * Test individual APIs with detailed diagnostics and field mapping
  */
 function testIndividualAPIs($isbn) {
     $results = [];
+
+    // Convert to ISBN-10 for Amazon (as modal uses)
+    $isbn10 = convertISBN13ToISBN10($isbn);
 
     // Test Google Books API
     try {
@@ -66,13 +88,22 @@ function testIndividualAPIs($isbn) {
         $results['open_library'] = ['status' => 'error', 'message' => $e->getMessage()];
     }
 
-    // Test Amazon Scraping
+    // Test Amazon Scraping with ISBN-10 (same as modal)
     try {
         if (function_exists('scrapeAmazonBuyingOptions')) {
-            $amazonData = scrapeAmazonBuyingOptions($isbn);
+            // Try both ISBN-13 and ISBN-10
+            $amazonData = null;
+            if ($isbn10) {
+                $amazonData = scrapeAmazonBuyingOptions($isbn10);
+            }
+            if (!$amazonData || empty($amazonData)) {
+                $amazonData = scrapeAmazonBuyingOptions($isbn);
+            }
+
             $results['amazon'] = [
                 'status' => $amazonData && !empty($amazonData) ? 'success' : 'no_data',
-                'data' => $amazonData
+                'data' => $amazonData,
+                'isbn_used' => $amazonData && !empty($amazonData) ? ($isbn10 ? $isbn10 : $isbn) : null
             ];
         } else {
             $results['amazon'] = ['status' => 'function_missing', 'message' => 'scrapeAmazonBuyingOptions function not available'];
@@ -383,118 +414,136 @@ $pageActions = '
                         </table>
                     </div>
 
-                    <!-- Individual API Tests -->
-                    <div class="row">
-                        <!-- Google Books API Test -->
-                        <div class="col-md-4">
-                            <div class="card mb-4">
-                                <div class="card-header">
-                                    <h6 class="mb-0">📚 Google Books API</h6>
-                                </div>
-                                <div class="card-body">
-                                    <?php
-                                    $googleUrl = "https://www.googleapis.com/books/v1/volumes?q=isbn:$isbn";
-                                    $ch = curl_init($googleUrl);
-                                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                                    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-                                    curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0');
-                                    $response = curl_exec($ch);
-                                    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                                    curl_close($ch);
+                    <!-- Comprehensive Field Mapping Table -->
+                    <div class="table-responsive mb-4">
+                        <h6>📊 Complete Field Mapping: Books Table vs API Sources</h6>
+                        <table class="table table-bordered table-hover">
+                            <thead class="thead-dark">
+                                <tr>
+                                    <th>Books Table Field</th>
+                                    <th>📚 Google Books</th>
+                                    <th>📖 OpenLibrary</th>
+                                    <th>🛒 Amazon</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php
+                                // Get API data
+                                $googleData = $results['api_tests']['google_books']['data']['items'][0]['volumeInfo'] ?? null;
+                                $olData = $results['api_tests']['open_library']['data']['docs'][0] ?? null;
+                                $amazonData = $results['api_tests']['amazon']['data'] ?? null;
 
-                                    if ($response && $httpCode === 200) {
-                                        $data = json_decode($response, true);
-                                        if (!empty($data['items'][0])) {
-                                            $book = $data['items'][0]['volumeInfo'];
-                                            echo '<p><span class="badge badge-success">✓ API Success</span></p>';
-                                            echo '<table class="table table-sm">';
-                                            echo '<tr><td><strong>Title:</strong></td><td>' . htmlspecialchars($book['title'] ?? 'N/A') . '</td></tr>';
-                                            echo '<tr><td><strong>Authors:</strong></td><td>' . htmlspecialchars(implode(', ', $book['authors'] ?? [])) . '</td></tr>';
-                                            echo '<tr><td><strong>Categories:</strong></td><td>' . htmlspecialchars(implode(', ', $book['categories'] ?? [])) . '</td></tr>';
-                                            echo '<tr><td><strong>Publisher:</strong></td><td>' . htmlspecialchars($book['publisher'] ?? 'N/A') . '</td></tr>';
-                                            echo '</table>';
-                                        } else {
-                                            echo '<p><span class="badge badge-warning">⚠ No Results</span></p>';
+                                // Define field mappings
+                                $fieldMappings = [
+                                    'title' => [
+                                        'google' => $googleData['title'] ?? 'N/A',
+                                        'ol' => $olData['title'] ?? 'N/A',
+                                        'amazon' => $amazonData['metadata']['title'] ?? 'N/A'
+                                    ],
+                                    'author' => [
+                                        'google' => isset($googleData['authors']) ? implode(', ', $googleData['authors']) : 'N/A',
+                                        'ol' => isset($olData['author_name']) ? implode(', ', $olData['author_name']) : 'N/A',
+                                        'amazon' => $amazonData['metadata']['author'] ?? 'N/A'
+                                    ],
+                                    'isbn' => [
+                                        'google' => 'From query',
+                                        'ol' => 'From query',
+                                        'amazon' => 'From query'
+                                    ],
+                                    'isbn_13' => [
+                                        'google' => 'From query',
+                                        'ol' => 'From query',
+                                        'amazon' => 'From query'
+                                    ],
+                                    'publisher' => [
+                                        'google' => $googleData['publisher'] ?? 'N/A',
+                                        'ol' => isset($olData['publisher']) ? implode(', ', array_slice($olData['publisher'], 0, 1)) : 'N/A',
+                                        'amazon' => $amazonData['metadata']['publisher'] ?? 'N/A'
+                                    ],
+                                    'publication_date' => [
+                                        'google' => $googleData['publishedDate'] ?? 'N/A',
+                                        'ol' => $olData['first_publish_year'] ?? 'N/A',
+                                        'amazon' => $amazonData['metadata']['publication_date'] ?? 'N/A'
+                                    ],
+                                    'page_count' => [
+                                        'google' => $googleData['pageCount'] ?? 'N/A',
+                                        'ol' => $olData['number_of_pages_median'] ?? 'N/A',
+                                        'amazon' => $amazonData['metadata']['pages'] ?? 'N/A'
+                                    ],
+                                    'language' => [
+                                        'google' => $googleData['language'] ?? 'N/A',
+                                        'ol' => isset($olData['language']) ? implode(', ', array_slice($olData['language'], 0, 1)) : 'N/A',
+                                        'amazon' => $amazonData['metadata']['language'] ?? 'N/A'
+                                    ],
+                                    'age_range' => [
+                                        'google' => isset($googleData['categories']) ? 'From categories: ' . implode(', ', $googleData['categories']) : 'N/A',
+                                        'ol' => 'No direct age data',
+                                        'amazon' => $amazonData['metadata']['reading_age'] ?? $amazonData['metadata']['age_range'] ?? 'N/A'
+                                    ],
+                                    'reading_level' => [
+                                        'google' => 'Derived from categories',
+                                        'ol' => 'No direct reading level',
+                                        'amazon' => $amazonData['metadata']['reading_level'] ?? 'N/A'
+                                    ],
+                                    'tags' => [
+                                        'google' => isset($googleData['categories']) ? implode(', ', $googleData['categories']) : 'N/A',
+                                        'ol' => isset($olData['subject']) ? implode(', ', array_slice($olData['subject'], 0, 5)) . '...' : 'N/A',
+                                        'amazon' => $amazonData['metadata']['genres'] ?? 'N/A'
+                                    ],
+                                    'cover_url' => [
+                                        'google' => $googleData['imageLinks']['thumbnail'] ?? 'N/A',
+                                        'ol' => 'Available via cover API',
+                                        'amazon' => $amazonData['metadata']['image_url'] ?? 'N/A'
+                                    ],
+                                    'purchase_links' => [
+                                        'google' => $googleData['previewLink'] ?? 'N/A',
+                                        'ol' => 'No purchase links',
+                                        'amazon' => isset($amazonData['buying_options']) ? 'Available' : 'N/A'
+                                    ],
+                                    'format' => [
+                                        'google' => 'No format data',
+                                        'ol' => 'No format data',
+                                        'amazon' => $amazonData['metadata']['format'] ?? 'N/A'
+                                    ],
+                                    'price_range' => [
+                                        'google' => 'No price data',
+                                        'ol' => 'No price data',
+                                        'amazon' => isset($amazonData['buying_options']) ? 'Available' : 'N/A'
+                                    ]
+                                ];
+
+                                foreach ($fieldMappings as $field => $sources) {
+                                    $hasData = false;
+                                    foreach ($sources as $value) {
+                                        if ($value !== 'N/A' && $value !== 'No direct age data' && $value !== 'No direct reading level' && $value !== 'No format data' && $value !== 'No price data' && $value !== 'No purchase links') {
+                                            $hasData = true;
+                                            break;
                                         }
-                                    } else {
-                                        echo '<p><span class="badge badge-danger">✗ API Failed (HTTP ' . $httpCode . ')</span></p>';
                                     }
+                                    $statusClass = $hasData ? 'table-success' : 'table-warning';
+                                    $statusIcon = $hasData ? '✅' : '⚠️';
                                     ?>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- OpenLibrary API Test -->
-                        <div class="col-md-4">
-                            <div class="card mb-4">
-                                <div class="card-header">
-                                    <h6 class="mb-0">📖 OpenLibrary API</h6>
-                                </div>
-                                <div class="card-body">
+                                    <tr class="<?php echo $statusClass; ?>">
+                                        <td><strong><?php echo htmlspecialchars($field); ?></strong></td>
+                                        <td><?php echo htmlspecialchars($sources['google']); ?></td>
+                                        <td><?php echo htmlspecialchars($sources['ol']); ?></td>
+                                        <td><?php echo htmlspecialchars($sources['amazon']); ?></td>
+                                        <td><?php echo $statusIcon; ?></td>
+                                    </tr>
                                     <?php
-                                    $olUrl = "https://openlibrary.org/search.json?q=isbn:$isbn&fields=*,availability&limit=1";
-                                    $ch = curl_init($olUrl);
-                                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                                    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-                                    curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0');
-                                    $response = curl_exec($ch);
-                                    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                                    curl_close($ch);
+                                }
+                                ?>
+                            </tbody>
+                        </table>
 
-                                    if ($response && $httpCode === 200) {
-                                        $data = json_decode($response, true);
-                                        if (!empty($data['docs'][0])) {
-                                            $book = $data['docs'][0];
-                                            echo '<p><span class="badge badge-success">✓ API Success</span></p>';
-                                            echo '<table class="table table-sm">';
-                                            echo '<tr><td><strong>Title:</strong></td><td>' . htmlspecialchars($book['title'] ?? 'N/A') . '</td></tr>';
-                                            echo '<tr><td><strong>Authors:</strong></td><td>' . htmlspecialchars(implode(', ', $book['author_name'] ?? [])) . '</td></tr>';
-                                            echo '<tr><td><strong>Subjects:</strong></td><td>' . htmlspecialchars(implode(', ', array_slice($book['subject'] ?? [], 0, 3))) . '...</td></tr>';
-                                            echo '<tr><td><strong>First Published:</strong></td><td>' . htmlspecialchars($book['first_publish_year'] ?? 'N/A') . '</td></tr>';
-                                            echo '</table>';
-                                        } else {
-                                            echo '<p><span class="badge badge-warning">⚠ No Results</span></p>';
-                                        }
-                                    } else {
-                                        echo '<p><span class="badge badge-danger">✗ API Failed (HTTP ' . $httpCode . ')</span></p>';
-                                    }
-                                    ?>
-                                </div>
-                            </div>
+                        <!-- Amazon ISBN Test Info -->
+                        <?php if (isset($results['api_tests']['amazon']['isbn_used'])): ?>
+                        <div class="alert alert-info">
+                            <strong>Amazon ISBN Used:</strong> <?php echo htmlspecialchars($results['api_tests']['amazon']['isbn_used']); ?>
+                            (Modal uses ISBN-10 for Amazon scraping)
                         </div>
-
-                        <!-- Amazon Test -->
-                        <div class="col-md-4">
-                            <div class="card mb-4">
-                                <div class="card-header">
-                                    <h6 class="mb-0">🛒 Amazon Scraping</h6>
-                                </div>
-                                <div class="card-body">
-                                    <?php
-                                    if (function_exists('scrapeAmazonBuyingOptions')) {
-                                        $amazonData = scrapeAmazonBuyingOptions($isbn);
-                                        if ($amazonData && !empty($amazonData)) {
-                                            echo '<p><span class="badge badge-success">✓ Scraping Success</span></p>';
-                                            if (isset($amazonData['metadata']) && !empty($amazonData['metadata'])) {
-                                                echo '<table class="table table-sm">';
-                                                foreach (array_slice($amazonData['metadata'], 0, 4) as $key => $value) {
-                                                    if (is_array($value)) $value = implode(', ', $value);
-                                                    echo '<tr><td><strong>' . htmlspecialchars(ucfirst(str_replace('_', ' ', $key))) . ':</strong></td><td>' . htmlspecialchars($value) . '</td></tr>';
-                                                }
-                                                echo '</table>';
-                                            } else {
-                                                echo '<p><span class="badge badge-warning">⚠ No Metadata</span></p>';
-                                            }
-                                        } else {
-                                            echo '<p><span class="badge badge-warning">⚠ No Data Found</span></p>';
-                                        }
-                                    } else {
-                                        echo '<p><span class="badge badge-danger">✗ Function Not Available</span></p>';
-                                    }
-                                    ?>
-                                </div>
-                            </div>
-                        </div>
+                        <?php endif; ?>
                     </div>
 
                     <!-- Note about testing approach -->

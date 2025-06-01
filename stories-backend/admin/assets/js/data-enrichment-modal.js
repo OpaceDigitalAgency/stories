@@ -657,6 +657,19 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
                     existingField: existingField
                 });
 
+                // CRITICAL FIX: Skip fields that already have Amazon data from PHP side
+                if (existingField && existingField.new_data) {
+                    // Check if field already has Amazon as a source from PHP combineMultiSourceData
+                    const hasAmazonFromPHP = existingField.new_data.source && existingField.new_data.source.includes('amazon');
+                    const hasAmazonInOptions = existingField.new_data.options &&
+                        existingField.new_data.options.some(opt => opt.source === 'amazon');
+
+                    if (hasAmazonFromPHP || hasAmazonInOptions) {
+                        console.log(`📦 SKIP_DUPLICATE: Field ${fieldName} already has Amazon data from PHP side - skipping JavaScript merge`);
+                        return; // Skip this field to prevent duplicates
+                    }
+                }
+
                 // CRITICAL FIX: Completely skip tags field from Amazon processing to prevent duplicate display
                 // The tags field has complex display logic that gets corrupted when Amazon data is merged
                 if (fieldName === 'tags') {

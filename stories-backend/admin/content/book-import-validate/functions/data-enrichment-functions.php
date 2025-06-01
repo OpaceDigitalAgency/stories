@@ -1396,10 +1396,27 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
                 }
             }
 
-            // CRITICAL FIX: COMPLETELY REMOVE OpenLibrary age range extraction
-            // OpenLibrary does not provide reliable age range data - only Amazon does
-            // This prevents fake "OpenLibrary" sources from appearing in the enrichment modal
-            // when OpenLibrary doesn't actually have age data
+            // OpenLibrary subject_facet[] - ONLY very specific age-related patterns with explicit age numbers
+            if (!$ageRange && isset($match['subject_facet']) && is_array($match['subject_facet'])) {
+                foreach ($match['subject_facet'] as $subject) {
+                    // ONLY accept very specific age-related subjects with explicit age numbers
+                    if (stripos($subject, "Children's Books/Ages") !== false && preg_match('/Ages\s+(\d+)-(\d+)/i', $subject)) {
+                        if (stripos($subject, "Ages 9-12") !== false) {
+                            $ageRange = '9-10 years';
+                            break;
+                        } elseif (stripos($subject, "Ages 6-9") !== false) {
+                            $ageRange = '6-7 years';
+                            break;
+                        } elseif (stripos($subject, "Ages 4-8") !== false) {
+                            $ageRange = '4-5 years';
+                            break;
+                        }
+                        // Add more specific age mappings as needed
+                    }
+                    // REMOVED: Generic mappings like "Tweens" or "Young Adult Fiction"
+                    // These create fake data when there's no actual age information
+                }
+            }
 
             // FINAL FILTER: Remove any remaining problematic values
             if ($ageRange && (strpos($ageRange, '12+') !== false || strpos($ageRange, 'unknown') !== false)) {
@@ -1412,14 +1429,30 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
             return $ageRange;
 
         case 'reading_level':
-            // CRITICAL FIX: COMPLETELY REMOVE OpenLibrary reading level extraction
-            // Reading levels should only come from Amazon-derived age ranges
-            // This prevents fake "OpenLibrary" sources from appearing in the enrichment modal
-            // when OpenLibrary doesn't actually provide reading level data
+            // CRITICAL FIX: Only return reading level data when there's EXPLICIT reading level information
+            // Do NOT create fake reading level data from generic categories
+
+            // OpenLibrary: use lexile[] with conversion to readable format (this is explicit reading level data)
+            if (isset($match['lexile']) && is_array($match['lexile']) && !empty($match['lexile'])) {
+                $lexileValue = $match['lexile'][0];
+                $readingLevel = convertLexileToReadingLevel($lexileValue);
+                // FILTER OUT UNKNOWN VALUES
+                if ($readingLevel && stripos($readingLevel, 'unknown') === false) {
+                    return $readingLevel;
+                }
+            }
+            // Also check if lexile is a direct value
+            elseif (isset($match['lexile']) && is_numeric($match['lexile'])) {
+                $readingLevel = convertLexileToReadingLevel($match['lexile']);
+                // FILTER OUT UNKNOWN VALUES
+                if ($readingLevel && stripos($readingLevel, 'unknown') === false) {
+                    return $readingLevel;
+                }
+            }
 
             // REMOVED: Google Books categories to reading level mapping
             // This was creating fake reading level data when APIs don't actually have reading level information
-            // Only Amazon provides explicit reading age data that can be mapped to reading levels
+            // Only Amazon and OpenLibrary Lexile data provide explicit reading level information
 
             // Return null if no EXPLICIT reading level data found
             return null;

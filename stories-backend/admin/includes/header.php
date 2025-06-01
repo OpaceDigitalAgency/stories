@@ -279,7 +279,7 @@ $siteName = get_config('site.name', 'Stories From The Web');
         }
 
         .main-nav .nav-link {
-            padding: 0.3rem 0.6rem; /* Further reduced padding */
+            padding: 0.2rem 0.4rem; /* Even more reduced padding */
             border-radius: var(--radius-md);
             color: var(--gray-700);
             font-weight: 500;
@@ -289,7 +289,6 @@ $siteName = get_config('site.name', 'Stories From The Web');
             cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
             white-space: nowrap;
             height: 36px; /* Fixed height for consistency */
         }
@@ -332,10 +331,23 @@ $siteName = get_config('site.name', 'Stories From The Web');
             font-weight: 600;
         }
 
+        /* Remove Bootstrap margins that cause spacing issues */
+        .ml-1, .mx-1 {
+            margin-left: 0 !important;
+        }
+        .mr-1, .mx-1 {
+            margin-right: 0 !important;
+        }
+
+        /* Add consistent icon spacing */
+        .main-nav .fas {
+            padding-right: 5px;
+        }
+
         .user-info {
             display: flex;
             align-items: center; /* Ensure vertical centering */
-            gap: 0.5rem; /* Reduced gap */
+            gap: 0.25rem; /* Further reduced gap */
             height: 100%; /* Full height of container */
         }
 
@@ -344,9 +356,10 @@ $siteName = get_config('site.name', 'Stories From The Web');
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 0.25rem 0.5rem; /* Smaller padding */
-            height: 36px; /* Fixed height for consistency */
+            padding: 0.2rem 0.4rem; /* Even smaller padding */
+            height: 32px; /* Reduced height for compactness */
             margin: 0; /* Remove any margin */
+            font-size: 0.875rem; /* Slightly smaller font */
         }
 
         /* Fix for the welcome text */
@@ -359,19 +372,19 @@ $siteName = get_config('site.name', 'Stories From The Web');
         /* Fix for form inside user-info */
         .user-info form {
             margin: 0;
-            height: 36px; /* Fixed height for consistency */
+            height: 32px; /* Match button height */
             display: flex; /* Ensure proper alignment */
             align-items: center; /* Vertical centering */
         }
 
         /* Specific fix for logout button */
         .user-info .btn-danger {
-            height: 36px;
+            height: 32px; /* Match other buttons */
             display: flex;
             align-items: center;
             justify-content: center;
-            padding-top: 0;
-            padding-bottom: 0;
+            padding: 0.2rem 0.4rem; /* Match other buttons */
+            font-size: 0.875rem; /* Match other buttons */
             line-height: 1;
         }
 

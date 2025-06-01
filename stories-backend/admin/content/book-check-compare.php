@@ -44,24 +44,7 @@ try {
     echo "<div class='alert alert-danger'>Error loading required functions: " . htmlspecialchars($e->getMessage()) . "</div>";
 }
 
-/**
- * Convert ISBN-13 to ISBN-10
- */
-function convertISBN13ToISBN10($isbn13) {
-    if (strlen($isbn13) !== 13 || substr($isbn13, 0, 3) !== '978') {
-        return null;
-    }
-
-    $isbn10Base = substr($isbn13, 3, 9);
-    $sum = 0;
-    for ($i = 0; $i < 9; $i++) {
-        $sum += (int)$isbn10Base[$i] * (10 - $i);
-    }
-    $checkDigit = (11 - ($sum % 11)) % 11;
-    $checkDigit = $checkDigit === 10 ? 'X' : (string)$checkDigit;
-
-    return $isbn10Base . $checkDigit;
-}
+// convertISBN13ToISBN10() function is already available in data-enrichment-functions.php
 
 /**
  * Test individual APIs with detailed diagnostics and field mapping

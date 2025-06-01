@@ -13,6 +13,13 @@ require_once __DIR__ . '/google-books-validation-functions.php';
 require_once __DIR__ . '/open-library-validation-functions.php';
 require_once __DIR__ . '/data-enrichment-fixes.php';
 
+// Global debug function for browser console output
+function debugLog($message, $data = null) {
+    $logData = $data ? json_encode($data) : '';
+    echo "<script>console.log('ENRICHMENT_DEBUG: " . addslashes($message) . "', " . ($logData ?: '""') . ");</script>";
+    flush(); // Ensure immediate output
+}
+
 /**
  * Fix duplicate location strings like "London, London (England)" -> "London (England)"
  *
@@ -136,10 +143,10 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
     $openLibraryMatch = findBestDataMatch($openLibraryResults, $title, $author, $currentISBN);
 
     // CRITICAL DEBUG: Log the actual matches found
-    error_log("MATCH_DEBUG: Google match found: " . ($googleMatch ? 'YES' : 'NO'));
-    error_log("MATCH_DEBUG: Google match data: " . json_encode($googleMatch));
-    error_log("MATCH_DEBUG: OpenLibrary match found: " . ($openLibraryMatch ? 'YES' : 'NO'));
-    error_log("MATCH_DEBUG: OpenLibrary match data: " . json_encode($openLibraryMatch));
+    debugLog("Google match found: " . ($googleMatch ? 'YES' : 'NO'));
+    debugLog("Google match data", $googleMatch);
+    debugLog("OpenLibrary match found: " . ($openLibraryMatch ? 'YES' : 'NO'));
+    debugLog("OpenLibrary match data", $openLibraryMatch);
 
     // Validate OpenLibrary match if we have an ISBN - STRICT validation
     if (!empty($currentISBN) && $openLibraryMatch) {
@@ -166,20 +173,20 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
 
         // CRITICAL DEBUG: Log author field processing
         if ($fieldName === 'author') {
-            error_log("AUTHOR_DEBUG: Processing author field");
-            error_log("AUTHOR_DEBUG: Google match data: " . json_encode($googleMatch));
-            error_log("AUTHOR_DEBUG: OpenLibrary match data: " . json_encode($openLibraryMatch));
-            error_log("AUTHOR_DEBUG: Google value extracted: " . json_encode($googleValue));
-            error_log("AUTHOR_DEBUG: OpenLibrary value extracted: " . json_encode($openLibraryValue));
+            debugLog("Processing author field");
+            debugLog("Author - Google match data", $googleMatch);
+            debugLog("Author - OpenLibrary match data", $openLibraryMatch);
+            debugLog("Author - Google value extracted", $googleValue);
+            debugLog("Author - OpenLibrary value extracted", $openLibraryValue);
         }
 
         // CRITICAL DEBUG: Log title field processing
         if ($fieldName === 'title') {
-            error_log("TITLE_DEBUG: Processing title field");
-            error_log("TITLE_DEBUG: Google match data: " . json_encode($googleMatch));
-            error_log("TITLE_DEBUG: OpenLibrary match data: " . json_encode($openLibraryMatch));
-            error_log("TITLE_DEBUG: Google value extracted: " . json_encode($googleValue));
-            error_log("TITLE_DEBUG: OpenLibrary value extracted: " . json_encode($openLibraryValue));
+            debugLog("Processing title field");
+            debugLog("Title - Google match data", $googleMatch);
+            debugLog("Title - OpenLibrary match data", $openLibraryMatch);
+            debugLog("Title - Google value extracted", $googleValue);
+            debugLog("Title - OpenLibrary value extracted", $openLibraryValue);
         }
 
         // Check if we have data from either source OR if this is an Amazon-derived field
@@ -311,10 +318,12 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
             // No data from either source - show as unknown (but don't override Amazon fields)
 
             // CRITICAL DEBUG: Log when fields are marked as unknown
-            if ($fieldName === 'author') {
-                error_log("AUTHOR_DEBUG: Author field marked as unknown - no data from either source");
-                error_log("AUTHOR_DEBUG: googleValue empty: " . (empty($googleValue) ? 'YES' : 'NO'));
-                error_log("AUTHOR_DEBUG: openLibraryValue empty: " . (empty($openLibraryValue) ? 'YES' : 'NO'));
+            if ($fieldName === 'author' || $fieldName === 'title') {
+                debugLog("$fieldName field marked as unknown - no data from either source");
+                debugLog("$fieldName - googleValue empty: " . (empty($googleValue) ? 'YES' : 'NO'));
+                debugLog("$fieldName - openLibraryValue empty: " . (empty($openLibraryValue) ? 'YES' : 'NO'));
+                debugLog("$fieldName - googleValue", $googleValue);
+                debugLog("$fieldName - openLibraryValue", $openLibraryValue);
             }
 
             $combinedFields[$fieldName] = [
@@ -1429,45 +1438,45 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
 
         case 'author':
             // CRITICAL FIX: Handle different author field formats between APIs
-            error_log("AUTHOR_EXTRACT_DEBUG: Processing author field for match: " . json_encode($match));
+            debugLog("AUTHOR_EXTRACT: Processing author field for match", $match);
 
             // Google Books format: 'author' field (string, already joined)
             if (isset($match['author']) && !empty($match['author'])) {
-                error_log("AUTHOR_EXTRACT_DEBUG: Found Google Books author field: " . $match['author']);
+                debugLog("AUTHOR_EXTRACT: Found Google Books author field: " . $match['author']);
                 return $match['author'];
             }
 
             // OpenLibrary format: author_name array
             if (isset($match['author_name']) && is_array($match['author_name'])) {
                 $author = !empty($match['author_name']) ? $match['author_name'][0] : null;
-                error_log("AUTHOR_EXTRACT_DEBUG: Found OpenLibrary author_name array: " . json_encode($author));
+                debugLog("AUTHOR_EXTRACT: Found OpenLibrary author_name array", $author);
                 return $author;
             } elseif (isset($match['author_name']) && is_string($match['author_name'])) {
-                error_log("AUTHOR_EXTRACT_DEBUG: Found OpenLibrary author_name string: " . $match['author_name']);
+                debugLog("AUTHOR_EXTRACT: Found OpenLibrary author_name string: " . $match['author_name']);
                 return $match['author_name'];
             }
 
             // Fallback: check for 'authors' array (some APIs use this)
             if (isset($match['authors']) && is_array($match['authors'])) {
                 $author = !empty($match['authors']) ? $match['authors'][0] : null;
-                error_log("AUTHOR_EXTRACT_DEBUG: Found authors array: " . json_encode($author));
+                debugLog("AUTHOR_EXTRACT: Found authors array", $author);
                 return $author;
             }
 
-            error_log("AUTHOR_EXTRACT_DEBUG: No author field found in match data");
+            debugLog("AUTHOR_EXTRACT: No author field found in match data");
             return null;
 
         case 'title':
             // CRITICAL FIX: Handle title field extraction
-            error_log("TITLE_EXTRACT_DEBUG: Processing title field for match: " . json_encode($match));
+            debugLog("TITLE_EXTRACT: Processing title field for match", $match);
 
             // Standard title field (used by both Google Books and OpenLibrary)
             if (isset($match['title']) && !empty($match['title'])) {
-                error_log("TITLE_EXTRACT_DEBUG: Found title field: " . $match['title']);
+                debugLog("TITLE_EXTRACT: Found title field: " . $match['title']);
                 return $match['title'];
             }
 
-            error_log("TITLE_EXTRACT_DEBUG: No title field found in match data");
+            debugLog("TITLE_EXTRACT: No title field found in match data");
             return null;
 
         default:

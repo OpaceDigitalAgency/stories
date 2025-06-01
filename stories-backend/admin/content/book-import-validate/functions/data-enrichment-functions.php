@@ -262,15 +262,26 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
                     ]);
 
                     if (in_array($fieldName, ['title', 'author'])) {
-                        // CRITICAL FIX: For title/author, prefer Google Books when values differ
-                        debugLog("Using Google Books value for core field '$fieldName': $googleValue");
-                        $combinedFields[$fieldName] = [
-                            'value' => $googleValue,
-                            'source' => 'google_books',
-                            'confidence' => $fieldConfig['confidence'],
-                            'label' => $fieldConfig['label'],
-                            'alternative' => $openLibraryValue // Keep alternative for reference
-                        ];
+                        // CRITICAL FIX: For author, prefer OpenLibrary; for title, prefer Google Books
+                        if ($fieldName === 'author') {
+                            debugLog("Using OpenLibrary value for author field: $openLibraryValue");
+                            $combinedFields[$fieldName] = [
+                                'value' => $openLibraryValue,
+                                'source' => 'open_library',
+                                'confidence' => $fieldConfig['confidence'],
+                                'label' => $fieldConfig['label'],
+                                'alternative' => $googleValue // Keep alternative for reference
+                            ];
+                        } else {
+                            debugLog("Using Google Books value for title field: $googleValue");
+                            $combinedFields[$fieldName] = [
+                                'value' => $googleValue,
+                                'source' => 'google_books',
+                                'confidence' => $fieldConfig['confidence'],
+                                'label' => $fieldConfig['label'],
+                                'alternative' => $openLibraryValue // Keep alternative for reference
+                            ];
+                        }
                     } else {
                         // For other fields, create options as before
                         $options = [
@@ -2751,6 +2762,21 @@ function getAmazonEnrichmentData($isbn, $currentBookData = null) {
                         'original_value' => $amazonMetadata['reading_age'] // Keep original for reference
                     ]
                 ];
+
+                // Also map to reading level using standard_reading_levels table
+                $readingLevel = mapAgeRangeToReadingLevel($standardizedAgeRange);
+                if ($readingLevel) {
+                    $enrichmentFields['reading_level'] = [
+                        'label' => 'Reading Level',
+                        'new_data' => [
+                            'value' => $readingLevel,
+                            'source' => 'amazon_derived',
+                            'confidence' => 85, // Slightly lower confidence as it's derived
+                            'status' => 'available',
+                            'derived_from' => $standardizedAgeRange
+                        ]
+                    ];
+                }
             }
         }
 
@@ -2849,6 +2875,31 @@ function getAmazonEnrichmentData($isbn, $currentBookData = null) {
 // Reading levels are derived from age ranges using the standard_reading_levels table
 
 /**
+ * Map age range to reading level using standard_reading_levels table
+ */
+function mapAgeRangeToReadingLevel($ageRange) {
+    global $db;
+
+    try {
+        $stmt = $db->prepare("SELECT reading_stage FROM standard_reading_levels WHERE age_group = ? LIMIT 1");
+        $stmt->execute([$ageRange]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($result) {
+            debugLog("Age range '$ageRange' mapped to reading level: " . $result['reading_stage']);
+            return $result['reading_stage'];
+        }
+
+        debugLog("No reading level found for age range: $ageRange");
+        return null;
+
+    } catch (PDOException $e) {
+        debugLog("Database error mapping age range to reading level: " . $e->getMessage());
+        return null;
+    }
+}
+
+/**
  * Map Amazon age range to our standardized age ranges
  */
 function mapAmazonAgeRangeToStandard($amazonAgeRange) {
@@ -2918,6 +2969,8 @@ function mapAmazonAgeRangeToStandard($amazonAgeRange) {
         $startAge = intval($matches[1]);
         $endAge = intval($matches[2]);
         $midAge = ($startAge + $endAge) / 2;
+
+        debugLog("Amazon age range mapping: '$amazonAgeRange' → start:$startAge, end:$endAge, midpoint:$midAge");
 
         // Find the best matching standard range based on midpoint
         if ($midAge <= 0.5) return '0-12 months';

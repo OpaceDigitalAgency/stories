@@ -447,7 +447,7 @@ $pageActions = '
                                 ?>
                                 <tr>
                                     <td><strong>Age Range</strong></td>
-                                    <td>Children's (8-9 years)</td>
+                                    <td>7-8 years</td>
                                     <td><?php echo htmlspecialchars($actualAgeRange); ?></td>
                                     <td><?php echo $ageStatus; ?></td>
                                     <td><?php echo htmlspecialchars($ageRangeField['source'] ?? 'unknown'); ?></td>
@@ -547,14 +547,14 @@ $pageActions = '
                                 // Define field mappings
                                 $fieldMappings = [
                                     'title' => [
-                                        'google' => $googleData['title'] ?? 'N/A',
-                                        'ol' => $olData['title'] ?? 'N/A',
-                                        'amazon' => $amazonData['metadata']['title'] ?? 'N/A'
+                                        'google' => $googleData['title'] ?? 'Not found',
+                                        'ol' => $olData['title'] ?? 'Not found',
+                                        'amazon' => 'Not used'
                                     ],
                                     'author' => [
-                                        'google' => isset($googleData['authors']) ? implode(', ', $googleData['authors']) : 'N/A',
-                                        'ol' => isset($olData['author_name']) ? implode(', ', $olData['author_name']) : 'N/A',
-                                        'amazon' => $amazonData['metadata']['author'] ?? 'N/A'
+                                        'google' => isset($googleData['authors']) ? implode(', ', $googleData['authors']) : 'Not found',
+                                        'ol' => isset($olData['author_name']) ? implode(', ', $olData['author_name']) : 'Not found',
+                                        'amazon' => 'Not used'
                                     ],
                                     'isbn' => [
                                         'google' => 'From query',
@@ -587,14 +587,16 @@ $pageActions = '
                                         'amazon' => $amazonData['metadata']['language'] ?? 'N/A'
                                     ],
                                     'age_range' => [
-                                        'google' => isset($googleData['categories']) ? 'From categories: ' . implode(', ', $googleData['categories']) : 'N/A',
-                                        'ol' => 'No direct age data',
-                                        'amazon' => $amazonData['metadata']['reading_age'] ?? $amazonData['metadata']['age_range'] ?? 'N/A'
+                                        'google' => 'Too vague (Children)',
+                                        'ol' => 'Not available',
+                                        'amazon' => $amazonData['metadata']['reading_age'] ?? 'Not found',
+                                        'automated' => true
                                     ],
                                     'reading_level' => [
-                                        'google' => 'Derived from categories',
-                                        'ol' => 'No direct reading level',
-                                        'amazon' => $amazonData['metadata']['reading_level'] ?? 'N/A'
+                                        'google' => 'Not available',
+                                        'ol' => 'Not available',
+                                        'amazon' => 'Derived from age_range',
+                                        'automated' => true
                                     ],
                                     'tags' => [
                                         'google' => isset($googleData['categories']) ? implode(', ', $googleData['categories']) : 'N/A',
@@ -612,33 +614,39 @@ $pageActions = '
                                         'amazon' => isset($amazonData['buying_options']) ? 'Available' : 'N/A'
                                     ],
                                     'format' => [
-                                        'google' => 'No format data',
-                                        'ol' => 'No format data',
-                                        'amazon' => $amazonData['metadata']['format'] ?? 'N/A'
+                                        'google' => 'Not available',
+                                        'ol' => 'Not available',
+                                        'amazon' => isset($amazonData['selected_format']) ? $amazonData['selected_format'] : 'Not found'
                                     ],
                                     'price_range' => [
-                                        'google' => 'No price data',
-                                        'ol' => 'No price data',
-                                        'amazon' => isset($amazonData['buying_options']) ? 'Available' : 'N/A'
+                                        'google' => 'Not available',
+                                        'ol' => 'Not available',
+                                        'amazon' => isset($amazonData['selected_price']) ? 'Calculated from ' . $amazonData['selected_price'] : 'Not found',
+                                        'automated' => true
                                     ]
                                 ];
 
                                 foreach ($fieldMappings as $field => $sources) {
                                     $hasData = false;
-                                    foreach ($sources as $value) {
-                                        if ($value !== 'N/A' && $value !== 'No direct age data' && $value !== 'No direct reading level' && $value !== 'No format data' && $value !== 'No price data' && $value !== 'No purchase links') {
+                                    $isAutomated = isset($sources['automated']) && $sources['automated'];
+
+                                    foreach ($sources as $key => $value) {
+                                        if ($key !== 'automated' && $value !== 'N/A' && $value !== 'Not found' && $value !== 'Not available' && $value !== 'Not used' && $value !== 'No purchase links') {
                                             $hasData = true;
                                             break;
                                         }
                                     }
+
                                     $statusClass = $hasData ? 'table-success' : 'table-warning';
                                     $statusIcon = $hasData ? '✅' : '⚠️';
+                                    $fieldClass = $isAutomated ? 'text-primary font-weight-bold' : '';
+                                    $fieldLabel = $isAutomated ? $field . ' (automated)' : $field;
                                     ?>
                                     <tr class="<?php echo $statusClass; ?>">
-                                        <td><strong><?php echo htmlspecialchars($field); ?></strong></td>
-                                        <td><?php echo htmlspecialchars($sources['google']); ?></td>
-                                        <td><?php echo htmlspecialchars($sources['ol']); ?></td>
-                                        <td><?php echo htmlspecialchars($sources['amazon']); ?></td>
+                                        <td><strong class="<?php echo $fieldClass; ?>"><?php echo htmlspecialchars($fieldLabel); ?></strong></td>
+                                        <td class="<?php echo $isAutomated ? 'text-muted' : ''; ?>"><?php echo htmlspecialchars($sources['google']); ?></td>
+                                        <td class="<?php echo $isAutomated ? 'text-muted' : ''; ?>"><?php echo htmlspecialchars($sources['ol']); ?></td>
+                                        <td class="<?php echo $isAutomated ? 'text-primary' : ''; ?>"><?php echo htmlspecialchars($sources['amazon']); ?></td>
                                         <td><?php echo $statusIcon; ?></td>
                                     </tr>
                                     <?php

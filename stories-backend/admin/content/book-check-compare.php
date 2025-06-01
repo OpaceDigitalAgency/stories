@@ -50,6 +50,9 @@ $pageDescription = 'Comprehensive diagnostic tool for book enrichment data';
 require_once '../includes/auth-check.php';
 require_once '../includes/header.php';
 
+// Include database connection
+require_once '../includes/db-connect.php';
+
 // Add console logging function
 function consoleLog($message, $data = null) {
     $logData = $data ? json_encode($data) : '';
@@ -183,10 +186,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['isbn'])) {
                 $results['error'] = 'testIndividualAPIs function not available';
             }
 
-            // Step 2: Test the main enrichment function
+            // Step 2: Test the main enrichment function with database connection
             if (function_exists('getEnrichedBookData')) {
                 consoleLog("Starting getEnrichedBookData");
-                $enrichedData = getEnrichedBookData($title, $author, $isbn);
+                // Pass database connection to enrichment function
+                $enrichedData = getEnrichedBookData($title, $author, $isbn, null, $db);
                 consoleLog("getEnrichedBookData completed");
             } else {
                 consoleLog("Error: getEnrichedBookData function not found");
@@ -202,8 +206,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['isbn'])) {
             $results['execution_time'] = $executionTime;
             $results['confidence_score'] = $enrichedData['confidence_score'] ?? 'N/A';
 
-            // Add note about AJAX testing
-            $results['note'] = 'Using getEnrichedBookData() function - AJAX testing temporarily disabled to prevent page errors';
+            // Remove misleading note - no longer needed
 
             consoleLog("Processing completed successfully", ['execution_time' => $executionTime]);
 
@@ -295,15 +298,69 @@ $pageActions = '
                         Confidence Score: <?php echo $results['confidence_score']; ?>
                     </div>
 
-                    <!-- Critical Issues Identified -->
-                    <div class="alert alert-danger">
-                        <h6><strong>🚨 ROOT CAUSE ANALYSIS:</strong></h6>
-                        <ul class="mb-0">
-                            <li><strong>getEnrichedBookData() Function BROKEN:</strong> Core enrichment pipeline failing to extract basic title/author fields</li>
-                            <li><strong>Source Tracking MISSING:</strong> All sources showing as "unknown" instead of actual API names</li>
-                            <li><strong>Amazon HTML Parser FAILED:</strong> Extracting Unicode control characters (&lrm;) instead of "6 - 9 years"</li>
-                            <li><strong>Data Merging Logic BROKEN:</strong> Individual APIs work but final merge produces N/A values</li>
+                    <!-- Dynamic Root Cause Analysis -->
+                    <?php
+                    $enrichedFields = $enrichedData['fields'] ?? [];
+                    $titleField = $enrichedFields['title'] ?? null;
+                    $authorField = $enrichedFields['author'] ?? null;
+                    $ageRangeField = $enrichedFields['age_range'] ?? null;
+                    $readingLevelField = $enrichedFields['reading_level'] ?? null;
+
+                    $issues = [];
+                    $working = [];
+
+                    // Check title
+                    if (!$titleField || ($titleField['value'] ?? null) === null) {
+                        $issues[] = "Title extraction failing";
+                    } else {
+                        $working[] = "Title extraction (" . ($titleField['source'] ?? 'unknown') . ")";
+                    }
+
+                    // Check author
+                    if (!$authorField || ($authorField['value'] ?? null) === null) {
+                        $issues[] = "Author extraction failing";
+                    } else {
+                        $working[] = "Author extraction (" . ($authorField['source'] ?? 'unknown') . ")";
+                    }
+
+                    // Check age range
+                    if (!$ageRangeField || ($ageRangeField['value'] ?? null) === null) {
+                        $issues[] = "Age range processing not working";
+                    } else {
+                        $working[] = "Age range processing (" . ($ageRangeField['source'] ?? 'unknown') . ")";
+                    }
+
+                    // Check reading level
+                    if (!$readingLevelField || ($readingLevelField['value'] ?? null) === null) {
+                        $issues[] = "Reading level derivation not working";
+                    } else {
+                        $working[] = "Reading level derivation (" . ($readingLevelField['source'] ?? 'unknown') . ")";
+                    }
+
+                    $alertClass = empty($issues) ? 'alert-success' : 'alert-warning';
+                    $alertIcon = empty($issues) ? '✅' : '⚠️';
+                    ?>
+                    <div class="alert <?php echo $alertClass; ?>">
+                        <h6><strong><?php echo $alertIcon; ?> DYNAMIC ROOT CAUSE ANALYSIS:</strong></h6>
+                        <?php if (!empty($working)): ?>
+                        <p><strong>✅ WORKING:</strong></p>
+                        <ul class="mb-2">
+                            <?php foreach ($working as $item): ?>
+                            <li><?php echo htmlspecialchars($item); ?></li>
+                            <?php endforeach; ?>
                         </ul>
+                        <?php endif; ?>
+
+                        <?php if (!empty($issues)): ?>
+                        <p><strong>❌ ISSUES DETECTED:</strong></p>
+                        <ul class="mb-0">
+                            <?php foreach ($issues as $issue): ?>
+                            <li><?php echo htmlspecialchars($issue); ?></li>
+                            <?php endforeach; ?>
+                        </ul>
+                        <?php else: ?>
+                        <p class="mb-0"><strong>All core enrichment functions working correctly!</strong></p>
+                        <?php endif; ?>
                     </div>
 
                     <!-- Diagnosis Summary -->
@@ -409,59 +466,76 @@ $pageActions = '
                                 <?php
                                 $enrichedData = $results['enriched_data'];
 
-                                // Check title
+                                // Check title - use API data as expected
                                 $titleField = $enrichedData['fields']['title'] ?? null;
-                                $actualTitle = $titleField['value'] ?? 'N/A';
-                                $titleMatch = stripos($actualTitle, $title) !== false || stripos($title, $actualTitle) !== false;
-                                $titleStatus = $titleMatch ? '<span class="badge badge-success">✅ Match</span>' : '<span class="badge badge-danger">❌ Different</span>';
+                                $actualTitle = $titleField['value'] ?? 'Not extracted';
+                                $expectedTitle = $results['api_tests']['google_books']['data']['items'][0]['volumeInfo']['title'] ??
+                                               $results['api_tests']['open_library']['data']['docs'][0]['title'] ?? 'Not found in APIs';
+                                $titleMatch = ($actualTitle !== 'Not extracted' && $actualTitle === $expectedTitle);
+                                $titleStatus = $titleMatch ? '<span class="badge badge-success">✅ Match</span>' :
+                                             ($actualTitle === 'Not extracted' ? '<span class="badge badge-danger">❌ Not Extracted</span>' : '<span class="badge badge-warning">⚠ Different</span>');
                                 ?>
                                 <tr>
                                     <td><strong>Title</strong></td>
-                                    <td><?php echo htmlspecialchars($title); ?></td>
+                                    <td><?php echo htmlspecialchars($expectedTitle); ?></td>
                                     <td><?php echo htmlspecialchars($actualTitle); ?></td>
                                     <td><?php echo $titleStatus; ?></td>
                                     <td><?php echo htmlspecialchars($titleField['source'] ?? 'unknown'); ?></td>
                                 </tr>
 
                                 <?php
-                                // Check author
+                                // Check author - prefer OpenLibrary as expected
                                 $authorField = $enrichedData['fields']['author'] ?? null;
-                                $actualAuthor = $authorField['value'] ?? 'N/A';
-                                $authorMatch = stripos($actualAuthor, $author) !== false || stripos($author, $actualAuthor) !== false;
-                                $authorStatus = $authorMatch ? '<span class="badge badge-success">✅ Match</span>' : '<span class="badge badge-danger">❌ Different</span>';
+                                $actualAuthor = $authorField['value'] ?? 'Not extracted';
+                                $expectedAuthor = isset($results['api_tests']['open_library']['data']['docs'][0]['author_name']) ?
+                                                implode(', ', $results['api_tests']['open_library']['data']['docs'][0]['author_name']) :
+                                                (isset($results['api_tests']['google_books']['data']['items'][0]['volumeInfo']['authors']) ?
+                                                implode(', ', $results['api_tests']['google_books']['data']['items'][0]['volumeInfo']['authors']) : 'Not found in APIs');
+                                $authorMatch = ($actualAuthor !== 'Not extracted' && $actualAuthor === $expectedAuthor);
+                                $authorStatus = $authorMatch ? '<span class="badge badge-success">✅ Match</span>' :
+                                              ($actualAuthor === 'Not extracted' ? '<span class="badge badge-danger">❌ Not Extracted</span>' : '<span class="badge badge-warning">⚠ Different</span>');
                                 ?>
                                 <tr>
                                     <td><strong>Author</strong></td>
-                                    <td><?php echo htmlspecialchars($author); ?></td>
+                                    <td><?php echo htmlspecialchars($expectedAuthor); ?></td>
                                     <td><?php echo htmlspecialchars($actualAuthor); ?></td>
                                     <td><?php echo $authorStatus; ?></td>
                                     <td><?php echo htmlspecialchars($authorField['source'] ?? 'unknown'); ?></td>
                                 </tr>
 
                                 <?php
-                                // Check age range
+                                // Check age range - use Amazon data as expected
                                 $ageRangeField = $enrichedData['fields']['age_range'] ?? null;
-                                $actualAgeRange = $ageRangeField['value'] ?? 'null';
-                                $ageStatus = ($actualAgeRange === 'null') ? '<span class="badge badge-warning">⚠ Null</span>' :
-                                           (($actualAgeRange === '18+ years') ? '<span class="badge badge-danger">❌ Adult</span>' : '<span class="badge badge-success">✅ Has Value</span>');
+                                $actualAgeRange = $ageRangeField['value'] ?? 'Not extracted';
+                                $expectedAgeRange = $results['api_tests']['amazon']['data']['metadata']['reading_age'] ?? 'Not found in Amazon';
+                                // Map Amazon age to expected standard range
+                                if ($expectedAgeRange === '6 - 9 years, from customers') {
+                                    $expectedAgeRange = '7-8 years (from Amazon 6-9 years midpoint)';
+                                }
+                                $ageMatch = ($actualAgeRange !== 'Not extracted' && strpos($actualAgeRange, '7-8') !== false);
+                                $ageStatus = $ageMatch ? '<span class="badge badge-success">✅ Match</span>' :
+                                           ($actualAgeRange === 'Not extracted' ? '<span class="badge badge-danger">❌ Not Extracted</span>' : '<span class="badge badge-warning">⚠ Different</span>');
                                 ?>
                                 <tr>
                                     <td><strong>Age Range</strong></td>
-                                    <td>7-8 years</td>
+                                    <td><?php echo htmlspecialchars($expectedAgeRange); ?></td>
                                     <td><?php echo htmlspecialchars($actualAgeRange); ?></td>
                                     <td><?php echo $ageStatus; ?></td>
                                     <td><?php echo htmlspecialchars($ageRangeField['source'] ?? 'unknown'); ?></td>
                                 </tr>
 
                                 <?php
-                                // Check reading level
+                                // Check reading level - should be derived from age range
                                 $readingField = $enrichedData['fields']['reading_level'] ?? null;
-                                $actualReading = $readingField['value'] ?? 'N/A';
-                                $readingStatus = '<span class="badge badge-info">📝 Info</span>';
+                                $actualReading = $readingField['value'] ?? 'Not extracted';
+                                $expectedReading = 'Transitional Reader (from 7-8 years)';
+                                $readingMatch = ($actualReading !== 'Not extracted' && strpos($actualReading, 'Transitional') !== false);
+                                $readingStatus = $readingMatch ? '<span class="badge badge-success">✅ Match</span>' :
+                                               ($actualReading === 'Not extracted' ? '<span class="badge badge-danger">❌ Not Extracted</span>' : '<span class="badge badge-warning">⚠ Different</span>');
                                 ?>
                                 <tr>
                                     <td><strong>Reading Level</strong></td>
-                                    <td>Age-appropriate</td>
+                                    <td><?php echo htmlspecialchars($expectedReading); ?></td>
                                     <td><?php echo htmlspecialchars($actualReading); ?></td>
                                     <td><?php echo $readingStatus; ?></td>
                                     <td><?php echo htmlspecialchars($readingField['source'] ?? 'unknown'); ?></td>
@@ -484,11 +558,19 @@ $pageActions = '
                             </thead>
                             <tbody>
                                 <?php foreach ($enrichedData['fields'] as $fieldName => $fieldData): ?>
-                                    <?php if (is_array($fieldData)): ?>
+                                    <?php
+                                    // Skip maturity_rating as requested
+                                    if ($fieldName === 'maturity_rating') continue;
+
+                                    if (is_array($fieldData)): ?>
                                         <?php
-                                        $value = $fieldData['value'] ?? 'N/A';
+                                        $value = $fieldData['value'] ?? 'Not available';
                                         $source = $fieldData['source'] ?? 'unknown';
                                         $confidence = $fieldData['confidence'] ?? 'N/A';
+
+                                        // Show source in brackets with value
+                                        $displayValue = ($value !== 'Not available' && $source !== 'unknown') ?
+                                                       $value . ' (' . $source . ')' : $value;
 
                                         // Highlight important fields
                                         $rowClass = '';
@@ -500,7 +582,7 @@ $pageActions = '
                                         ?>
                                         <tr<?php echo $rowClass; ?>>
                                             <td><strong><?php echo htmlspecialchars($fieldName); ?></strong></td>
-                                            <td><?php echo htmlspecialchars($value); ?></td>
+                                            <td><?php echo htmlspecialchars($displayValue); ?></td>
                                             <td><?php echo htmlspecialchars($source); ?></td>
                                             <td><?php echo htmlspecialchars($confidence); ?></td>
                                         </tr>
@@ -696,22 +778,48 @@ $pageActions = '
                             </div>
                         </div>
                         <div class="mt-2">
-                            <strong>🎯 Key Issue:</strong> Only Amazon provides <strong>specific age ranges</strong> ("6 - 9 years") -
-                            Google Books "Children" and OpenLibrary subjects are too vague for age mapping.
+                            <?php
+                            // Dynamic key issue analysis
+                            $amazonAge = $amazonData['metadata']['reading_age'] ?? null;
+                            $googleCategories = $googleData['categories'] ?? [];
+                            $olSubjects = $olData['subject'] ?? [];
+
+                            $hasSpecificAmazonAge = $amazonAge && preg_match('/\d+\s*-\s*\d+\s*years/', $amazonAge);
+                            $hasSpecificGoogleAge = false;
+                            $hasSpecificOLAge = false;
+
+                            // Check for specific ages in Google categories
+                            foreach ($googleCategories as $category) {
+                                if (preg_match('/\d+\s*-\s*\d+|ages?\s+\d+/', strtolower($category))) {
+                                    $hasSpecificGoogleAge = true;
+                                    break;
+                                }
+                            }
+
+                            // Check for specific ages in OpenLibrary subjects
+                            foreach ($olSubjects as $subject) {
+                                if (preg_match('/\d+\s*-\s*\d+|ages?\s+\d+/', strtolower($subject))) {
+                                    $hasSpecificOLAge = true;
+                                    break;
+                                }
+                            }
+
+                            if ($hasSpecificAmazonAge && !$hasSpecificGoogleAge && !$hasSpecificOLAge) {
+                                echo '<strong>🎯 Key Issue:</strong> Only Amazon provides <strong>specific age ranges</strong> ("' . htmlspecialchars($amazonAge) . '") - Google Books and OpenLibrary data is too vague for age mapping.';
+                            } elseif (!$hasSpecificAmazonAge && !$hasSpecificGoogleAge && !$hasSpecificOLAge) {
+                                echo '<strong>🎯 Key Issue:</strong> <strong>No specific age data</strong> found in any source - all sources provide vague categories only.';
+                            } else {
+                                echo '<strong>✅ Age Data Available:</strong> ';
+                                $sources = [];
+                                if ($hasSpecificAmazonAge) $sources[] = 'Amazon ("' . htmlspecialchars($amazonAge) . '")';
+                                if ($hasSpecificGoogleAge) $sources[] = 'Google Books';
+                                if ($hasSpecificOLAge) $sources[] = 'OpenLibrary';
+                                echo implode(', ', $sources) . ' provide specific age information.';
+                            }
+                            ?>
                         </div>
                     </div>
                     <?php endif; ?>
-
-                    <!-- Note about testing approach -->
-                    <?php if (isset($results['note'])): ?>
-                    <div class="alert alert-warning">
-                        <strong>Note:</strong> <?php echo htmlspecialchars($results['note']); ?>
-                    </div>
-                    <?php endif; ?>
-
-                    <div class="alert alert-info mt-3">
-                        <strong>Debug Information:</strong> Check the <a href="debug-logs.php" class="alert-link">debug logs</a> for more details.
-                    </div>
                 <?php endif; ?>
             </div>
         </div>

@@ -51,7 +51,11 @@ function fixDuplicateLocation($location) {
  * @param string $currentPublisher Current publisher (if any) for database matching
  * @return array Enriched book data with confidence scores
  */
-function getEnrichedBookData($title, $author, $currentISBN = '', $currentPublisher = null) {
+function getEnrichedBookData($title, $author, $currentISBN = '', $currentPublisher = null, $db = null) {
+    // Set global database connection if provided
+    if ($db !== null) {
+        global $db;
+    }
     // PUBLISHER DEBUG - Track the publisher parameter
     error_log("PUBLISHER_DEBUG: getEnrichedBookData called with currentPublisher='$currentPublisher'");
 

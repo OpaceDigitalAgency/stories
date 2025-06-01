@@ -471,6 +471,22 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         // Display enrichment fields
         displayEnrichmentFields(data.fields);
 
+        // CRITICAL FIX: Check if Amazon data is already included in the PHP response
+        const hasAmazonData = Object.values(data.fields).some(field => {
+            if (field.new_data?.source?.includes('amazon')) return true;
+            if (field.new_data?.options?.some(opt => opt.source === 'amazon' || opt.source === 'amazon_derived')) return true;
+            return false;
+        });
+
+        if (hasAmazonData) {
+            console.log('📦 AMAZON_STATUS_FIX: Amazon data already included in PHP response - updating status immediately');
+            $('#amazon-status-badge')
+                .removeClass('badge-info badge-warning badge-danger')
+                .addClass('badge-success')
+                .html('✓ Amazon - Data Found')
+                .show();
+        }
+
         // Auto-select fields with single source and beneficial updates
         autoSelectBeneficialFields(data.fields);
 

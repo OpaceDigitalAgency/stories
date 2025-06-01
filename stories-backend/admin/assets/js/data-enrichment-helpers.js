@@ -19,6 +19,29 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
         let optionsHtml = '';
         const options = field.new_data.options || [];
 
+        // CRITICAL FIX: Check if all sources have the same value - if so, convert to single-source field
+        if (options.length > 1) {
+            const firstValue = options[0]?.value;
+            const allSameValue = options.every(option => option.value === firstValue);
+
+            if (allSameValue && firstValue) {
+                console.log(`📦 SINGLE_VALUE_FIX: All sources for ${fieldName} have same value "${firstValue}" - converting to single-source field`);
+
+                // Create a single-source field instead
+                const singleSourceField = {
+                    ...field,
+                    new_data: {
+                        value: firstValue,
+                        source: 'multiple_sources_agree',
+                        confidence: Math.max(...options.map(opt => opt.confidence || 0)),
+                        status: 'available'
+                    }
+                };
+
+                return window.createSingleSourceField(fieldName, singleSourceField, label, false, false);
+            }
+        }
+
         // Determine overall benefit level for multi-source field
         let bestBenefitLevel = 'not_beneficial';
         let hasExactMatch = false;

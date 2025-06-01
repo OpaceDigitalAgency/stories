@@ -1358,33 +1358,27 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
             break;
 
         case 'age_range':
-            // REMOVED: All maturity rating processing to eliminate 12+ issue
-            // Google Books age range extraction - only from categories and subject_facet
+            // CRITICAL FIX: Only return age range data when there's EXPLICIT age information
+            // Do NOT create fake age data from generic categories like "Fiction" or "Children's Fiction"
             $ageRange = null;
             error_log("AGE_TEST: AGE_RANGE_EXTRACT_DEBUG: Starting age range extraction for source: " . ($match['source'] ?? 'unknown'));
 
-            // Check Google Books categories for explicit age patterns
+            // Check Google Books categories for EXPLICIT age patterns ONLY
             if (isset($match['categories']) && is_array($match['categories'])) {
                 error_log("AGE_TEST: AGE_RANGE_EXTRACT_DEBUG: Found categories: " . json_encode($match['categories']));
                 foreach ($match['categories'] as $category) {
                     if (is_string($category)) {
                         error_log("AGE_TEST: AGE_RANGE_EXTRACT_DEBUG: Checking category: '$category'");
-                        // Look for explicit age patterns in categories
+                        // ONLY look for explicit age patterns with numbers - NO generic mappings
                         if (preg_match('/(\d+)\s*-\s*(\d+)\s*years?/i', $category, $matches)) {
                             $rawAgeRange = $matches[0]; // e.g., "8-12 years"
-                            error_log("AGE_TEST: AGE_RANGE_EXTRACT_DEBUG: Found age pattern '$rawAgeRange' in category");
+                            error_log("AGE_TEST: AGE_RANGE_EXTRACT_DEBUG: Found explicit age pattern '$rawAgeRange' in category");
                             $ageRange = mapAmazonAgeRangeToStandard($rawAgeRange);
                             error_log("AGE_TEST: AGE_RANGE_EXTRACT_DEBUG: Mapped to standard range: '$ageRange'");
                             if ($ageRange) break;
-                        } elseif (stripos($category, 'young adult') !== false) {
-                            $ageRange = '14-16 years';
-                            error_log("AGE_TEST: AGE_RANGE_EXTRACT_DEBUG: Found 'young adult' in category, setting to '14-16 years'");
-                            break;
-                        } elseif (stripos($category, 'teen') !== false) {
-                            $ageRange = '11-14 years';
-                            error_log("AGE_TEST: AGE_RANGE_EXTRACT_DEBUG: Found 'teen' in category, setting to '11-14 years'");
-                            break;
                         }
+                        // REMOVED: Generic mappings like "young adult" -> age range
+                        // These create fake data when APIs don't actually have age information
                     }
                 }
             } else {
@@ -1402,19 +1396,18 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
                 }
             }
 
-            // Open Library subject_facet[] contains specific patterns
+            // Open Library subject_facet[] - ONLY very specific age-related patterns
             if (!$ageRange && isset($match['subject_facet']) && is_array($match['subject_facet'])) {
                 foreach ($match['subject_facet'] as $subject) {
-                    if (stripos($subject, "Children's Books/Ages 9-12 Fiction") !== false) {
-                        $ageRange = '9-10 years';
-                        break;
-                    } elseif (stripos($subject, 'Tweens') !== false) {
-                        $ageRange = '8-9 years';
-                        break;
-                    } elseif (stripos($subject, 'Young Adult Fiction') !== false) {
-                        $ageRange = '11-14 years';
-                        break;
+                    // ONLY accept very specific age-related subjects with explicit age numbers
+                    if (stripos($subject, "Children's Books/Ages") !== false && preg_match('/Ages\s+(\d+)-(\d+)/i', $subject)) {
+                        if (stripos($subject, "Ages 9-12") !== false) {
+                            $ageRange = '9-10 years';
+                            break;
+                        }
                     }
+                    // REMOVED: Generic mappings like "Tweens" or "Young Adult Fiction"
+                    // These create fake data when there's no actual age information
                 }
             }
 
@@ -1424,13 +1417,15 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
                 return null;
             }
 
-            // NO MATURITY RATING PROCESSING - this was causing the 12+ issue
-            // Return null if no age range found from explicit sources
+            // Return null if no EXPLICIT age range found - don't create fake data
             error_log("AGE_TEST: AGE_RANGE_EXTRACT_DEBUG: Final age range result: " . ($ageRange ?? 'null'));
             return $ageRange;
 
         case 'reading_level':
-            // Open Library: use lexile[] with conversion to readable format
+            // CRITICAL FIX: Only return reading level data when there's EXPLICIT reading level information
+            // Do NOT create fake reading level data from generic categories
+
+            // Open Library: use lexile[] with conversion to readable format (this is explicit reading level data)
             if (isset($match['lexile']) && is_array($match['lexile']) && !empty($match['lexile'])) {
                 $lexileValue = $match['lexile'][0];
                 $readingLevel = convertLexileToReadingLevel($lexileValue);
@@ -1448,18 +1443,12 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
                 }
             }
 
-            // CRITICAL FIX: Add Google Books categories to reading level mapping
-            if (isset($match['categories']) && is_array($match['categories'])) {
-                foreach ($match['categories'] as $category) {
-                    if (is_string($category)) {
-                        $readingLevel = mapCategoryToReadingLevel($category);
-                        if ($readingLevel) {
-                            return $readingLevel;
-                        }
-                    }
-                }
-            }
-            break;
+            // REMOVED: Google Books categories to reading level mapping
+            // This was creating fake reading level data when APIs don't actually have reading level information
+            // Only Amazon provides explicit reading age data that can be mapped to reading levels
+
+            // Return null if no EXPLICIT reading level data found
+            return null;
 
         case 'average_rating':
             // Get average rating from OpenLibrary

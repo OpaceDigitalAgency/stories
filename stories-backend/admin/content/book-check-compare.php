@@ -267,13 +267,38 @@ $pageActions = '
 
                     <!-- Critical Issues Identified -->
                     <div class="alert alert-danger">
-                        <h6><strong>🚨 CRITICAL ISSUES IDENTIFIED:</strong></h6>
+                        <h6><strong>🚨 ROOT CAUSE ANALYSIS:</strong></h6>
                         <ul class="mb-0">
-                            <li><strong>Title/Author Extraction BROKEN:</strong> APIs return data but enrichment shows "N/A"</li>
-                            <li><strong>Amazon Age Range Parsing FAILED:</strong> Shows "&lrm;" instead of "6 - 9 years, from customers"</li>
-                            <li><strong>Category to Age Range Mapping MISSING:</strong> Google Books "Children" not converted to age range</li>
-                            <li><strong>Amazon Field Extraction INCOMPLETE:</strong> Missing publisher, publication_date, page_count from HTML</li>
+                            <li><strong>getEnrichedBookData() Function BROKEN:</strong> Core enrichment pipeline failing to extract basic title/author fields</li>
+                            <li><strong>Source Tracking MISSING:</strong> All sources showing as "unknown" instead of actual API names</li>
+                            <li><strong>Amazon HTML Parser FAILED:</strong> Extracting Unicode control characters (&lrm;) instead of "6 - 9 years"</li>
+                            <li><strong>Data Merging Logic BROKEN:</strong> Individual APIs work but final merge produces N/A values</li>
                         </ul>
+                    </div>
+
+                    <!-- Diagnosis Summary -->
+                    <div class="alert alert-warning">
+                        <h6><strong>📊 DIAGNOSIS SUMMARY:</strong></h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>✅ WORKING:</strong>
+                                <ul class="mb-0">
+                                    <li>Google Books API (returns title, author, categories)</li>
+                                    <li>OpenLibrary API (returns title, author, subjects)</li>
+                                    <li>ISBN extraction (both ISBN-10 and ISBN-13)</li>
+                                    <li>Some fields: publication_date, language, tags</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <strong>❌ BROKEN:</strong>
+                                <ul class="mb-0">
+                                    <li>Title/Author field extraction (core bug)</li>
+                                    <li>Amazon HTML parsing (returns control chars)</li>
+                                    <li>Source attribution (all show "unknown")</li>
+                                    <li>Age range processing (no specific ages extracted)</li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- API Status Overview -->
@@ -459,7 +484,14 @@ $pageActions = '
                     <?php if (isset($results['api_tests'])): ?>
                     <div class="table-responsive mb-4">
                         <h6>📊 Complete Field Mapping: Books Table vs API Sources</h6>
-                        <table class="table table-bordered table-hover">
+                        <table class="table table-bordered table-hover" style="table-layout: fixed;">
+                            <colgroup>
+                                <col style="width: 15%;">
+                                <col style="width: 25%;">
+                                <col style="width: 25%;">
+                                <col style="width: 25%;">
+                                <col style="width: 10%;">
+                            </colgroup>
                             <thead class="thead-dark">
                                 <tr>
                                     <th>Books Table Field</th>
@@ -594,15 +626,41 @@ $pageActions = '
                         <?php endif; ?>
                     </div>
 
-                    <!-- Additional Data Section - Temporarily Disabled -->
+                    <!-- Missing Data Analysis -->
                     <div class="alert alert-info">
-                        <strong>Additional Data Analysis:</strong>
-                        <ul class="mb-0">
-                            <li><strong>Amazon Age Data Available:</strong> "Reading age: 6 - 9 years, from customers" (not being extracted)</li>
-                            <li><strong>Google Books Categories:</strong> "Children" (not being mapped to age ranges)</li>
-                            <li><strong>Amazon Series Info:</strong> "Book 2 of 7: Chronicles of Narnia" (not being used)</li>
-                            <li><strong>Amazon Reviews:</strong> "4.5/5 stars (19,649 reviews)" (not being captured)</li>
-                        </ul>
+                        <h6><strong>📋 AVAILABLE DATA NOT BEING USED:</strong></h6>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <strong>🛒 Amazon (HTML Available):</strong>
+                                <ul class="mb-0 small">
+                                    <li><strong>Specific Age:</strong> "6 - 9 years, from customers"</li>
+                                    <li><strong>Series:</strong> "Book 2 of 7: Chronicles of Narnia"</li>
+                                    <li><strong>Reviews:</strong> "4.5/5 stars (19,649 reviews)"</li>
+                                    <li><strong>Physical:</strong> "208 pages, 430g, 12.5x1.4x18.6cm"</li>
+                                    <li><strong>Rankings:</strong> "#10 in Fiction Classics for Young Adults"</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-4">
+                                <strong>📖 OpenLibrary (Available):</strong>
+                                <ul class="mb-0 small">
+                                    <li><strong>Rich Subjects:</strong> "the Blitz, fauns, Turkish Delight, lions, English Children's stories, Fantasy & Magic, Action & Adventure, Classics"</li>
+                                    <li><strong>Characters:</strong> "Aslan, Edmund Pevensie, Father Christmas"</li>
+                                    <li><strong>Settings:</strong> "Cair Paravel, England, London"</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-4">
+                                <strong>📚 Google Books (Available):</strong>
+                                <ul class="mb-0 small">
+                                    <li><strong>Categories:</strong> "Children" (too vague for age mapping)</li>
+                                    <li><strong>Description:</strong> Full book description available</li>
+                                    <li><strong>Preview:</strong> Book preview links</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <strong>🎯 Key Issue:</strong> Only Amazon provides <strong>specific age ranges</strong> ("6 - 9 years") -
+                            Google Books "Children" and OpenLibrary subjects are too vague for age mapping.
+                        </div>
                     </div>
                     <?php endif; ?>
 

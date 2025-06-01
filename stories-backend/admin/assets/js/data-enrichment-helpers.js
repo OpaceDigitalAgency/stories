@@ -318,35 +318,53 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
         } else if (fieldName === 'awards') {
             return value.split(',').map(award => `<span class="badge badge-light mr-1">${award.trim()}</span>`).join('');
         } else if (fieldName === 'characters' || fieldName === 'settings') {
-            return value.split(',').map(item => `<span class="badge badge-light mr-1">${item.trim()}</span>`).join('');
+            // CRITICAL FIX: Deduplicate and clean before displaying
+            const items = value.split(',').map(item => item.trim()).filter(item => item.length > 0);
+            const uniqueItems = [...new Set(items)]; // Remove duplicates
+            return uniqueItems.map(item => `<span class="badge badge-light mr-1">${item}</span>`).join('');
         } else if (fieldName === 'purchase_links') {
             // CRITICAL FIX: Use same user-friendly formatting as formatFieldValue
             try {
+                console.log('🛒 CURRENT_PURCHASE_LINKS_DEBUG: Raw value:', value);
+                console.log('🛒 CURRENT_PURCHASE_LINKS_DEBUG: Value type:', typeof value);
+
                 const linksData = typeof value === 'string' ? JSON.parse(value) : value;
+                console.log('🛒 CURRENT_PURCHASE_LINKS_DEBUG: Parsed linksData:', linksData);
+
                 if (!linksData || typeof linksData !== 'object') {
-                    return '<span class="text-muted">No links available</span>';
+                    console.log('🛒 CURRENT_PURCHASE_LINKS_DEBUG: No valid links data');
+                    return '<span class="text-muted">No valid purchase options</span>';
                 }
 
                 // Format as user-friendly purchase options
                 let formattedLinks = '';
                 Object.keys(linksData).forEach(format => {
                     const option = linksData[format];
-                    if (option && option.price && option.url) {
+                    console.log(`🛒 CURRENT_PURCHASE_LINKS_DEBUG: Processing format "${format}":`, option);
+
+                    if (option && (option.price || option.url)) {
+                        const price = option.price || 'Price not available';
+                        const url = option.url || '#';
                         const isSelected = option.is_selected ? ' <span class="badge badge-success">Default</span>' : '';
+
                         formattedLinks += `
                             <div class="mb-1">
-                                <strong>${format}:</strong> ${option.price}${isSelected}
-                                <a href="${option.url}" target="_blank" class="btn btn-sm btn-outline-primary ml-2">
+                                <strong>${format}:</strong> ${price}${isSelected}
+                                ${url !== '#' ? `<a href="${url}" target="_blank" class="btn btn-sm btn-outline-primary ml-2">
                                     <i class="fas fa-external-link-alt"></i> Buy
-                                </a>
+                                </a>` : ''}
                             </div>
                         `;
+                    } else {
+                        console.log(`🛒 CURRENT_PURCHASE_LINKS_DEBUG: Skipping format "${format}" - missing price or url`);
                     }
                 });
 
+                console.log('🛒 CURRENT_PURCHASE_LINKS_DEBUG: Final formatted links:', formattedLinks);
                 return formattedLinks || '<span class="text-muted">No valid purchase options</span>';
             } catch (e) {
-                console.error('Error parsing purchase links in formatCurrentValue:', e);
+                console.error('🛒 CURRENT_PURCHASE_LINKS_DEBUG: Error parsing purchase links in formatCurrentValue:', e);
+                console.error('🛒 CURRENT_PURCHASE_LINKS_DEBUG: Raw value that failed:', value);
                 return '<span class="text-danger">Error parsing links</span>';
             }
         }
@@ -463,7 +481,10 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
         } else if (fieldName === 'awards') {
             return value.split(',').map(award => `<span class="badge badge-warning mr-1">${award.trim()}</span>`).join('');
         } else if (fieldName === 'characters' || fieldName === 'settings') {
-            return value.split(',').map(item => `<span class="badge badge-light mr-1">${item.trim()}</span>`).join('');
+            // CRITICAL FIX: Deduplicate and clean before displaying
+            const items = value.split(',').map(item => item.trim()).filter(item => item.length > 0);
+            const uniqueItems = [...new Set(items)]; // Remove duplicates
+            return uniqueItems.map(item => `<span class="badge badge-light mr-1">${item}</span>`).join('');
         } else if (fieldName === 'alternative_isbns') {
             // Display alternative ISBNs in a scrollable container
             const isbns = value.split(',').map(isbn => isbn.trim()).filter(isbn => isbn.length >= 10);
@@ -479,8 +500,14 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
         } else if (fieldName === 'purchase_links') {
             // Display purchase links in a user-friendly format
             try {
+                console.log('🛒 PURCHASE_LINKS_DEBUG: Raw value:', value);
+                console.log('🛒 PURCHASE_LINKS_DEBUG: Value type:', typeof value);
+
                 const linksData = typeof value === 'string' ? JSON.parse(value) : value;
+                console.log('🛒 PURCHASE_LINKS_DEBUG: Parsed linksData:', linksData);
+
                 if (!linksData || typeof linksData !== 'object') {
+                    console.log('🛒 PURCHASE_LINKS_DEBUG: No valid links data');
                     return '<span class="text-muted">No links available</span>';
                 }
 
@@ -488,22 +515,31 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
                 let formattedLinks = '';
                 Object.keys(linksData).forEach(format => {
                     const option = linksData[format];
-                    if (option && option.price && option.url) {
+                    console.log(`🛒 PURCHASE_LINKS_DEBUG: Processing format "${format}":`, option);
+
+                    if (option && (option.price || option.url)) {
+                        const price = option.price || 'Price not available';
+                        const url = option.url || '#';
                         const isSelected = option.is_selected ? ' <span class="badge badge-success">Default</span>' : '';
+
                         formattedLinks += `
                             <div class="mb-1">
-                                <strong>${format}:</strong> ${option.price}${isSelected}
-                                <a href="${option.url}" target="_blank" class="btn btn-sm btn-outline-primary ml-2">
+                                <strong>${format}:</strong> ${price}${isSelected}
+                                ${url !== '#' ? `<a href="${url}" target="_blank" class="btn btn-sm btn-outline-primary ml-2">
                                     <i class="fas fa-external-link-alt"></i> Buy
-                                </a>
+                                </a>` : ''}
                             </div>
                         `;
+                    } else {
+                        console.log(`🛒 PURCHASE_LINKS_DEBUG: Skipping format "${format}" - missing price or url`);
                     }
                 });
 
+                console.log('🛒 PURCHASE_LINKS_DEBUG: Final formatted links:', formattedLinks);
                 return formattedLinks || '<span class="text-muted">No valid purchase options</span>';
             } catch (e) {
-                console.error('Error parsing purchase links:', e);
+                console.error('🛒 PURCHASE_LINKS_DEBUG: Error parsing purchase links:', e);
+                console.error('🛒 PURCHASE_LINKS_DEBUG: Raw value that failed:', value);
                 return '<span class="text-danger">Error parsing links</span>';
             }
         }

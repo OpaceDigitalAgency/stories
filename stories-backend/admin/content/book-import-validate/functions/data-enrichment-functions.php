@@ -191,9 +191,11 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $amazonData
         // CRITICAL DEBUG: Log Amazon field extraction for age_range and reading_level
         if ($fieldName === 'age_range' || $fieldName === 'reading_level') {
             error_log("FIELD_EXTRACTION_DEBUG: Field '$fieldName' - Amazon data available: " . (!empty($amazonData) ? 'YES' : 'NO'));
+            error_log("FIELD_EXTRACTION_DEBUG: Field '$fieldName' - Google value: " . ($googleValue ?: 'NULL'));
+            error_log("FIELD_EXTRACTION_DEBUG: Field '$fieldName' - OpenLibrary value: " . ($openLibraryValue ?: 'NULL'));
             error_log("FIELD_EXTRACTION_DEBUG: Field '$fieldName' - Amazon value extracted: " . ($amazonValue ?: 'NULL'));
             if (!empty($amazonData)) {
-                error_log("FIELD_EXTRACTION_DEBUG: Amazon data structure: " . json_encode($amazonData));
+                error_log("FIELD_EXTRACTION_DEBUG: Amazon metadata: " . json_encode($amazonData['metadata'] ?? []));
             }
         }
 
@@ -3099,17 +3101,74 @@ function extractAmazonFieldValue($amazonData, $fieldName, $currentISBN = '') {
             return null;
 
         case 'format':
-            return $amazonData['selected_format'] ?? null;
+            // Check for format in buying options or metadata
+            $selectedFormat = $amazonData['selected_format'] ?? null;
+            if ($selectedFormat) {
+                error_log("AMAZON_FIELD_EXTRACT: Found selected_format: '$selectedFormat'");
+                return $selectedFormat;
+            }
 
-        case 'price_range':
-            $price = $amazonData['selected_price'] ?? null;
-            if ($price) {
-                // Extract numeric price and map to range
-                if (preg_match('/£(\d+\.\d{2})/', $price, $matches)) {
-                    $numericPrice = floatval($matches[1]);
-                    return mapPriceToRange($numericPrice);
+            // Check buying options for format
+            $buyingOptions = $amazonData['buying_options'] ?? [];
+            if (!empty($buyingOptions)) {
+                foreach ($buyingOptions as $format => $option) {
+                    if (isset($option['is_selected']) && $option['is_selected']) {
+                        error_log("AMAZON_FIELD_EXTRACT: Found selected format from buying_options: '$format'");
+                        return $format;
+                    }
+                }
+                // If no selected format, return first available
+                $firstFormat = array_keys($buyingOptions)[0] ?? null;
+                if ($firstFormat) {
+                    error_log("AMAZON_FIELD_EXTRACT: Using first available format: '$firstFormat'");
+                    return $firstFormat;
                 }
             }
+
+            error_log("AMAZON_FIELD_EXTRACT: No format found in Amazon data");
+            return null;
+
+        case 'price_range':
+            // Check for selected price first
+            $selectedPrice = $amazonData['selected_price'] ?? null;
+            if ($selectedPrice) {
+                error_log("AMAZON_FIELD_EXTRACT: Found selected_price: '$selectedPrice'");
+                if (preg_match('/£(\d+\.\d{2})/', $selectedPrice, $matches)) {
+                    $numericPrice = floatval($matches[1]);
+                    $priceRange = mapPriceToRange($numericPrice);
+                    error_log("AMAZON_FIELD_EXTRACT: Mapped price £$numericPrice to range: '$priceRange'");
+                    return $priceRange;
+                }
+            }
+
+            // Check buying options for price
+            $buyingOptions = $amazonData['buying_options'] ?? [];
+            if (!empty($buyingOptions)) {
+                foreach ($buyingOptions as $format => $option) {
+                    if (isset($option['is_selected']) && $option['is_selected'] && isset($option['price'])) {
+                        error_log("AMAZON_FIELD_EXTRACT: Found selected price from buying_options: '{$option['price']}'");
+                        if (preg_match('/£(\d+\.\d{2})/', $option['price'], $matches)) {
+                            $numericPrice = floatval($matches[1]);
+                            $priceRange = mapPriceToRange($numericPrice);
+                            error_log("AMAZON_FIELD_EXTRACT: Mapped price £$numericPrice to range: '$priceRange'");
+                            return $priceRange;
+                        }
+                    }
+                }
+                // If no selected price, use first available
+                $firstOption = reset($buyingOptions);
+                if ($firstOption && isset($firstOption['price'])) {
+                    error_log("AMAZON_FIELD_EXTRACT: Using first available price: '{$firstOption['price']}'");
+                    if (preg_match('/£(\d+\.\d{2})/', $firstOption['price'], $matches)) {
+                        $numericPrice = floatval($matches[1]);
+                        $priceRange = mapPriceToRange($numericPrice);
+                        error_log("AMAZON_FIELD_EXTRACT: Mapped price £$numericPrice to range: '$priceRange'");
+                        return $priceRange;
+                    }
+                }
+            }
+
+            error_log("AMAZON_FIELD_EXTRACT: No price found in Amazon data");
             return null;
 
         case 'purchase_links':

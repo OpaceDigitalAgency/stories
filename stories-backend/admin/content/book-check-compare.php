@@ -359,30 +359,7 @@ $pageActions = '
                         <?php endif; ?>
                     </div>
 
-                    <!-- Diagnosis Summary -->
-                    <div class="alert alert-warning">
-                        <h6><strong>📊 DIAGNOSIS SUMMARY:</strong></h6>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <strong>✅ WORKING:</strong>
-                                <ul class="mb-0">
-                                    <li>Google Books API (returns title, author, categories)</li>
-                                    <li>OpenLibrary API (returns title, author, subjects)</li>
-                                    <li>ISBN extraction (both ISBN-10 and ISBN-13)</li>
-                                    <li>Some fields: publication_date, language, tags</li>
-                                </ul>
-                            </div>
-                            <div class="col-md-6">
-                                <strong>❌ BROKEN:</strong>
-                                <ul class="mb-0">
-                                    <li>Title/Author field extraction (core bug)</li>
-                                    <li>Amazon HTML parsing (returns control chars)</li>
-                                    <li>Source attribution (all show "unknown")</li>
-                                    <li>Age range processing (no specific ages extracted)</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
+
 
                     <!-- API Status Overview -->
                     <div class="table-responsive mb-4">
@@ -878,16 +855,15 @@ $pageActions = '
                                         $amazonUnused[] = 'Product Details: Available in HTML but not extracted';
                                     }
 
-                                    if (!empty($amazonUnused)):
-                                        foreach (array_slice($amazonUnused, 0, 5) as $unused):
-                                    ?>
-                                    <li><?php echo $unused; ?></li>
-                                    <?php
-                                        endforeach;
-                                        if (count($amazonUnused) > 5):
-                                    ?>
-                                    <li><em>...and <?php echo count($amazonUnused) - 5; ?> more fields</em></li>
-                                    <?php endif; ?>
+                                    if (!empty($amazonUnused)): ?>
+                                    <li><strong>Unused Fields (<?php echo count($amazonUnused); ?>):</strong></li>
+                                    <li>
+                                        <div style="max-height: 150px; overflow-y: auto; border: 1px solid #ddd; padding: 5px; font-size: 11px; background: #f9f9f9;">
+                                            <?php foreach ($amazonUnused as $unused): ?>
+                                            <div><?php echo $unused; ?></div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </li>
                                     <?php else: ?>
                                     <li><em>All available Amazon data is being used</em></li>
                                     <?php endif; ?>
@@ -898,45 +874,16 @@ $pageActions = '
                                 <ul class="mb-0 small">
                                     <?php
                                     $olUnused = [];
-                                    $olUsedFields = ['title', 'author_name', 'publisher', 'first_publish_year', 'number_of_pages_median', 'language', 'isbn', 'subject', 'subject_key', 'subject_facet'];
+                                    $olUsedFields = ['title', 'author_name', 'publisher', 'first_publish_year', 'number_of_pages_median', 'language', 'isbn', 'subject', 'subject_key', 'subject_facet', 'person', 'person_facet', 'place', 'place_facet', 'ia', 'lending_identifier_s'];
 
                                     // Check for unused OpenLibrary fields
                                     if (isset($olData)) {
-                                        // Characters (person/person_facet) - NOT used in enrichment
-                                        if (isset($olData['person']) && !empty($olData['person'])) {
-                                            $personCount = count($olData['person']);
-                                            $displayPersons = array_slice($olData['person'], 0, 4);
-                                            $olUnused[] = "Characters ($personCount): " . htmlspecialchars(implode(', ', $displayPersons)) . ($personCount > 4 ? '...' : '');
-                                        }
+                                        // Note: Characters (person/person_facet) and Settings (place/place_facet) ARE used in enrichment
+                                        // Note: Internet Archive ID (ia/lending_identifier_s) IS used in enrichment
 
-                                        // Settings (place/place_facet) - NOT used in enrichment
-                                        if (isset($olData['place']) && !empty($olData['place'])) {
-                                            $placeCount = count($olData['place']);
-                                            $displayPlaces = array_slice($olData['place'], 0, 4);
-                                            $olUnused[] = "Settings ($placeCount): " . htmlspecialchars(implode(', ', $displayPlaces)) . ($placeCount > 4 ? '...' : '');
-                                        }
-
-                                        // Ratings - NOT used in enrichment
-                                        if (isset($olData['ratings_average']) && !empty($olData['ratings_average'])) {
-                                            $olUnused[] = "Average Rating: " . htmlspecialchars($olData['ratings_average']);
-                                        }
-                                        if (isset($olData['ratings_count']) && !empty($olData['ratings_count'])) {
-                                            $olUnused[] = "Rating Count: " . htmlspecialchars($olData['ratings_count']);
-                                        }
-
-                                        // Internet Archive ID - NOT used in enrichment
-                                        if (isset($olData['ia']) && !empty($olData['ia'])) {
-                                            $olUnused[] = "Internet Archive ID: " . htmlspecialchars($olData['ia'][0]);
-                                        }
-
-                                        // Lexile scores - NOT used in enrichment
-                                        if (isset($olData['lexile']) && !empty($olData['lexile'])) {
-                                            $olUnused[] = "Lexile Score: " . htmlspecialchars($olData['lexile'][0]);
-                                        }
-
-                                        // Check for other unused fields
+                                        // Check for all unused fields dynamically
                                         foreach ($olData as $key => $value) {
-                                            if (!in_array($key, $olUsedFields) && !empty($value) && !in_array($key, ['person', 'place', 'ratings_average', 'ratings_count', 'ia', 'lexile'])) {
+                                            if (!in_array($key, $olUsedFields) && !empty($value)) {
                                                 if (is_array($value)) {
                                                     $olUnused[] = ucfirst(str_replace('_', ' ', $key)) . " (" . count($value) . " items): " . htmlspecialchars(implode(', ', array_slice($value, 0, 3))) . (count($value) > 3 ? '...' : '');
                                                 } else {
@@ -946,16 +893,15 @@ $pageActions = '
                                         }
                                     }
 
-                                    if (!empty($olUnused)):
-                                        foreach (array_slice($olUnused, 0, 6) as $unused):
-                                    ?>
-                                    <li><?php echo $unused; ?></li>
-                                    <?php
-                                        endforeach;
-                                        if (count($olUnused) > 6):
-                                    ?>
-                                    <li><em>...and <?php echo count($olUnused) - 6; ?> more fields</em></li>
-                                    <?php endif; ?>
+                                    if (!empty($olUnused)): ?>
+                                    <li><strong>Unused Fields (<?php echo count($olUnused); ?>):</strong></li>
+                                    <li>
+                                        <div style="max-height: 150px; overflow-y: auto; border: 1px solid #ddd; padding: 5px; font-size: 11px; background: #f9f9f9;">
+                                            <?php foreach ($olUnused as $unused): ?>
+                                            <div><?php echo $unused; ?></div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </li>
                                     <?php else: ?>
                                     <li><em>All available OpenLibrary data is being used</em></li>
                                     <?php endif; ?>
@@ -1011,63 +957,22 @@ $pageActions = '
                                         }
                                     }
 
-                                    if (!empty($googleUnused)):
-                                        foreach (array_slice($googleUnused, 0, 6) as $unused):
-                                    ?>
-                                    <li><?php echo $unused; ?></li>
-                                    <?php
-                                        endforeach;
-                                        if (count($googleUnused) > 6):
-                                    ?>
-                                    <li><em>...and <?php echo count($googleUnused) - 6; ?> more fields</em></li>
-                                    <?php endif; ?>
+                                    if (!empty($googleUnused)): ?>
+                                    <li><strong>Unused Fields (<?php echo count($googleUnused); ?>):</strong></li>
+                                    <li>
+                                        <div style="max-height: 150px; overflow-y: auto; border: 1px solid #ddd; padding: 5px; font-size: 11px; background: #f9f9f9;">
+                                            <?php foreach ($googleUnused as $unused): ?>
+                                            <div><?php echo $unused; ?></div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </li>
                                     <?php else: ?>
                                     <li><em>All available Google Books data is being used</em></li>
                                     <?php endif; ?>
                                 </ul>
                             </div>
                         </div>
-                        <div class="mt-2">
-                            <?php
-                            // Dynamic key issue analysis
-                            $amazonAge = $amazonData['metadata']['reading_age'] ?? null;
-                            $googleCategories = $googleData['categories'] ?? [];
-                            $olSubjects = $olData['subject'] ?? [];
 
-                            $hasSpecificAmazonAge = $amazonAge && preg_match('/\d+\s*-\s*\d+\s*years/', $amazonAge);
-                            $hasSpecificGoogleAge = false;
-                            $hasSpecificOLAge = false;
-
-                            // Check for specific ages in Google categories
-                            foreach ($googleCategories as $category) {
-                                if (preg_match('/\d+\s*-\s*\d+|ages?\s+\d+/', strtolower($category))) {
-                                    $hasSpecificGoogleAge = true;
-                                    break;
-                                }
-                            }
-
-                            // Check for specific ages in OpenLibrary subjects
-                            foreach ($olSubjects as $subject) {
-                                if (preg_match('/\d+\s*-\s*\d+|ages?\s+\d+/', strtolower($subject))) {
-                                    $hasSpecificOLAge = true;
-                                    break;
-                                }
-                            }
-
-                            if ($hasSpecificAmazonAge && !$hasSpecificGoogleAge && !$hasSpecificOLAge) {
-                                echo '<strong>🎯 Key Issue:</strong> Only Amazon provides <strong>specific age ranges</strong> ("' . htmlspecialchars($amazonAge) . '") - Google Books and OpenLibrary data is too vague for age mapping.';
-                            } elseif (!$hasSpecificAmazonAge && !$hasSpecificGoogleAge && !$hasSpecificOLAge) {
-                                echo '<strong>🎯 Key Issue:</strong> <strong>No specific age data</strong> found in any source - all sources provide vague categories only.';
-                            } else {
-                                echo '<strong>✅ Age Data Available:</strong> ';
-                                $sources = [];
-                                if ($hasSpecificAmazonAge) $sources[] = 'Amazon ("' . htmlspecialchars($amazonAge) . '")';
-                                if ($hasSpecificGoogleAge) $sources[] = 'Google Books';
-                                if ($hasSpecificOLAge) $sources[] = 'OpenLibrary';
-                                echo implode(', ', $sources) . ' provide specific age information.';
-                            }
-                            ?>
-                        </div>
                     </div>
                     <?php endif; ?>
                 <?php endif; ?>

@@ -15,9 +15,29 @@ require_once __DIR__ . '/data-enrichment-fixes.php';
 
 // Global debug function for browser console output
 function debugLog($message, $data = null) {
-    $logData = $data ? json_encode($data) : '';
-    echo "<script>console.log('ENRICHMENT_DEBUG: " . addslashes($message) . "', " . ($logData ?: '""') . ");</script>";
-    flush(); // Ensure immediate output
+    // Check if we're in an AJAX context (JSON response expected)
+    $isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) &&
+              strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+
+    // Also check if Content-Type is set to JSON
+    $isJsonResponse = false;
+    foreach (headers_list() as $header) {
+        if (stripos($header, 'Content-Type: application/json') !== false) {
+            $isJsonResponse = true;
+            break;
+        }
+    }
+
+    if ($isAjax || $isJsonResponse) {
+        // In AJAX context, don't output anything to avoid breaking JSON
+        // The debugging will be handled by book-check-compare.php instead
+        return;
+    } else {
+        // In regular page context, output to browser console
+        $logData = $data ? json_encode($data) : '';
+        echo "<script>console.log('SCRAPE_TEST: " . addslashes($message) . "', " . ($logData ?: '""') . ");</script>";
+        flush(); // Ensure immediate output
+    }
 }
 
 /**
@@ -104,22 +124,22 @@ function getEnrichedBookData($title, $author, $currentISBN = '', $currentPublish
     if (!empty($currentISBN)) {
         // Try to get Amazon data for age range, format, price, etc.
         try {
-            error_log("SCRAPE_TEST: Starting Amazon scraping for ISBN $currentISBN");
+            debugLog("Starting Amazon scraping for ISBN $currentISBN");
             $amazonData = scrapeAmazonBuyingOptions($currentISBN);
             $enrichedData['sources_checked'][] = 'amazon';
 
             // CRITICAL DEBUG: Log what Amazon data was actually retrieved
-            error_log("SCRAPE_TEST: Amazon data retrieved for ISBN $currentISBN");
-            error_log("SCRAPE_TEST: Amazon metadata: " . json_encode($amazonData['metadata'] ?? []));
-            error_log("SCRAPE_TEST: Amazon buying_options: " . json_encode($amazonData['buying_options'] ?? []));
+            debugLog("Amazon data retrieved for ISBN $currentISBN");
+            debugLog("Amazon metadata", $amazonData['metadata'] ?? []);
+            debugLog("Amazon buying_options", $amazonData['buying_options'] ?? []);
 
             // Check specifically for reading_age
             if (isset($amazonData['metadata']['reading_age'])) {
-                error_log("SCRAPE_TEST: Found reading_age in Amazon data: '" . $amazonData['metadata']['reading_age'] . "'");
+                debugLog("Found reading_age in Amazon data: '" . $amazonData['metadata']['reading_age'] . "'");
             } else {
-                error_log("SCRAPE_TEST: NO reading_age found in Amazon metadata");
+                debugLog("NO reading_age found in Amazon metadata");
                 if (isset($amazonData['metadata'])) {
-                    error_log("SCRAPE_TEST: Available metadata keys: " . implode(', ', array_keys($amazonData['metadata'])));
+                    debugLog("Available metadata keys: " . implode(', ', array_keys($amazonData['metadata'])));
                 }
             }
         } catch (Exception $e) {
@@ -205,16 +225,16 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $amazonData
 
         // CRITICAL DEBUG: Log Amazon field extraction for key fields
         if (in_array($fieldName, ['age_range', 'reading_level', 'format', 'price_range', 'page_count', 'publisher', 'publication_date', 'language'])) {
-            error_log("SCRAPE_TEST: Field '$fieldName' - Amazon data available: " . (!empty($amazonData) ? 'YES' : 'NO'));
-            error_log("SCRAPE_TEST: Field '$fieldName' - Google value: " . (is_null($googleValue) ? 'NULL' : "'$googleValue'"));
-            error_log("SCRAPE_TEST: Field '$fieldName' - OpenLibrary value: " . (is_null($openLibraryValue) ? 'NULL' : "'$openLibraryValue'"));
-            error_log("SCRAPE_TEST: Field '$fieldName' - Amazon value extracted: " . (is_null($amazonValue) ? 'NULL' : "'$amazonValue'"));
-            error_log("SCRAPE_TEST: Field '$fieldName' - Google empty check: " . (empty($googleValue) ? 'TRUE' : 'FALSE'));
-            error_log("SCRAPE_TEST: Field '$fieldName' - OpenLibrary empty check: " . (empty($openLibraryValue) ? 'TRUE' : 'FALSE'));
-            error_log("SCRAPE_TEST: Field '$fieldName' - Amazon empty check: " . (empty($amazonValue) ? 'TRUE' : 'FALSE'));
+            debugLog("Field '$fieldName' - Amazon data available: " . (!empty($amazonData) ? 'YES' : 'NO'));
+            debugLog("Field '$fieldName' - Google value: " . (is_null($googleValue) ? 'NULL' : "'$googleValue'"));
+            debugLog("Field '$fieldName' - OpenLibrary value: " . (is_null($openLibraryValue) ? 'NULL' : "'$openLibraryValue'"));
+            debugLog("Field '$fieldName' - Amazon value extracted: " . (is_null($amazonValue) ? 'NULL' : "'$amazonValue'"));
+            debugLog("Field '$fieldName' - Google empty check: " . (empty($googleValue) ? 'TRUE' : 'FALSE'));
+            debugLog("Field '$fieldName' - OpenLibrary empty check: " . (empty($openLibraryValue) ? 'TRUE' : 'FALSE'));
+            debugLog("Field '$fieldName' - Amazon empty check: " . (empty($amazonValue) ? 'TRUE' : 'FALSE'));
             if (!empty($amazonData)) {
-                error_log("SCRAPE_TEST: Amazon metadata: " . json_encode($amazonData['metadata'] ?? []));
-                error_log("SCRAPE_TEST: Amazon buying_options: " . json_encode($amazonData['buying_options'] ?? []));
+                debugLog("Amazon metadata for field '$fieldName'", $amazonData['metadata'] ?? []);
+                debugLog("Amazon buying_options for field '$fieldName'", $amazonData['buying_options'] ?? []);
             }
         }
 
@@ -247,7 +267,7 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $amazonData
                     'confidence' => $fieldConfig['confidence'],
                     'label' => $fieldConfig['label']
                 ];
-                error_log("SCRAPE_TEST: Using Amazon data for $fieldName: $amazonValue");
+                debugLog("Using Amazon data for $fieldName: $amazonValue");
             } elseif ($fieldName === 'tags') {
                 // Special handling for tags - always merge them
                 $mergedTags = mergeTagsFromSources($googleValue, $openLibraryValue);
@@ -3111,13 +3131,13 @@ function extractAmazonFieldValue($amazonData, $fieldName, $currentISBN = '') {
             // Extract age range from Amazon metadata
             $readingAge = $amazonData['metadata']['reading_age'] ?? null;
             if ($readingAge) {
-                error_log("SCRAPE_TEST: Processing reading_age: '$readingAge'");
+                debugLog("Processing reading_age: '$readingAge'");
                 // Map Amazon age range to our standard format
                 $standardAge = mapAmazonAgeRangeToStandard($readingAge);
-                error_log("SCRAPE_TEST: Mapped to standard age: '$standardAge'");
+                debugLog("Mapped to standard age: '$standardAge'");
                 return $standardAge;
             }
-            error_log("SCRAPE_TEST: No reading_age found in Amazon metadata");
+            debugLog("No reading_age found in Amazon metadata");
             return null;
 
         case 'reading_level':
@@ -3132,32 +3152,32 @@ function extractAmazonFieldValue($amazonData, $fieldName, $currentISBN = '') {
         case 'format':
             // Check for format in buying options or metadata
             $selectedFormat = $amazonData['selected_format'] ?? null;
-            error_log("SCRAPE_TEST: Format extraction - selected_format: " . ($selectedFormat ?? 'NULL'));
+            debugLog("Format extraction - selected_format: " . ($selectedFormat ?? 'NULL'));
             if ($selectedFormat) {
-                error_log("SCRAPE_TEST: Found selected_format: '$selectedFormat'");
+                debugLog("Found selected_format: '$selectedFormat'");
                 return $selectedFormat;
             }
 
             // Check buying options for format
             $buyingOptions = $amazonData['buying_options'] ?? [];
-            error_log("SCRAPE_TEST: Format extraction - buying_options available: " . (!empty($buyingOptions) ? 'YES' : 'NO'));
+            debugLog("Format extraction - buying_options available: " . (!empty($buyingOptions) ? 'YES' : 'NO'));
             if (!empty($buyingOptions)) {
-                error_log("SCRAPE_TEST: Format extraction - available formats: " . implode(', ', array_keys($buyingOptions)));
+                debugLog("Format extraction - available formats: " . implode(', ', array_keys($buyingOptions)));
                 foreach ($buyingOptions as $format => $option) {
                     if (isset($option['is_selected']) && $option['is_selected']) {
-                        error_log("SCRAPE_TEST: Found selected format from buying_options: '$format'");
+                        debugLog("Found selected format from buying_options: '$format'");
                         return $format;
                     }
                 }
                 // If no selected format, return first available
                 $firstFormat = array_keys($buyingOptions)[0] ?? null;
                 if ($firstFormat) {
-                    error_log("SCRAPE_TEST: Using first available format: '$firstFormat'");
+                    debugLog("Using first available format: '$firstFormat'");
                     return $firstFormat;
                 }
             }
 
-            error_log("SCRAPE_TEST: No format found in Amazon data");
+            debugLog("No format found in Amazon data");
             return null;
 
         case 'price_range':

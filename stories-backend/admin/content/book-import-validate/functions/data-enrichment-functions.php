@@ -2441,22 +2441,20 @@ function extractAmazonMetadata($responses) {
         if (preg_match('/<div[^>]*id="detailBullets_feature_div"[^>]*>(.*?)<\/div>/is', $response, $bulletMatch)) {
             $bulletContent = $bulletMatch[1];
 
-            // Extract individual bullet points - UPDATED patterns based on current Amazon structure
+            // Extract individual bullet points - FIXED patterns based on actual Amazon HTML structure
+            // The HTML structure is: <span class="a-text-bold">Label‏:‎</span><span>Value</span>
+            // Unicode characters ‏ (U+200F) and ‎ (U+200E) appear between label and colon
             $bulletPatterns = [
-                'reading_age' => '/<span[^>]*class="a-text-bold"[^>]*>Reading age[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
-                // ADDITIONAL PATTERNS for reading age based on current Amazon structure
-                'reading_age_alt1' => '/Reading age[^:]*:\s*([^<\n]+)/i',
-                'reading_age_alt2' => '/Reading age[^>]*>([^<]+)</i',
-                'reading_age_alt3' => '/<span>Reading age<\/span>.*?<span[^>]*>([^<]+)<\/span>/is',
-                // REMOVED: 'grade_level' - Amazon grade levels are US-based, not UK standard
-                'publisher' => '/<span[^>]*class="a-text-bold"[^>]*>Publisher[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
-                'publication_date' => '/<span[^>]*class="a-text-bold"[^>]*>Publication date[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
-                'language' => '/<span[^>]*class="a-text-bold"[^>]*>Language[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
-                'print_length' => '/<span[^>]*class="a-text-bold"[^>]*>Print length[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
-                'isbn_10' => '/<span[^>]*class="a-text-bold"[^>]*>ISBN-10[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
-                'isbn_13' => '/<span[^>]*class="a-text-bold"[^>]*>ISBN-13[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
-                'dimensions' => '/<span[^>]*class="a-text-bold"[^>]*>Dimensions[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
-                'item_weight' => '/<span[^>]*class="a-text-bold"[^>]*>Item weight[^<]*<\/span>[^<]*<span[^>]*>([^<]+)<\/span>/i',
+                'reading_age' => '/<span[^>]*class="a-text-bold"[^>]*>Reading age[^<]*<\/span>\s*<span[^>]*>([^<]+)<\/span>/i',
+                'publisher' => '/<span[^>]*class="a-text-bold"[^>]*>Publisher[^<]*<\/span>\s*<span[^>]*>([^<]+)<\/span>/i',
+                'publication_date' => '/<span[^>]*class="a-text-bold"[^>]*>Publication date[^<]*<\/span>\s*<span[^>]*>([^<]+)<\/span>/i',
+                'language' => '/<span[^>]*class="a-text-bold"[^>]*>Language[^<]*<\/span>\s*<span[^>]*>([^<]+)<\/span>/i',
+                'print_length' => '/<span[^>]*class="a-text-bold"[^>]*>Print length[^<]*<\/span>\s*<span[^>]*>([^<]+)<\/span>/i',
+                'isbn_10' => '/<span[^>]*class="a-text-bold"[^>]*>ISBN-10[^<]*<\/span>\s*<span[^>]*>([^<]+)<\/span>/i',
+                'isbn_13' => '/<span[^>]*class="a-text-bold"[^>]*>ISBN-13[^<]*<\/span>\s*<span[^>]*>([^<]+)<\/span>/i',
+                'dimensions' => '/<span[^>]*class="a-text-bold"[^>]*>Dimensions[^<]*<\/span>\s*<span[^>]*>([^<]+)<\/span>/i',
+                'item_weight' => '/<span[^>]*class="a-text-bold"[^>]*>Item weight[^<]*<\/span>\s*<span[^>]*>([^<]+)<\/span>/i',
+                'series' => '/<span[^>]*class="a-text-bold"[^>]*>Book \d+ of \d+[^<]*<\/span>\s*<a[^>]*><span[^>]*>([^<]+)<\/span><\/a>/i',
             ];
 
             foreach ($bulletPatterns as $key => $pattern) {

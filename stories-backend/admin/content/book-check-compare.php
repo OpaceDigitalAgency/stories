@@ -103,16 +103,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['isbn'])) {
             // Step 1: Test individual APIs
             $results['api_tests'] = testIndividualAPIs($isbn);
 
-            // Step 2: Test the main enrichment function (same as modal)
-            $enrichedData = getEnrichedBookData($title, $author, $isbn);
+            // Step 2: Call EXACT same AJAX endpoints as modal
+            $results['ajax_calls'] = [];
+
+            // Simulate get_enrichment_data AJAX call
+            $_POST_backup = $_POST;
+            $_POST = [
+                'action' => 'get_enrichment_data',
+                'title' => $title,
+                'author' => $author,
+                'current_isbn' => $isbn,
+                'book_id' => '1' // Dummy book ID for testing
+            ];
+
+            ob_start();
+            include 'book-import-validate/ajax/data-enrichment-ajax.php';
+            $enrichmentResponse = ob_get_clean();
+            $results['ajax_calls']['enrichment'] = json_decode($enrichmentResponse, true);
+
+            // Simulate get_amazon_data AJAX call
+            $_POST = [
+                'action' => 'get_amazon_data',
+                'isbn' => $isbn,
+                'book_id' => '1' // Dummy book ID for testing
+            ];
+
+            ob_start();
+            include 'book-import-validate/ajax/data-enrichment-ajax.php';
+            $amazonResponse = ob_get_clean();
+            $results['ajax_calls']['amazon'] = json_decode($amazonResponse, true);
+
+            // Restore original $_POST
+            $_POST = $_POST_backup;
 
             $endTime = microtime(true);
             $executionTime = round($endTime - $startTime, 2);
 
             $results['success'] = true;
-            $results['enriched_data'] = $enrichedData;
             $results['execution_time'] = $executionTime;
-            $results['confidence_score'] = $enrichedData['confidence_score'] ?? 'N/A';
+
+            // Use the AJAX response data instead of getEnrichedBookData
+            if ($results['ajax_calls']['enrichment']['success']) {
+                $results['enriched_data'] = $results['ajax_calls']['enrichment']['data'];
+                $results['confidence_score'] = $results['ajax_calls']['enrichment']['data']['confidence_score'] ?? 'N/A';
+            } else {
+                $results['error'] = 'AJAX enrichment failed: ' . ($results['ajax_calls']['enrichment']['message'] ?? 'Unknown error');
+            }
 
         } catch (Exception $e) {
             $results['error'] = 'Enrichment failed: ' . $e->getMessage();
@@ -493,6 +529,58 @@ $pageActions = '
                             </div>
                         </div>
                     </div>
+
+                    <!-- AJAX Call Results -->
+                    <?php if (isset($results['ajax_calls'])): ?>
+                    <div class="mb-4">
+                        <h6>🔧 AJAX Call Results (Same as Modal)</h6>
+
+                        <!-- Enrichment AJAX -->
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <strong>get_enrichment_data AJAX Response</strong>
+                            </div>
+                            <div class="card-body">
+                                <?php if ($results['ajax_calls']['enrichment']['success']): ?>
+                                    <span class="badge badge-success">✓ Success</span>
+                                    <p><strong>Fields Found:</strong> <?php echo count($results['ajax_calls']['enrichment']['data']['fields']); ?></p>
+                                    <p><strong>Confidence:</strong> <?php echo $results['ajax_calls']['enrichment']['data']['confidence_score']; ?></p>
+
+                                    <!-- Show key fields -->
+                                    <?php
+                                    $keyFields = ['title', 'author', 'age_range', 'reading_level'];
+                                    foreach ($keyFields as $field) {
+                                        if (isset($results['ajax_calls']['enrichment']['data']['fields'][$field])) {
+                                            $fieldData = $results['ajax_calls']['enrichment']['data']['fields'][$field];
+                                            echo "<p><strong>$field:</strong> " . htmlspecialchars($fieldData['value'] ?? 'N/A') . " (source: " . htmlspecialchars($fieldData['source'] ?? 'unknown') . ")</p>";
+                                        }
+                                    }
+                                    ?>
+                                <?php else: ?>
+                                    <span class="badge badge-danger">✗ Failed</span>
+                                    <p><strong>Error:</strong> <?php echo htmlspecialchars($results['ajax_calls']['enrichment']['message'] ?? 'Unknown error'); ?></p>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
+                        <!-- Amazon AJAX -->
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <strong>get_amazon_data AJAX Response</strong>
+                            </div>
+                            <div class="card-body">
+                                <?php if (isset($results['ajax_calls']['amazon']['success']) && $results['ajax_calls']['amazon']['success']): ?>
+                                    <span class="badge badge-success">✓ Success</span>
+                                    <p><strong>Amazon Data Found:</strong></p>
+                                    <pre><?php echo htmlspecialchars(json_encode($results['ajax_calls']['amazon']['data'] ?? [], JSON_PRETTY_PRINT)); ?></pre>
+                                <?php else: ?>
+                                    <span class="badge badge-warning">⚠ No Data</span>
+                                    <p><strong>Message:</strong> <?php echo htmlspecialchars($results['ajax_calls']['amazon']['message'] ?? 'No Amazon data found'); ?></p>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
 
                     <div class="alert alert-info mt-3">
                         <strong>Debug Information:</strong> Check the <a href="debug-logs.php" class="alert-link">debug logs</a> for more details.

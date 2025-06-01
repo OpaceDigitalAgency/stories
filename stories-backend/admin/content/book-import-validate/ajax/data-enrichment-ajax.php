@@ -726,21 +726,8 @@ function handleApplyEnrichment() {
                 break;
 
             case 'maturity_rating':
-                // Map maturity rating to age_range since maturity_rating column doesn't exist
-                error_log("Maturity rating field: value='$value', mapping to age_range");
-
-                if (!empty($value)) {
-                    $mappedAgeRange = mapMaturityToAgeRangeFromTable($value);
-                    if ($mappedAgeRange && columnExists('books', 'age_range')) {
-                        $updateFields[] = "age_range = ?";
-                        $params[] = $mappedAgeRange;
-                        error_log("Mapped maturity_rating '$value' to age_range '$mappedAgeRange'");
-                    } else {
-                        error_log("Failed to map maturity_rating '$value' to age_range");
-                    }
-                } else {
-                    error_log("Skipping maturity_rating - empty value");
-                }
+                // REMOVED: Maturity rating logic removed as it causes confusion
+                error_log("Skipping maturity_rating field - logic removed");
                 break;
 
             case 'average_rating':
@@ -1076,30 +1063,11 @@ function getCurrentBookData($bookId) {
  * Process enrichment fields for display - show only database fields with current vs new values
  */
 function filterRelevantFields($fields, $currentBookData) {
-    // Process maturity_rating separately and map to age_range if needed
-    if (isset($fields['maturity_rating']) && !empty($fields['maturity_rating']['value'])) {
-        $maturityRating = $fields['maturity_rating']['value'];
-        error_log("AGE_TEST: MATURITY_DEBUG: Processing maturity_rating: '$maturityRating'");
-        $mappedAgeRange = mapMaturityToAgeRangeFromTable($maturityRating);
-        error_log("AGE_TEST: MATURITY_DEBUG: Mapped to age_range: '$mappedAgeRange'");
+    // REMOVED: Maturity rating processing - logic removed as it causes confusion
+    // Age ranges now come only from OpenLibrary subjects and Amazon metadata
 
-        if ($mappedAgeRange) {
-            // Add age_range to the fields if it's not already there or if current age_range is empty
-            $currentAgeRange = $currentBookData['age_range'] ?? null;
-
-            if (empty($currentAgeRange) || $currentAgeRange !== $mappedAgeRange) {
-                $fields['age_range'] = [
-                    'value' => $mappedAgeRange,
-                    'source' => $fields['maturity_rating']['source'] ?? 'google_books',
-                    'confidence' => $fields['maturity_rating']['confidence'] ?? 0.8
-                ];
-                error_log("AGE_TEST: MATURITY_DEBUG: Added age_range field: '$mappedAgeRange' from maturity_rating");
-            }
-        }
-
-        // Remove maturity_rating from fields since it's not a database column
-        unset($fields['maturity_rating']);
-    }
+    // Remove maturity_rating from fields since it's not a database column and logic is removed
+    unset($fields['maturity_rating']);
 
     // CRITICAL DEBUG: Check if age_range field exists and what its value is
     if (isset($fields['age_range'])) {
@@ -1269,98 +1237,8 @@ function columnExists($table, $column) {
     }
 }
 
-/**
- * Map Google Books maturity rating to age range using standard_reading_levels table
- */
-function mapMaturityToAgeRangeFromTable($maturityRating) {
-    global $db;
-
-    try {
-        // Check if standard_reading_levels table exists
-        $stmt = $db->query("SHOW TABLES LIKE 'standard_reading_levels'");
-        if ($stmt->rowCount() === 0) {
-            // Fallback to simple mapping if table doesn't exist
-            return mapMaturityToAgeRange($maturityRating);
-        }
-
-        // FIXED: Map maturity rating to appropriate age groups (NOT_MATURE should never map to 18+)
-        $mappings = [
-            'NOT_MATURE' => ['8-9 years', '7-8 years', '9-10 years', '6-7 years', '5-6 years', '10-11 years'],
-            'MATURE' => ['18+ years', '16-18 years', '14-16 years']
-        ];
-
-        $maturityUpper = strtoupper($maturityRating);
-        $searchTerms = $mappings[$maturityUpper] ?? [];
-
-        error_log("AGE_TEST: MATURITY_MAPPING: Processing '$maturityUpper', search terms: " . json_encode($searchTerms));
-
-        foreach ($searchTerms as $term) {
-            $stmt = $db->prepare("SELECT age_group FROM standard_reading_levels WHERE age_group = ? LIMIT 1");
-            $stmt->execute([$term]);
-            $result = $stmt->fetch();
-
-            if ($result) {
-                error_log("AGE_TEST: MATURITY_MAPPING: Found match for '$term': '{$result['age_group']}'");
-                return $result['age_group'];
-            } else {
-                error_log("AGE_TEST: MATURITY_MAPPING: No match found for '$term'");
-            }
-        }
-
-        // If no exact match found, return a suitable default for the category
-        error_log("AGE_TEST: MATURITY_MAPPING: No exact matches found, using fallback for '$maturityUpper'");
-        if (strtoupper($maturityRating) === 'NOT_MATURE') {
-            // For children's books, default to a middle-range age group
-            $stmt = $db->prepare("SELECT age_group FROM standard_reading_levels WHERE age_group IN ('7-8 years', '8-9 years', '9-10 years') ORDER BY sort_order ASC LIMIT 1");
-            error_log("AGE_TEST: MATURITY_MAPPING: Using NOT_MATURE fallback query");
-        } else {
-            // For mature content, default to adult age group
-            $stmt = $db->prepare("SELECT age_group FROM standard_reading_levels WHERE age_group = '18+ years' LIMIT 1");
-            error_log("AGE_TEST: MATURITY_MAPPING: Using MATURE fallback query");
-        }
-
-        $stmt->execute();
-        $result = $stmt->fetch();
-        $finalResult = $result ? $result['age_group'] : null;
-        error_log("AGE_TEST: MATURITY_MAPPING: Fallback result: " . ($finalResult ?? 'null'));
-        return $finalResult;
-
-    } catch (Exception $e) {
-        error_log("Error mapping maturity rating: " . $e->getMessage());
-        return mapMaturityToAgeRange($maturityRating);
-    }
-}
-
-/**
- * Map Google Books maturity rating to age range (fallback)
- * FIXED: Better age range mapping that considers current book context
- */
-function mapMaturityToAgeRange($maturityRating, $currentBookData = null) {
-    $currentAgeRange = $currentBookData['age_range'] ?? null;
-
-    switch (strtoupper($maturityRating)) {
-        case 'NOT_MATURE':
-            // For children's books, try to stay close to current age range if reasonable
-            if (!empty($currentAgeRange)) {
-                // If current age range is already a children's range, keep it reasonable
-                if (preg_match('/^(\d+)-(\d+)\s*years?$/i', $currentAgeRange, $matches)) {
-                    $startAge = intval($matches[1]);
-                    $endAge = intval($matches[2]);
-
-                    // If current range is reasonable for children (under 12), don't change it drastically
-                    if ($startAge <= 10 && $endAge <= 12) {
-                        return null; // Don't override reasonable children's age ranges
-                    }
-                }
-            }
-            // Default to a middle children's range only if no current range or current range is unreasonable
-            return '7-8 years';
-        case 'MATURE':
-            return '18+ years';
-        default:
-            return null;
-    }
-}
+// REMOVED: All maturity rating mapping functions - logic removed as it causes confusion
+// Age ranges now come only from OpenLibrary subjects and Amazon metadata
 
 
 

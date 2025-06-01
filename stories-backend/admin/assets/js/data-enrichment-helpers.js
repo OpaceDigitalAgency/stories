@@ -346,10 +346,10 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
         } else if (fieldName === 'awards') {
             return value.split(',').map(award => `<span class="badge badge-light mr-1">${award.trim()}</span>`).join('');
         } else if (fieldName === 'characters' || fieldName === 'settings') {
-            // CRITICAL FIX: Deduplicate and clean before displaying
+            // CRITICAL FIX: Use same styling as Alternative ISBNs and deduplicate
             const items = value.split(',').map(item => item.trim()).filter(item => item.length > 0);
             const uniqueItems = [...new Set(items)]; // Remove duplicates
-            return uniqueItems.map(item => `<span class="badge badge-light mr-1">${item}</span>`).join('');
+            return uniqueItems.map(item => `<span class="badge badge-info mr-1 mb-1">${item}</span>`).join('');
         } else if (fieldName === 'purchase_links') {
             // CRITICAL FIX: Use same logic as formatFieldValue for consistency
             try {
@@ -534,11 +534,6 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
             return `<span class="badge badge-info">${value}</span>`;
         } else if (fieldName === 'awards') {
             return value.split(',').map(award => `<span class="badge badge-warning mr-1">${award.trim()}</span>`).join('');
-        } else if (fieldName === 'characters' || fieldName === 'settings') {
-            // CRITICAL FIX: Deduplicate and clean before displaying
-            const items = value.split(',').map(item => item.trim()).filter(item => item.length > 0);
-            const uniqueItems = [...new Set(items)]; // Remove duplicates
-            return uniqueItems.map(item => `<span class="badge badge-light mr-1">${item}</span>`).join('');
         } else if (fieldName === 'alternative_isbns') {
             // Display alternative ISBNs in a scrollable container
             const isbns = value.split(',').map(isbn => isbn.trim()).filter(isbn => isbn.length >= 10);

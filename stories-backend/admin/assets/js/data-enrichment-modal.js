@@ -2225,6 +2225,12 @@ if (typeof window.dataEnrichmentModalLoaded === 'undefined') {
         let hasExactMatch = false;
         let databaseState = null;
 
+        // CRITICAL DEBUG: Log what displayValue contains for characters/settings
+        if (fieldName === 'characters' || fieldName === 'settings') {
+            console.log(`🔧 CHAR_SETTINGS_DEBUG: Field ${fieldName} displayValue:`, displayValue);
+            console.log(`🔧 CHAR_SETTINGS_DEBUG: Field ${fieldName} newData.value:`, newData.value);
+        }
+
         // CRITICAL FIX: Prevent re-processing of tags field that has already been evaluated
         if (fieldName === 'tags') {
             // Check if this field has already been processed by looking for the enrichment field container

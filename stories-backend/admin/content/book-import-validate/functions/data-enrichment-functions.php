@@ -99,8 +99,21 @@ function getEnrichedBookData($title, $author, $currentISBN = '', $currentPublish
         $enrichedData['sources_checked'][] = 'open_library';
     }
 
-    // Combine and analyze results from both sources
-    $combinedData = combineMultiSourceData($googleResults, $openLibraryResults, $title, $author, $currentISBN, $currentPublisher, []);
+    // CRITICAL FIX: Add Amazon data integration
+    $amazonData = [];
+    if (!empty($currentISBN)) {
+        // Try to get Amazon data for age range, format, price, etc.
+        try {
+            $amazonData = scrapeAmazonBuyingOptions($currentISBN);
+            $enrichedData['sources_checked'][] = 'amazon';
+            error_log("ENRICHMENT_DEBUG: Amazon data retrieved for ISBN $currentISBN");
+        } catch (Exception $e) {
+            error_log("ENRICHMENT_DEBUG: Amazon scraping failed for ISBN $currentISBN: " . $e->getMessage());
+        }
+    }
+
+    // Combine and analyze results from all sources including Amazon
+    $combinedData = combineMultiSourceData($googleResults, $openLibraryResults, $amazonData, $title, $author, $currentISBN, $currentPublisher, []);
 
     if (!empty($combinedData)) {
         $enrichedData['fields'] = $combinedData['fields'];
@@ -114,9 +127,10 @@ function getEnrichedBookData($title, $author, $currentISBN = '', $currentPublish
 /**
  * Combine data from multiple sources intelligently
  */
-function combineMultiSourceData($googleResults, $openLibraryResults, $title, $author, $currentISBN, $currentPublisher = null, $currentValues = []) {
+function combineMultiSourceData($googleResults, $openLibraryResults, $amazonData, $title, $author, $currentISBN, $currentPublisher = null, $currentValues = []) {
     // Define fields that match actual database structure with enhanced mapping
     $allFields = [
+        'title' => ['confidence' => 95, 'label' => 'Title'], // CRITICAL: Was missing!
         'isbn' => ['confidence' => 95, 'label' => 'ISBN-10'],
         'isbn13' => ['confidence' => 95, 'label' => 'ISBN-13'],
         'author' => ['confidence' => 90, 'label' => 'Author'],
@@ -129,17 +143,15 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
         'preview_link' => ['confidence' => 60, 'label' => 'Preview Link'],
         'series' => ['confidence' => 50, 'label' => 'Series'],
         'tags' => ['confidence' => 50, 'label' => 'Genres'], // Maps from Google categories[] + OpenLibrary subject[] + subject_key[] + subject_facet[]
-        'maturity_rating' => ['confidence' => 55, 'label' => 'Maturity Rating'], // Maps to age_range
-        'age_range' => ['confidence' => 50, 'label' => 'Age Range'], // Derived from maturity_rating and subjects
-        'reading_level' => ['confidence' => 40, 'label' => 'Reading Level'], // From OpenLibrary lexile
+        'age_range' => ['confidence' => 50, 'label' => 'Age Range'], // Derived from Amazon + subjects
+        'reading_level' => ['confidence' => 40, 'label' => 'Reading Level'], // Derived from age_range using database
+        'price_range' => ['confidence' => 45, 'label' => 'Price Range'], // From Amazon pricing
+        'purchase_links' => ['confidence' => 50, 'label' => 'Purchase Links'], // From Amazon + Google
         'internet_archive_id' => ['confidence' => 70, 'label' => 'Internet Archive ID'], // From OpenLibrary
         'awards' => ['confidence' => 45, 'label' => 'Awards'], // From OpenLibrary subject_facet
         'characters' => ['confidence' => 40, 'label' => 'Characters'], // From OpenLibrary person
         'settings' => ['confidence' => 40, 'label' => 'Settings'], // From OpenLibrary place
-        // Fields that require external sources
-        'price_range' => ['confidence' => 0, 'label' => 'Price Range'],
-        'alternative_isbns' => ['confidence' => 70, 'label' => 'Alternative ISBNs'],
-        'purchase_links' => ['confidence' => 80, 'label' => 'Purchase Links']
+        'alternative_isbns' => ['confidence' => 70, 'label' => 'Alternative ISBNs']
     ];
 
     // Find best matches from each source (with fallback parameters for non-ISBN matching)
@@ -174,6 +186,7 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
     foreach ($allFields as $fieldName => $fieldConfig) {
         $googleValue = extractFieldValue($googleMatch, $fieldName, $currentISBN);
         $openLibraryValue = extractFieldValue($openLibraryMatch, $fieldName, $currentISBN);
+        $amazonValue = extractAmazonFieldValue($amazonData, $fieldName, $currentISBN);
 
         // CRITICAL DEBUG: Log author field processing
         if ($fieldName === 'author') {
@@ -193,8 +206,8 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
             debugLog("Title - OpenLibrary value extracted", $openLibraryValue);
         }
 
-        // Check if we have data from either source OR if this is an Amazon-derived field
-        if (!empty($googleValue) || !empty($openLibraryValue) || in_array($fieldName, ['purchase_links', 'format', 'price_range'])) {
+        // Check if we have data from any source (Google, OpenLibrary, or Amazon)
+        if (!empty($googleValue) || !empty($openLibraryValue) || !empty($amazonValue)) {
             // Special handling for tags - always merge them
             if ($fieldName === 'tags') {
                 $mergedTags = mergeTagsFromSources($googleValue, $openLibraryValue);
@@ -217,19 +230,15 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $title, $au
                         'label' => $fieldConfig['label']
                     ];
                 }
-            } elseif (in_array($fieldName, ['purchase_links', 'format', 'price_range'])) {
-                // Special handling for Amazon-derived fields - these will be populated via AJAX
-                // to avoid blocking the main enrichment request
+            } elseif (!empty($amazonValue) && empty($googleValue) && empty($openLibraryValue)) {
+                // Only Amazon has data for this field
                 $combinedFields[$fieldName] = [
-                    'new_data' => [
-                        'value' => null,
-                        'source' => 'amazon_derived',
-                        'confidence' => $fieldConfig['confidence'],
-                        'label' => $fieldConfig['label'],
-                        'status' => 'pending_amazon_data'
-                    ]
+                    'value' => $amazonValue,
+                    'source' => 'amazon',
+                    'confidence' => $fieldConfig['confidence'],
+                    'label' => $fieldConfig['label']
                 ];
-                error_log("Created Amazon field: $fieldName with pending_amazon_data status");
+                error_log("ENRICHMENT_DEBUG: Using Amazon-only data for $fieldName: $amazonValue");
             } elseif (!empty($googleValue) && !empty($openLibraryValue)) {
                 // Both sources have data - check if they match
                 debugLog("Field '$fieldName' has both Google and OpenLibrary values", [
@@ -3017,4 +3026,119 @@ function mapAmazonAgeRangeToStandard($amazonAgeRange) {
     // If no mapping found, return null
     error_log("Unable to map Amazon age range '$amazonAgeRange' to standard range");
     return null;
+}
+
+/**
+ * Extract field value from Amazon data
+ */
+function extractAmazonFieldValue($amazonData, $fieldName, $currentISBN = '') {
+    if (empty($amazonData) || !is_array($amazonData)) {
+        return null;
+    }
+
+    switch ($fieldName) {
+        case 'age_range':
+            // Extract age range from Amazon metadata
+            $readingAge = $amazonData['metadata']['reading_age'] ?? null;
+            if ($readingAge) {
+                // Map Amazon age range to our standard format
+                return mapAmazonAgeToStandardRange($readingAge);
+            }
+            return null;
+
+        case 'reading_level':
+            // Derive reading level from age range
+            $ageRange = extractAmazonFieldValue($amazonData, 'age_range', $currentISBN);
+            if ($ageRange) {
+                return mapAgeRangeToReadingLevel($ageRange);
+            }
+            return null;
+
+        case 'format':
+            return $amazonData['selected_format'] ?? null;
+
+        case 'price_range':
+            $price = $amazonData['selected_price'] ?? null;
+            if ($price) {
+                // Extract numeric price and map to range
+                if (preg_match('/£(\d+\.\d{2})/', $price, $matches)) {
+                    $numericPrice = floatval($matches[1]);
+                    return mapPriceToRange($numericPrice);
+                }
+            }
+            return null;
+
+        case 'purchase_links':
+            $buyingOptions = $amazonData['buying_options'] ?? [];
+            if (!empty($buyingOptions)) {
+                // Return the selected format's URL or first available
+                foreach ($buyingOptions as $option) {
+                    if (isset($option['is_selected']) && $option['is_selected']) {
+                        return $option['url'] ?? null;
+                    }
+                }
+                // Fallback to first option
+                $firstOption = reset($buyingOptions);
+                return $firstOption['url'] ?? null;
+            }
+            return null;
+
+        case 'publisher':
+            return $amazonData['metadata']['publisher'] ?? null;
+
+        case 'page_count':
+            return $amazonData['metadata']['pages'] ?? null;
+
+        case 'language':
+            return $amazonData['metadata']['language'] ?? null;
+
+        default:
+            return null;
+    }
+}
+
+/**
+ * Map Amazon age range to our standard format
+ */
+function mapAmazonAgeToStandardRange($amazonAge) {
+    // Extract numbers from Amazon age string like "6 - 9 years, from customers"
+    if (preg_match('/(\d+)\s*-\s*(\d+)\s*years?/i', $amazonAge, $matches)) {
+        $minAge = intval($matches[1]);
+        $maxAge = intval($matches[2]);
+
+        // Calculate midpoint and map to our standard ranges
+        $midpoint = ($minAge + $maxAge) / 2;
+
+        if ($midpoint <= 1) return '0-12 months';
+        if ($midpoint <= 2) return '12-24 months';
+        if ($midpoint <= 3) return '2-3 years';
+        if ($midpoint <= 4) return '3-4 years';
+        if ($midpoint <= 5) return '4-5 years';
+        if ($midpoint <= 6) return '5-6 years';
+        if ($midpoint <= 7) return '6-7 years';
+        if ($midpoint <= 8) return '7-8 years';
+        if ($midpoint <= 9) return '8-9 years';
+        if ($midpoint <= 10) return '9-10 years';
+        if ($midpoint <= 11) return '10-11 years';
+        if ($midpoint <= 14) return '11-14 years';
+        if ($midpoint <= 16) return '14-16 years';
+        if ($midpoint <= 18) return '16-18 years';
+        return '18+ years';
+    }
+
+    return null;
+}
+
+
+
+/**
+ * Map price to price range
+ */
+function mapPriceToRange($price) {
+    if ($price < 5) return 'Under £5';
+    if ($price < 10) return '£5-£10';
+    if ($price < 15) return '£10-£15';
+    if ($price < 20) return '£15-£20';
+    if ($price < 30) return '£20-£30';
+    return 'Over £30';
 }

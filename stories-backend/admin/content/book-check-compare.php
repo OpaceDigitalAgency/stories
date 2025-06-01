@@ -547,7 +547,13 @@ $pageActions = '
                     <!-- All Enriched Fields -->
                     <div class="table-responsive mb-4">
                         <h6>All Enriched Fields</h6>
-                        <table class="table table-sm table-bordered">
+                        <table class="table table-sm table-bordered" style="table-layout: fixed;">
+                            <colgroup>
+                                <col style="width: 20%;">
+                                <col style="width: 50%;">
+                                <col style="width: 20%;">
+                                <col style="width: 10%;">
+                            </colgroup>
                             <thead class="thead-light">
                                 <tr>
                                     <th>Field</th>
@@ -568,9 +574,8 @@ $pageActions = '
                                         $source = $fieldData['source'] ?? 'unknown';
                                         $confidence = $fieldData['confidence'] ?? 'N/A';
 
-                                        // Show source in brackets with value
-                                        $displayValue = ($value !== 'Not available' && $source !== 'unknown') ?
-                                                       $value . ' (' . $source . ')' : $value;
+                                        // Don't show source in brackets since we have a separate Source column
+                                        $displayValue = $value;
 
                                         // Highlight important fields
                                         $rowClass = '';
@@ -582,7 +587,7 @@ $pageActions = '
                                         ?>
                                         <tr<?php echo $rowClass; ?>>
                                             <td><strong><?php echo htmlspecialchars($fieldName); ?></strong></td>
-                                            <td><?php echo htmlspecialchars($displayValue); ?></td>
+                                            <td style="word-wrap: break-word; word-break: break-all; max-width: 0;"><?php echo htmlspecialchars($displayValue); ?></td>
                                             <td><?php echo htmlspecialchars($source); ?></td>
                                             <td><?php echo htmlspecialchars($confidence); ?></td>
                                         </tr>

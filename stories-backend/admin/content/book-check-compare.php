@@ -6,6 +6,11 @@
  * It uses the EXACT same functions as the modal to ensure accurate testing.
  */
 
+// Enable error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+ini_set('log_errors', 1);
+
 // Set page title and current page
 $pageTitle = 'Book Check & Compare';
 $currentPage = 'book-check-compare';
@@ -15,10 +20,29 @@ $pageDescription = 'Comprehensive diagnostic tool for book enrichment data';
 require_once '../includes/auth-check.php';
 require_once '../includes/header.php';
 
+// Add console logging function
+function consoleLog($message, $data = null) {
+    $logData = $data ? json_encode($data) : '';
+    echo "<script>console.log('BOOK_CHECK: " . addslashes($message) . "', " . ($logData ?: '""') . ");</script>";
+}
+
+consoleLog("Page started loading");
+
 // Include ALL the same functions the modal uses
-require_once 'book-import-validate/functions/data-enrichment-functions.php';
-require_once 'book-import-validate/functions/google-books-validation-functions.php';
-require_once 'book-import-validate/functions/open-library-validation-functions.php';
+try {
+    consoleLog("Loading enrichment functions");
+    require_once 'book-import-validate/functions/data-enrichment-functions.php';
+    consoleLog("Loaded data-enrichment-functions.php");
+
+    require_once 'book-import-validate/functions/google-books-validation-functions.php';
+    consoleLog("Loaded google-books-validation-functions.php");
+
+    require_once 'book-import-validate/functions/open-library-validation-functions.php';
+    consoleLog("Loaded open-library-validation-functions.php");
+} catch (Exception $e) {
+    consoleLog("Error loading functions", $e->getMessage());
+    echo "<div class='alert alert-danger'>Error loading required functions: " . htmlspecialchars($e->getMessage()) . "</div>";
+}
 
 /**
  * Convert ISBN-13 to ISBN-10
@@ -122,20 +146,40 @@ $title = '';
 $author = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['isbn'])) {
+    consoleLog("Form submitted");
     $isbn = trim($_POST['isbn']);
     $title = trim($_POST['title'] ?? '');
     $author = trim($_POST['author'] ?? '');
 
+    consoleLog("Form data", ['isbn' => $isbn, 'title' => $title, 'author' => $author]);
+
     if (empty($isbn)) {
         $results['error'] = 'Please enter an ISBN';
+        consoleLog("Error: Empty ISBN");
     } else {
         $startTime = microtime(true);
         try {
-            // Step 1: Test individual APIs
-            $results['api_tests'] = testIndividualAPIs($isbn);
+            consoleLog("Starting API tests");
 
-            // Step 2: Test the main enrichment function (fallback to original approach)
-            $enrichedData = getEnrichedBookData($title, $author, $isbn);
+            // Step 1: Test individual APIs
+            if (function_exists('testIndividualAPIs')) {
+                $results['api_tests'] = testIndividualAPIs($isbn);
+                consoleLog("API tests completed");
+            } else {
+                consoleLog("Error: testIndividualAPIs function not found");
+                $results['error'] = 'testIndividualAPIs function not available';
+            }
+
+            // Step 2: Test the main enrichment function
+            if (function_exists('getEnrichedBookData')) {
+                consoleLog("Starting getEnrichedBookData");
+                $enrichedData = getEnrichedBookData($title, $author, $isbn);
+                consoleLog("getEnrichedBookData completed");
+            } else {
+                consoleLog("Error: getEnrichedBookData function not found");
+                $results['error'] = 'getEnrichedBookData function not available';
+                $enrichedData = [];
+            }
 
             $endTime = microtime(true);
             $executionTime = round($endTime - $startTime, 2);
@@ -148,8 +192,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['isbn'])) {
             // Add note about AJAX testing
             $results['note'] = 'Using getEnrichedBookData() function - AJAX testing temporarily disabled to prevent page errors';
 
+            consoleLog("Processing completed successfully", ['execution_time' => $executionTime]);
+
         } catch (Exception $e) {
             $results['error'] = 'Enrichment failed: ' . $e->getMessage();
+            consoleLog("Error during processing", $e->getMessage());
         }
     }
 } else {
@@ -571,6 +618,7 @@ $pageActions = '
 </div>
 
 <?php
+consoleLog("Page finished loading");
 // Include the footer
 require_once '../includes/footer.php';
 ?>

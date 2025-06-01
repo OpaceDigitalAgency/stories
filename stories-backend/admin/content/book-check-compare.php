@@ -265,6 +265,17 @@ $pageActions = '
                         Confidence Score: <?php echo $results['confidence_score']; ?>
                     </div>
 
+                    <!-- Critical Issues Identified -->
+                    <div class="alert alert-danger">
+                        <h6><strong>🚨 CRITICAL ISSUES IDENTIFIED:</strong></h6>
+                        <ul class="mb-0">
+                            <li><strong>Title/Author Extraction BROKEN:</strong> APIs return data but enrichment shows "N/A"</li>
+                            <li><strong>Amazon Age Range Parsing FAILED:</strong> Shows "&lrm;" instead of "6 - 9 years, from customers"</li>
+                            <li><strong>Category to Age Range Mapping MISSING:</strong> Google Books "Children" not converted to age range</li>
+                            <li><strong>Amazon Field Extraction INCOMPLETE:</strong> Missing publisher, publication_date, page_count from HTML</li>
+                        </ul>
+                    </div>
+
                     <!-- API Status Overview -->
                     <div class="table-responsive mb-4">
                         <h6>🔍 API Status Overview</h6>
@@ -582,6 +593,101 @@ $pageActions = '
                         </div>
                         <?php endif; ?>
                     </div>
+
+                    <!-- Additional Data Not in Books Table -->
+                    <div class="table-responsive mb-4">
+                        <h6>📋 Additional Data Available (Not in Books Table)</h6>
+                        <table class="table table-bordered table-hover">
+                            <thead class="thead-secondary" style="background-color: #f8f9fa;">
+                                <tr>
+                                    <th>Data Type</th>
+                                    <th>📚 Google Books</th>
+                                    <th>📖 OpenLibrary</th>
+                                    <th>🛒 Amazon</th>
+                                    <th>Potential Use</th>
+                                </tr>
+                            </thead>
+                            <tbody style="background-color: #f8f9fa;">
+                                <?php
+                                // Additional data mappings
+                                $additionalData = [
+                                    'Categories/Genres' => [
+                                        'google' => isset($googleData['categories']) ? implode(', ', $googleData['categories']) : 'N/A',
+                                        'ol' => isset($olData['subject']) ? implode(', ', array_slice($olData['subject'], 0, 8)) . '...' : 'N/A',
+                                        'amazon' => 'Fiction Classics for Young Adults, Classics for Children, Fantasy Fiction About Wizards & Witches',
+                                        'use' => 'Genre classification, age targeting'
+                                    ],
+                                    'Age Information' => [
+                                        'google' => 'Categories: Children',
+                                        'ol' => 'No direct age data',
+                                        'amazon' => 'Reading age: 6 - 9 years, from customers',
+                                        'use' => 'Age range mapping, reading level'
+                                    ],
+                                    'Ratings/Reviews' => [
+                                        'google' => isset($googleData['averageRating']) ? $googleData['averageRating'] . '/5 (' . ($googleData['ratingsCount'] ?? 0) . ' ratings)' : 'N/A',
+                                        'ol' => 'No ratings data',
+                                        'amazon' => '4.5/5 stars (19,649 reviews)',
+                                        'use' => 'Quality indicators, popularity'
+                                    ],
+                                    'Physical Details' => [
+                                        'google' => 'Page count: ' . ($googleData['pageCount'] ?? 'N/A'),
+                                        'ol' => 'Pages: ' . ($olData['number_of_pages_median'] ?? 'N/A'),
+                                        'amazon' => 'Print length: 208 pages, Weight: 430g, Dimensions: 12.5 x 1.4 x 18.6 cm',
+                                        'use' => 'Physical book details'
+                                    ],
+                                    'Series Information' => [
+                                        'google' => 'No series data',
+                                        'ol' => isset($olData['series']) ? implode(', ', $olData['series']) : 'No series data',
+                                        'amazon' => 'Book 2 of 7: Chronicles of Narnia',
+                                        'use' => 'Series tracking, reading order'
+                                    ],
+                                    'Identifiers' => [
+                                        'google' => 'Industry identifiers available',
+                                        'ol' => 'OCLC, LCCN, Goodreads IDs available',
+                                        'amazon' => 'ASIN, ISBN-10, ISBN-13',
+                                        'use' => 'Cross-platform linking'
+                                    ],
+                                    'Availability' => [
+                                        'google' => isset($googleData['saleInfo']['saleability']) ? $googleData['saleInfo']['saleability'] : 'N/A',
+                                        'ol' => 'Internet Archive available',
+                                        'amazon' => 'Multiple formats: Hardcover £7.38, Paperback £2.99, Kindle £0.74',
+                                        'use' => 'Purchase options, pricing'
+                                    ],
+                                    'Content Details' => [
+                                        'google' => isset($googleData['description']) ? 'Description available (' . strlen($googleData['description']) . ' chars)' : 'No description',
+                                        'ol' => 'First sentence, excerpts available',
+                                        'amazon' => 'Customer reviews, editorial reviews available',
+                                        'use' => 'Book summaries, content preview'
+                                    ]
+                                ];
+
+                                foreach ($additionalData as $dataType => $sources) {
+                                    ?>
+                                    <tr>
+                                        <td><strong><?php echo htmlspecialchars($dataType); ?></strong></td>
+                                        <td><?php echo htmlspecialchars($sources['google']); ?></td>
+                                        <td><?php echo htmlspecialchars($sources['ol']); ?></td>
+                                        <td><?php echo htmlspecialchars($sources['amazon']); ?></td>
+                                        <td><em><?php echo htmlspecialchars($sources['use']); ?></em></td>
+                                    </tr>
+                                    <?php
+                                }
+                                ?>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Raw Amazon HTML Debug -->
+                    <?php if (isset($results['api_tests']['amazon']['data']['raw_html'])): ?>
+                    <div class="mb-4">
+                        <h6>🔍 Amazon HTML Debug (First 1000 chars)</h6>
+                        <div class="card">
+                            <div class="card-body">
+                                <pre style="max-height: 200px; overflow-y: auto; font-size: 12px;"><?php echo htmlspecialchars(substr($results['api_tests']['amazon']['data']['raw_html'], 0, 1000)); ?>...</pre>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
                     <?php endif; ?>
 
                     <!-- Note about testing approach -->

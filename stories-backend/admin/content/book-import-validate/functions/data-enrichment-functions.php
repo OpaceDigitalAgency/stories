@@ -104,9 +104,24 @@ function getEnrichedBookData($title, $author, $currentISBN = '', $currentPublish
     if (!empty($currentISBN)) {
         // Try to get Amazon data for age range, format, price, etc.
         try {
+            error_log("ENRICHMENT_DEBUG: Starting Amazon scraping for ISBN $currentISBN");
             $amazonData = scrapeAmazonBuyingOptions($currentISBN);
             $enrichedData['sources_checked'][] = 'amazon';
+
+            // CRITICAL DEBUG: Log what Amazon data was actually retrieved
             error_log("ENRICHMENT_DEBUG: Amazon data retrieved for ISBN $currentISBN");
+            error_log("ENRICHMENT_DEBUG: Amazon metadata: " . json_encode($amazonData['metadata'] ?? []));
+            error_log("ENRICHMENT_DEBUG: Amazon buying_options: " . json_encode($amazonData['buying_options'] ?? []));
+
+            // Check specifically for reading_age
+            if (isset($amazonData['metadata']['reading_age'])) {
+                error_log("ENRICHMENT_DEBUG: Found reading_age in Amazon data: '" . $amazonData['metadata']['reading_age'] . "'");
+            } else {
+                error_log("ENRICHMENT_DEBUG: NO reading_age found in Amazon metadata");
+                if (isset($amazonData['metadata'])) {
+                    error_log("ENRICHMENT_DEBUG: Available metadata keys: " . implode(', ', array_keys($amazonData['metadata'])));
+                }
+            }
         } catch (Exception $e) {
             error_log("ENRICHMENT_DEBUG: Amazon scraping failed for ISBN $currentISBN: " . $e->getMessage());
         }
@@ -188,8 +203,8 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $amazonData
         $openLibraryValue = extractFieldValue($openLibraryMatch, $fieldName, $currentISBN);
         $amazonValue = extractAmazonFieldValue($amazonData, $fieldName, $currentISBN);
 
-        // CRITICAL DEBUG: Log Amazon field extraction for age_range and reading_level
-        if ($fieldName === 'age_range' || $fieldName === 'reading_level' || $fieldName === 'format' || $fieldName === 'price_range') {
+        // CRITICAL DEBUG: Log Amazon field extraction for key fields
+        if (in_array($fieldName, ['age_range', 'reading_level', 'format', 'price_range', 'page_count', 'publisher', 'publication_date', 'language'])) {
             error_log("FIELD_EXTRACTION_DEBUG: Field '$fieldName' - Amazon data available: " . (!empty($amazonData) ? 'YES' : 'NO'));
             error_log("FIELD_EXTRACTION_DEBUG: Field '$fieldName' - Google value: " . (is_null($googleValue) ? 'NULL' : "'$googleValue'"));
             error_log("FIELD_EXTRACTION_DEBUG: Field '$fieldName' - OpenLibrary value: " . (is_null($openLibraryValue) ? 'NULL' : "'$openLibraryValue'"));
@@ -223,8 +238,8 @@ function combineMultiSourceData($googleResults, $openLibraryResults, $amazonData
 
         // Check if we have data from any source (Google, OpenLibrary, or Amazon)
         if (!empty($googleValue) || !empty($openLibraryValue) || !empty($amazonValue)) {
-            // Special handling for Amazon-only fields (age_range, reading_level, format, price_range)
-            if (in_array($fieldName, ['age_range', 'reading_level', 'format', 'price_range']) && !empty($amazonValue)) {
+            // Special handling for Amazon-priority fields
+            if (in_array($fieldName, ['age_range', 'reading_level', 'format', 'price_range', 'page_count', 'publisher', 'publication_date', 'language', 'isbn', 'isbn13', 'series']) && !empty($amazonValue)) {
                 // Amazon data takes priority for these fields
                 $combinedFields[$fieldName] = [
                     'value' => $amazonValue,
@@ -3201,13 +3216,73 @@ function extractAmazonFieldValue($amazonData, $fieldName, $currentISBN = '') {
             return null;
 
         case 'publisher':
-            return $amazonData['metadata']['publisher'] ?? null;
+            $publisher = $amazonData['metadata']['publisher'] ?? null;
+            if ($publisher) {
+                error_log("AMAZON_FIELD_EXTRACT: Found publisher: '$publisher'");
+                return $publisher;
+            }
+            error_log("AMAZON_FIELD_EXTRACT: No publisher found in Amazon data");
+            return null;
 
         case 'page_count':
-            return $amazonData['metadata']['pages'] ?? null;
+            // Amazon stores this as 'print_length' like "208 pages"
+            $printLength = $amazonData['metadata']['print_length'] ?? null;
+            if ($printLength) {
+                error_log("AMAZON_FIELD_EXTRACT: Found print_length: '$printLength'");
+                // Extract number from "208 pages"
+                if (preg_match('/(\d+)\s*pages?/i', $printLength, $matches)) {
+                    $pageCount = intval($matches[1]);
+                    error_log("AMAZON_FIELD_EXTRACT: Extracted page count: $pageCount");
+                    return $pageCount;
+                }
+            }
+            error_log("AMAZON_FIELD_EXTRACT: No page count found in Amazon data");
+            return null;
 
         case 'language':
-            return $amazonData['metadata']['language'] ?? null;
+            $language = $amazonData['metadata']['language'] ?? null;
+            if ($language) {
+                error_log("AMAZON_FIELD_EXTRACT: Found language: '$language'");
+                return $language;
+            }
+            error_log("AMAZON_FIELD_EXTRACT: No language found in Amazon data");
+            return null;
+
+        case 'publication_date':
+            $pubDate = $amazonData['metadata']['publication_date'] ?? null;
+            if ($pubDate) {
+                error_log("AMAZON_FIELD_EXTRACT: Found publication_date: '$pubDate'");
+                return $pubDate;
+            }
+            error_log("AMAZON_FIELD_EXTRACT: No publication_date found in Amazon data");
+            return null;
+
+        case 'isbn':
+            $isbn10 = $amazonData['metadata']['isbn_10'] ?? null;
+            if ($isbn10) {
+                error_log("AMAZON_FIELD_EXTRACT: Found ISBN-10: '$isbn10'");
+                return $isbn10;
+            }
+            error_log("AMAZON_FIELD_EXTRACT: No ISBN-10 found in Amazon data");
+            return null;
+
+        case 'isbn13':
+            $isbn13 = $amazonData['metadata']['isbn_13'] ?? null;
+            if ($isbn13) {
+                error_log("AMAZON_FIELD_EXTRACT: Found ISBN-13: '$isbn13'");
+                return $isbn13;
+            }
+            error_log("AMAZON_FIELD_EXTRACT: No ISBN-13 found in Amazon data");
+            return null;
+
+        case 'series':
+            $series = $amazonData['metadata']['series'] ?? null;
+            if ($series) {
+                error_log("AMAZON_FIELD_EXTRACT: Found series: '$series'");
+                return $series;
+            }
+            error_log("AMAZON_FIELD_EXTRACT: No series found in Amazon data");
+            return null;
 
         default:
             return null;

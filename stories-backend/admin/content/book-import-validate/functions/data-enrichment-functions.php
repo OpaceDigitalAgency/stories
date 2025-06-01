@@ -1396,20 +1396,10 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
                 }
             }
 
-            // Open Library subject_facet[] - ONLY very specific age-related patterns
-            if (!$ageRange && isset($match['subject_facet']) && is_array($match['subject_facet'])) {
-                foreach ($match['subject_facet'] as $subject) {
-                    // ONLY accept very specific age-related subjects with explicit age numbers
-                    if (stripos($subject, "Children's Books/Ages") !== false && preg_match('/Ages\s+(\d+)-(\d+)/i', $subject)) {
-                        if (stripos($subject, "Ages 9-12") !== false) {
-                            $ageRange = '9-10 years';
-                            break;
-                        }
-                    }
-                    // REMOVED: Generic mappings like "Tweens" or "Young Adult Fiction"
-                    // These create fake data when there's no actual age information
-                }
-            }
+            // CRITICAL FIX: COMPLETELY REMOVE OpenLibrary age range extraction
+            // OpenLibrary does not provide reliable age range data - only Amazon does
+            // This prevents fake "OpenLibrary" sources from appearing in the enrichment modal
+            // when OpenLibrary doesn't actually have age data
 
             // FINAL FILTER: Remove any remaining problematic values
             if ($ageRange && (strpos($ageRange, '12+') !== false || strpos($ageRange, 'unknown') !== false)) {
@@ -1422,26 +1412,10 @@ function extractFieldValue($match, $fieldName, $currentISBN = null) {
             return $ageRange;
 
         case 'reading_level':
-            // CRITICAL FIX: Only return reading level data when there's EXPLICIT reading level information
-            // Do NOT create fake reading level data from generic categories
-
-            // Open Library: use lexile[] with conversion to readable format (this is explicit reading level data)
-            if (isset($match['lexile']) && is_array($match['lexile']) && !empty($match['lexile'])) {
-                $lexileValue = $match['lexile'][0];
-                $readingLevel = convertLexileToReadingLevel($lexileValue);
-                // FILTER OUT UNKNOWN VALUES
-                if ($readingLevel && stripos($readingLevel, 'unknown') === false) {
-                    return $readingLevel;
-                }
-            }
-            // Also check if lexile is a direct value
-            elseif (isset($match['lexile']) && is_numeric($match['lexile'])) {
-                $readingLevel = convertLexileToReadingLevel($match['lexile']);
-                // FILTER OUT UNKNOWN VALUES
-                if ($readingLevel && stripos($readingLevel, 'unknown') === false) {
-                    return $readingLevel;
-                }
-            }
+            // CRITICAL FIX: COMPLETELY REMOVE OpenLibrary reading level extraction
+            // Reading levels should only come from Amazon-derived age ranges
+            // This prevents fake "OpenLibrary" sources from appearing in the enrichment modal
+            // when OpenLibrary doesn't actually provide reading level data
 
             // REMOVED: Google Books categories to reading level mapping
             // This was creating fake reading level data when APIs don't actually have reading level information

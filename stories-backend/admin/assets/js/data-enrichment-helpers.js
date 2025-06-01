@@ -323,13 +323,27 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
             const uniqueItems = [...new Set(items)]; // Remove duplicates
             return uniqueItems.map(item => `<span class="badge badge-light mr-1">${item}</span>`).join('');
         } else if (fieldName === 'purchase_links') {
-            // CRITICAL FIX: Use same user-friendly formatting as formatFieldValue
+            // CRITICAL FIX: Use same logic as formatFieldValue for consistency
             try {
                 console.log('🛒 CURRENT_PURCHASE_LINKS_DEBUG: Raw value:', value);
                 console.log('🛒 CURRENT_PURCHASE_LINKS_DEBUG: Value type:', typeof value);
 
-                const linksData = typeof value === 'string' ? JSON.parse(value) : value;
-                console.log('🛒 CURRENT_PURCHASE_LINKS_DEBUG: Parsed linksData:', linksData);
+                // Handle both JSON objects and simple URL strings (same as formatFieldValue)
+                let linksData;
+                if (typeof value === 'string') {
+                    // Check if it's a URL (Amazon returns simple URLs)
+                    if (value.startsWith('http')) {
+                        console.log('🛒 CURRENT_PURCHASE_LINKS_DEBUG: Detected simple URL, converting to object');
+                        linksData = { 'Amazon': value };
+                    } else {
+                        // Try to parse as JSON
+                        linksData = JSON.parse(value);
+                    }
+                } else {
+                    linksData = value;
+                }
+
+                console.log('🛒 CURRENT_PURCHASE_LINKS_DEBUG: Processed linksData:', linksData);
 
                 if (!linksData || typeof linksData !== 'object') {
                     console.log('🛒 CURRENT_PURCHASE_LINKS_DEBUG: No valid links data');
@@ -342,7 +356,19 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
                     const option = linksData[format];
                     console.log(`🛒 CURRENT_PURCHASE_LINKS_DEBUG: Processing format "${format}":`, option);
 
-                    if (option && (option.price || option.url)) {
+                    // Handle both simple URLs and complex objects
+                    if (typeof option === 'string') {
+                        // Simple URL
+                        formattedLinks += `
+                            <div class="mb-1">
+                                <strong>${format}:</strong>
+                                <a href="${option}" target="_blank" class="btn btn-sm btn-outline-primary ml-2">
+                                    <i class="fas fa-external-link-alt"></i> Buy
+                                </a>
+                            </div>
+                        `;
+                    } else if (option && (option.price || option.url)) {
+                        // Complex object with price/url
                         const price = option.price || 'Price not available';
                         const url = option.url || '#';
                         const isSelected = option.is_selected ? ' <span class="badge badge-success">Default</span>' : '';
@@ -356,7 +382,7 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
                             </div>
                         `;
                     } else {
-                        console.log(`🛒 CURRENT_PURCHASE_LINKS_DEBUG: Skipping format "${format}" - missing price or url`);
+                        console.log(`🛒 CURRENT_PURCHASE_LINKS_DEBUG: Skipping format "${format}" - invalid data:`, option);
                     }
                 });
 
@@ -503,8 +529,22 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
                 console.log('🛒 PURCHASE_LINKS_DEBUG: Raw value:', value);
                 console.log('🛒 PURCHASE_LINKS_DEBUG: Value type:', typeof value);
 
-                const linksData = typeof value === 'string' ? JSON.parse(value) : value;
-                console.log('🛒 PURCHASE_LINKS_DEBUG: Parsed linksData:', linksData);
+                // CRITICAL FIX: Handle both JSON objects and simple URL strings
+                let linksData;
+                if (typeof value === 'string') {
+                    // Check if it's a URL (Amazon returns simple URLs)
+                    if (value.startsWith('http')) {
+                        console.log('🛒 PURCHASE_LINKS_DEBUG: Detected simple URL, converting to object');
+                        linksData = { 'Amazon': value };
+                    } else {
+                        // Try to parse as JSON
+                        linksData = JSON.parse(value);
+                    }
+                } else {
+                    linksData = value;
+                }
+
+                console.log('🛒 PURCHASE_LINKS_DEBUG: Processed linksData:', linksData);
 
                 if (!linksData || typeof linksData !== 'object') {
                     console.log('🛒 PURCHASE_LINKS_DEBUG: No valid links data');
@@ -517,7 +557,19 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
                     const option = linksData[format];
                     console.log(`🛒 PURCHASE_LINKS_DEBUG: Processing format "${format}":`, option);
 
-                    if (option && (option.price || option.url)) {
+                    // Handle both simple URLs and complex objects
+                    if (typeof option === 'string') {
+                        // Simple URL
+                        formattedLinks += `
+                            <div class="mb-1">
+                                <strong>${format}:</strong>
+                                <a href="${option}" target="_blank" class="btn btn-sm btn-outline-primary ml-2">
+                                    <i class="fas fa-external-link-alt"></i> Buy
+                                </a>
+                            </div>
+                        `;
+                    } else if (option && (option.price || option.url)) {
+                        // Complex object with price/url
                         const price = option.price || 'Price not available';
                         const url = option.url || '#';
                         const isSelected = option.is_selected ? ' <span class="badge badge-success">Default</span>' : '';
@@ -531,7 +583,7 @@ if (typeof window.dataEnrichmentHelpersLoaded === 'undefined') {
                             </div>
                         `;
                     } else {
-                        console.log(`🛒 PURCHASE_LINKS_DEBUG: Skipping format "${format}" - missing price or url`);
+                        console.log(`🛒 PURCHASE_LINKS_DEBUG: Skipping format "${format}" - invalid data:`, option);
                     }
                 });
 

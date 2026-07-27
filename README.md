@@ -2,6 +2,8 @@
 
 A platform for discovering and sharing children's books and stories.
 
+> This project is not featured in the main portfolio table. Browse Opace's reusable open-source projects in the [Opace Digital Agency open-source portfolio](https://github.com/OpaceDigitalAgency/OpaceDigitalAgency).
+
 # Docs and readme file locations
 
 All docs are stored in the sub-folder stories-backend/docs
